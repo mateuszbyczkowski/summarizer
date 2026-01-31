@@ -7,66 +7,35 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.summarizer.app.domain.model.AIModel
 import com.summarizer.app.domain.model.DownloadStatus
 import com.summarizer.app.domain.model.ModelDownloadState
+import com.summarizer.app.util.StorageHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModelDownloadScreen(
+    viewModel: ModelDownloadViewModel = hiltViewModel(),
     onModelSelected: (AIModel) -> Unit,
     onSkip: () -> Unit
 ) {
-    // Sample models for UI preview
-    val sampleModels = remember {
-        listOf(
-            AIModel(
-                id = "tinyllama-1.1b",
-                name = "TinyLlama 1.1B",
-                description = "Small and fast model, perfect for budget devices. Good for basic summaries.",
-                sizeInMB = 700,
-                downloadUrl = "https://example.com/tinyllama",
-                isRecommended = true,
-                minimumRAM = 4,
-                estimatedSpeed = "Fast"
-            ),
-            AIModel(
-                id = "phi-2-2.7b",
-                name = "Phi-2 2.7B",
-                description = "More capable model with better understanding. Requires more RAM.",
-                sizeInMB = 1800,
-                downloadUrl = "https://example.com/phi2",
-                isRecommended = false,
-                minimumRAM = 6,
-                estimatedSpeed = "Medium"
-            ),
-            AIModel(
-                id = "gemma-2b",
-                name = "Gemma 2B",
-                description = "Google's efficient model, balanced performance and speed.",
-                sizeInMB = 1400,
-                downloadUrl = "https://example.com/gemma",
-                isRecommended = false,
-                minimumRAM = 4,
-                estimatedSpeed = "Fast"
-            )
-        )
-    }
-
-    var downloadStates by remember {
-        mutableStateOf(
-            sampleModels.associate { it.id to ModelDownloadState(it.id) }
-        )
-    }
+    val models by viewModel.models.collectAsState()
+    val downloadStates by viewModel.downloadStates.collectAsState()
+    val isWiFiOnly by viewModel.isWiFiOnly.collectAsState()
 
     Scaffold(
         topBar = {
@@ -84,15 +53,38 @@ fun ModelDownloadScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Header
+            // Header with WiFi toggle
             Column(
                 modifier = Modifier.padding(24.dp)
             ) {
-                Text(
-                    text = "Choose Your AI Model",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Choose Your AI Model",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    // WiFi-only toggle
+                    FilterChip(
+                        selected = isWiFiOnly,
+                        onClick = { viewModel.toggleWiFiOnly() },
+                        label = {
+                            Text(if (isWiFiOnly) "WiFi Only" else "Any Network")
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = if (isWiFiOnly) Icons.Default.Wifi else Icons.Default.WifiOff,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    )
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Select and download an AI model to power your summaries. All processing happens on your device.",
@@ -107,11 +99,13 @@ fun ModelDownloadScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(sampleModels) { model ->
+                items(models, key = { it.id }) { model ->
                     ModelCard(
                         model = model,
                         downloadState = downloadStates[model.id] ?: ModelDownloadState(model.id),
-                        onDownloadClick = { /* TODO: Implement in Week 4 */ },
+                        onDownloadClick = { viewModel.downloadModel(model) },
+                        onPauseClick = { viewModel.pauseDownload(model.id) },
+                        onResumeClick = { viewModel.resumeDownload(model.id) },
                         onSelectClick = { onModelSelected(model) }
                     )
                 }
@@ -136,6 +130,8 @@ fun ModelCard(
     model: AIModel,
     downloadState: ModelDownloadState,
     onDownloadClick: () -> Unit,
+    onPauseClick: () -> Unit,
+    onResumeClick: () -> Unit,
     onSelectClick: () -> Unit
 ) {
     Card(
@@ -260,20 +256,36 @@ fun ModelCard(
                     Column {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = "Downloading...",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                            Text(
-                                text = "${(downloadState.progress * 100).toInt()}%",
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Downloading... ${StorageHelper.formatStorageSize(downloadState.downloadedBytes / (1024 * 1024))} / ${StorageHelper.formatStorageSize(downloadState.totalBytes / (1024 * 1024))}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    text = "${(downloadState.progress * 100).toInt()}%",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                IconButton(
+                                    onClick = onPauseClick,
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Pause,
+                                        contentDescription = "Pause",
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         LinearProgressIndicator(
-                            progress = downloadState.progress,
+                            progress = downloadState.progress.coerceIn(0f, 1f),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -309,11 +321,30 @@ fun ModelCard(
                     }
                 }
                 DownloadStatus.PAUSED -> {
-                    Button(
-                        onClick = onDownloadClick,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Resume Download")
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Paused at ${(downloadState.progress * 100).toInt()}%",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = onResumeClick,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Resume Download")
+                        }
                     }
                 }
             }

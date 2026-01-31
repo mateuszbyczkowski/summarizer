@@ -16,6 +16,8 @@ import com.summarizer.app.domain.repository.AuthRepository
 import com.summarizer.app.domain.repository.PreferencesRepository
 import com.summarizer.app.ui.screens.auth.PinLockScreen
 import com.summarizer.app.ui.screens.auth.PinSetupScreen
+import com.summarizer.app.ui.screens.models.ModelDownloadScreen
+import com.summarizer.app.ui.screens.models.StorageLocationScreen
 import com.summarizer.app.ui.screens.onboarding.PermissionExplanationScreen
 import com.summarizer.app.ui.screens.onboarding.WelcomeScreen
 import com.summarizer.app.ui.screens.threads.ThreadDetailScreen
@@ -26,6 +28,8 @@ sealed class Screen(val route: String) {
     object Welcome : Screen("welcome")
     object PermissionExplanation : Screen("permission_explanation")
     object PinSetup : Screen("pin_setup")
+    object StorageLocation : Screen("storage_location")
+    object ModelDownload : Screen("model_download")
     object PinLock : Screen("pin_lock")
     object ThreadList : Screen("thread_list")
     object ThreadDetail : Screen("thread_detail/{threadId}") {
@@ -87,8 +91,33 @@ fun NavGraph() {
             composable(Screen.PinSetup.route) {
                 PinSetupScreen(
                     onPinSet = {
-                        navController.navigate(Screen.ThreadList.route) {
+                        navController.navigate(Screen.StorageLocation.route) {
                             popUpTo(Screen.PinSetup.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            composable(Screen.StorageLocation.route) {
+                StorageLocationScreen(
+                    onLocationSelected = { location ->
+                        navController.navigate(Screen.ModelDownload.route) {
+                            popUpTo(Screen.StorageLocation.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            composable(Screen.ModelDownload.route) {
+                ModelDownloadScreen(
+                    onModelSelected = { model ->
+                        navController.navigate(Screen.ThreadList.route) {
+                            popUpTo(Screen.ModelDownload.route) { inclusive = true }
+                        }
+                    },
+                    onSkip = {
+                        navController.navigate(Screen.ThreadList.route) {
+                            popUpTo(Screen.ModelDownload.route) { inclusive = true }
                         }
                     }
                 )

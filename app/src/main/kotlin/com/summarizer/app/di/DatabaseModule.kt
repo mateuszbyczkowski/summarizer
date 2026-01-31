@@ -2,6 +2,7 @@ package com.summarizer.app.di
 
 import android.content.Context
 import androidx.room.Room
+import com.summarizer.app.data.local.dao.AIModelDao
 import com.summarizer.app.data.local.database.AppDatabase
 import com.summarizer.app.data.local.database.dao.MessageDao
 import com.summarizer.app.data.local.database.dao.SummaryDao
@@ -57,5 +58,10 @@ object DatabaseModule {
     @Provides
     fun provideSummaryDao(database: AppDatabase): SummaryDao {
         return database.summaryDao()
+    }
+
+    @Provides
+    fun provideAIModelDao(database: AppDatabase): AIModelDao {
+        return database.aiModelDao()
     }
 }
