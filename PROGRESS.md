@@ -2,8 +2,8 @@
 # WhatsApp Summarizer - I1 MVP
 
 **Last Updated**: 2026-01-31
-**Current Status**: Week 3 COMPLETE 🎉
-**Overall Progress**: 50% (Weeks 1, 2 & 3 Complete)
+**Current Status**: Week 4 COMPLETE 🎉
+**Overall Progress**: 67% (Weeks 1, 2, 3 & 4 Complete)
 
 ---
 
@@ -24,7 +24,7 @@
 
 ---
 
-### Week 1, Day 1: Project Foundation (COMPLETE)
+### Week 1: Project Foundation (COMPLETE - 2026-01-31)
 
 #### Build System ✅
 - [x] Create Android Studio project structure
@@ -42,240 +42,188 @@
 - [x] Configure SQLCipher encryption
 - [x] Set up database module in Hilt
 
-#### Domain Layer ✅
-- [x] Define `Message`, `Thread`, `Summary` domain models
+#### Domain & Data Layer ✅
+- [x] Define domain models (Message, Thread, Summary)
 - [x] Create repository interfaces
 - [x] Implement repository pattern with mappers
-
-#### Data Layer ✅
-- [x] Implement `MessageRepositoryImpl`
-- [x] Implement `ThreadRepositoryImpl`
-- [x] Implement `SummaryRepositoryImpl`
-- [x] Configure Hilt `RepositoryModule`
+- [x] Configure Hilt RepositoryModule
 
 #### Service Layer ✅
-- [x] Create `WhatsAppNotificationListener` service
+- [x] Create WhatsAppNotificationListener service
 - [x] Implement notification parsing logic
 - [x] Auto-create threads from notifications
 - [x] Save messages to encrypted database
-- [x] Add service to AndroidManifest
 
 #### UI Layer ✅
-- [x] Set up Jetpack Compose theme
-- [x] Create Material 3 color scheme
-- [x] Implement typography
-- [x] Create `NavGraph` with navigation
-- [x] Build `ThreadListScreen` with UI
-- [x] Create `ThreadListViewModel`
-- [x] Add empty state design
-- [x] Implement thread item display with timestamp formatting
+- [x] Set up Jetpack Compose theme (Material 3)
+- [x] Create NavGraph with navigation
+- [x] Build ThreadListScreen with ViewModel
+- [x] Implement thread item display with timestamps
 
-#### Infrastructure ✅
-- [x] Create `SummarizerApplication` with Hilt
-- [x] Set up `MainActivity`
-- [x] Configure AndroidManifest with permissions
-- [x] Add data extraction rules
-- [x] Create string resources
-- [x] Set up Timber logging
+#### Core Features ✅
+- [x] Permission Management (PermissionHelper, PermissionCard)
+- [x] Thread Detail Screen with message history
+- [x] PIN Authentication System (SHA-256 hashing)
+- [x] SecurePreferences with EncryptedSharedPreferences
 
-#### Documentation ✅
-- [x] Create `START_HERE.md`
-- [x] Write `ANDROID_SETUP.md`
-- [x] Create `PROJECT_SETUP.md`
-- [x] Update all documentation with TinyLlama model
-
+**Files Created**: 45 Kotlin files
 **Completion Date**: 2026-01-31
-**Files Created**: 37 Kotlin files, 14 documentation files
-**Git Commits**: 16
 
 ---
 
-### Week 1, Days 2-7: Core Features (ALL COMPLETE 🎉)
+### Week 2: Message Capture Refinement (COMPLETE - 2026-01-31)
 
-#### ✅ Testing & Verification (COMPLETE - 2026-01-31)
-- [x] Open project in Android Studio
-- [x] Complete Gradle sync
-- [x] Run first build
-- [x] Fixed launcher icon issue
-- [x] App running on emulator
-- [x] Empty state displaying correctly
-- [x] Grant notification permission (via PermissionCard UI)
-- [x] Test WhatsApp message capture (VERIFIED WORKING)
-- [x] Verify messages appear in thread list (CONFIRMED)
-- [x] Debug parsing issues (fixed HorizontalDivider compatibility)
+#### Message Capture Improvements ✅
+- [x] Deduplication System (messageHash with unique index)
+- [x] Edge Case Handling (MessageType enum: TEXT, IMAGE, VIDEO, DELETED, SYSTEM, etc.)
+- [x] Enhanced notification parser with 3 fallback formats
+- [x] WhatsApp Business package support
+- [x] Comprehensive error handling and Timber logging
 
-#### ✅ Permission Management (COMPLETE - 2026-01-31)
-- [x] Create `PermissionHelper` utility
-- [x] Implement permission check logic
-- [x] Add `PermissionCard` UI component
-- [x] "Open Settings" button navigation
-- [x] Auto-detect permission changes on resume
-- [x] User successfully granted permission
+#### UI/UX Enhancements ✅
+- [x] Loading states (ThreadListUiState, ThreadDetailUiState)
+- [x] Animations (AnimatedVisibility, spring animations)
+- [x] Message styling (color-coded by type)
+- [x] Created WelcomeScreen for Week 3
 
-#### ✅ Thread Detail Screen (COMPLETE - 2026-01-31)
-- [x] Create `ThreadDetailScreen.kt`
-- [x] Create `ThreadDetailViewModel.kt`
-- [x] Display message list chronologically
-- [x] Add "Summarize Now" button (placeholder for Week 5)
-- [x] Implement navigation from thread list
-- [x] Fix navigation crash
-
-#### ✅ PIN Authentication (COMPLETE - 2026-01-31)
-- [x] Create `AuthRepository` interface
-- [x] Implement `AuthRepositoryImpl`
-- [x] Set up `SecurePreferences` with EncryptedSharedPreferences
-- [x] Create `PinSetupScreen.kt` with confirmation flow
-- [x] Create `PinLockScreen.kt` with auto-verify
-- [x] Create `PinSetupViewModel.kt`
-- [x] Create `PinLockViewModel.kt`
-- [x] Implement SHA-256 hashing with UUID salt
-- [x] Add PIN verification logic
-- [x] Wire up authentication in NavGraph
-- [x] Use Hilt EntryPoint for Compose access
-- [x] Determine start destination based on PIN state
-- [x] Update RepositoryModule with AuthRepository binding
-
-**Files Added (8 new files)**:
-- `AuthRepository.kt` (domain interface)
-- `AuthRepositoryImpl.kt` (data implementation)
-- `SecurePreferences.kt` (encrypted storage wrapper)
-- `PinSetupScreen.kt` (UI)
-- `PinSetupViewModel.kt`
-- `PinLockScreen.kt` (UI)
-- `PinLockViewModel.kt`
-- Updated `NavGraph.kt` (complete rewrite with auth flow)
-
-**Completion Date**: 2026-01-31 (Same day as project creation!)
-**Total Week 1 Files**: 37 Kotlin files
-**Total Week 1 Commits**: 17 (pushed to GitHub main branch)
-**Git Status**: ✅ All Week 1 commits pushed to remote
-
----
-
-### Week 2, Day 1: Enhancements COMPLETE ✅ (2026-01-31)
-
-#### 🔧 Message Capture Improvements
-- [x] **Deduplication System**
-  - Added `messageHash` field to MessageEntity
-  - Implemented hash generation from threadId + sender + content + timestamp
-  - Added unique database index on (threadId, messageHash)
-  - Changed insert strategy to IGNORE to prevent duplicates
-
-- [x] **Edge Case Handling**
-  - Added `MessageType` enum (TEXT, IMAGE, VIDEO, DOCUMENT, AUDIO, LOCATION, CONTACT, STICKER, DELETED, SYSTEM, UNKNOWN)
-  - Added `isDeleted` boolean flag to track deleted messages
-  - Implemented pattern matching for deleted, media, and system messages
-  - Enhanced notification parser with 3 fallback formats
-  - Added WhatsApp Business package support
-
-- [x] **Error Handling & Logging**
-  - Comprehensive try-catch blocks in notification listener
-  - Detailed Timber logging throughout parsing pipeline
-  - Graceful fallback for malformed notifications
-
-#### 🎨 UI/UX Enhancements
-- [x] **Pull-to-Refresh** - Added Material 3 PullToRefreshContainer
-- [x] **Loading States** - ThreadListUiState & ThreadDetailUiState (Loading, Success, Error)
-- [x] **Animations** - AnimatedVisibility, animateContentSize with spring animations
-- [x] **Message Styling** - Color-coded messages, type indicators with emojis
-- [x] **Onboarding** - Created WelcomeScreen.kt for Week 3
-
-#### 🗄️ Database Updates
+#### Database Updates ✅
 - [x] Updated schema version from 1 to 2
 - [x] Added MessageType TypeConverter
 - [x] Added messageHash, messageType, isDeleted fields
 
-**Files Modified**: 10 files
-**Files Created**: 1 file (WelcomeScreen.kt)
+**Files Modified**: 10
+**Files Created**: 1
 **Completion Date**: 2026-01-31
 
 ---
 
 ### Week 3: Onboarding Flow & UI Polish (COMPLETE - 2026-01-31)
 
-#### ✅ Onboarding Flow
-- [x] Create PreferencesRepository for first-launch detection
-- [x] Implement DataStore Preferences
+#### Onboarding Flow ✅
+- [x] Create PreferencesRepository with DataStore
+- [x] Implement first-launch detection
 - [x] Create PermissionExplanationScreen
 - [x] Wire up WelcomeScreen into NavGraph
-- [x] Add smart navigation logic (first launch → welcome → permission → PIN)
-- [x] Update PinSetupViewModel to mark onboarding complete
+- [x] Smart navigation: Welcome → Permission → PIN → App
+- [x] Mark onboarding complete in PinSetupViewModel
 
-#### ✅ Pull-to-Refresh
+#### Pull-to-Refresh ✅
 - [x] Add Accompanist SwipeRefresh dependency
-- [x] Implement refresh functionality in ThreadListViewModel
+- [x] Implement refresh in ThreadListViewModel
 - [x] Integrate SwipeRefresh in ThreadListScreen
 - [x] Add isRefreshing state management
 
-#### ✅ UI Polish
-- [x] Fix deprecated icon warnings (AutoMirrored versions)
+#### UI Polish ✅
+- [x] Fix deprecated icons (AutoMirrored versions for RTL)
 - [x] Convert thread items to Material 3 Cards
 - [x] Add elevation and pressed states
 - [x] Improve spacing and typography
 - [x] Remove dividers, use card spacing
-- [x] Better visual hierarchy
 
-#### ✅ Week 4 Preparation
+#### Week 4 Preparation ✅
 - [x] Create AIModel domain model
 - [x] Create DownloadStatus and ModelDownloadState
 - [x] Design ModelDownloadScreen UI
-- [x] Create ModelCard and ModelSpec components
-- [x] Add sample models for UI testing
 
-#### ✅ Build Fixes
+#### Build Fixes ✅
 - [x] Add DataStore Preferences dependency
 - [x] Update ProGuard rules for Google Tink
 - [x] Fix R8 minification errors
-- [x] Resolve type inference issues
 
+**Files Modified**: 9
+**Files Created**: 5
 **Completion Date**: 2026-01-31
-**Files Modified**: 9 files
-**Files Created**: 5 files
-**Git Status**: Ready to commit
+
+---
+
+### Week 4: Model Download System (COMPLETE - 2026-01-31)
+
+#### Model Repository & Database ✅
+- [x] Create AIModelEntity and AIModelDao
+- [x] Implement ModelRepository interface
+- [x] Create ModelRepositoryImpl with file management
+- [x] Update AppDatabase to version 3
+- [x] Add AIModelDao to DatabaseModule
+
+#### Storage Management ✅
+- [x] Create StorageHelper utility (space calculation, location management)
+- [x] Implement StorageLocationScreen with visual selection
+- [x] Real-time available space display (GB/MB with usage bars)
+- [x] Intelligent storage location recommendation
+- [x] Low storage warnings (<2GB threshold)
+- [x] Add storage preferences to PreferencesRepository
+
+#### Download Infrastructure ✅
+- [x] Create ModelDownloadManager with OkHttp
+- [x] Implement WiFi-only check with user override
+- [x] Add NetworkHelper utility (WiFi/mobile detection)
+- [x] Create NetworkModule for OkHttpClient
+- [x] Implement resume support (HTTP Range headers)
+- [x] Add pause/resume/cancel functionality
+- [x] Implement MD5 checksum validation
+- [x] Add progress tracking with StateFlow (throttled to 1%)
+- [x] 10% storage buffer requirement
+
+#### UI Integration ✅
+- [x] Create ModelDownloadViewModel with download orchestration
+- [x] Update ModelDownloadScreen with ViewModel
+- [x] Add WiFi-only toggle chip
+- [x] Implement real-time progress display
+- [x] Add pause/resume buttons
+- [x] Wire up to navigation graph (PIN → Storage → Model → App)
+- [x] Integrate storage location picker in onboarding
+
+#### Default Models (HuggingFace) ✅
+- [x] TinyLlama 1.1B (700MB, 4GB RAM, Fast) - Recommended
+- [x] Phi-2 2.7B (1.8GB, 6GB RAM, Medium)
+- [x] Gemma 2B (1.4GB, 4GB RAM, Fast)
+
+**Files Modified**: 7
+**Files Created**: 13
+**Completion Date**: 2026-01-31
 
 ---
 
 ## 🚧 In Progress
 
-### Week 4: Model Download (Next)
+### Week 5: AI Integration (Next)
 
-#### Current Tasks
-- [ ] Implement ModelDownloadManager service
-- [ ] Add OkHttp download with progress tracking
-- [ ] Create ModelRepository
-- [ ] Wire up ModelDownloadScreen to navigation
+#### Upcoming Tasks
+- [ ] Integrate llama-cpp-android library
+- [ ] Create AIEngine abstraction
+- [ ] Implement model loading from downloaded files
+- [ ] Create summarization prompts
+- [ ] Implement inference pipeline
+- [ ] Parse AI responses
+- [ ] Build summary display UI
+- [ ] Wire up "Summarize Now" button
 
 ---
 
 ## 📋 Upcoming Tasks
 
-### Week 4: Model Download
-- [ ] Create `ModelDownloadManager`
-- [ ] Implement OkHttp download with progress
-- [ ] Add download UI screen
-- [ ] Implement checksum validation
-- [ ] Store model in app files
-- [ ] Add retry logic for failed downloads
-
 ### Week 5: AI Integration (Critical Week)
-- [ ] Integrate llama-cpp-android library
-- [ ] Create `AIEngine` abstraction
-- [ ] Implement `LlamaCppEngine`
-- [ ] Load TinyLlama model
-- [ ] Create summarization prompt template
-- [ ] Implement inference pipeline
-- [ ] Parse JSON response from model
+- [ ] Integrate llama-cpp-android library (JitPack or direct)
+- [ ] Create `AIEngine` abstraction layer
+- [ ] Implement `LlamaCppEngine` for TinyLlama
+- [ ] Load GGUF model from downloaded files
+- [ ] Create summarization prompt templates
+- [ ] Implement inference pipeline with progress
+- [ ] Parse JSON/text responses from model
 - [ ] Create `GenerateSummaryUseCase`
-- [ ] Build summary display screen
+- [ ] Build SummaryDisplayScreen
 - [ ] Add error handling and timeouts
+- [ ] Test end-to-end summarization flow
 
 ### Week 6: Testing & Polish
-- [ ] End-to-end testing
-- [ ] Performance optimization
+- [ ] End-to-end testing (onboarding → capture → download → summarize)
+- [ ] Performance optimization (memory, battery, inference speed)
 - [ ] UI polish and animations
 - [ ] Bug fixes
 - [ ] Build signed APK
-- [ ] Prepare beta distribution
+- [ ] Prepare beta distribution (APK via email/Drive)
+- [ ] Create user guide
+- [ ] Final testing with 5 parent beta testers
 
 ---
 
@@ -284,10 +232,11 @@
 ### Infrastructure: 100% ✅
 - Gradle: ✅ Complete
 - Hilt DI: ✅ Complete
-- Database: ✅ Complete
+- Database: ✅ Complete (version 3)
 - Navigation: ✅ Complete
+- Network: ✅ Complete
 
-### Features: 60% ✅
+### Features: 80% ✅
 - Message Capture: ✅ Implemented & TESTED
 - Thread List: ✅ Complete
 - Thread Detail: ✅ Complete
@@ -295,10 +244,11 @@
 - Permission UI: ✅ Complete
 - Onboarding: ✅ Complete
 - Pull-to-Refresh: ✅ Complete
-- Model Download: 🚧 UI only (Week 4 pending)
+- Model Download: ✅ Complete (OkHttp, pause/resume, checksum)
+- Storage Management: ✅ Complete
 - AI Summarization: ❌ Not started (Week 5)
 
-### UI/UX: 80% ✅
+### UI/UX: 90% ✅
 - Theme: ✅ Complete
 - Thread List: ✅ Complete (polished with cards)
 - Thread Detail: ✅ Complete
@@ -307,9 +257,10 @@
 - Permission Card: ✅ Complete
 - Welcome Screen: ✅ Complete
 - Permission Explanation: ✅ Complete
-- Model Download UI: ✅ Complete (no backend)
+- Storage Location Picker: ✅ Complete
+- Model Download UI: ✅ Complete (with progress tracking)
 - Summary Display: ❌ Not started (Week 5)
-- Settings: ❌ Not started
+- Settings: ❌ Not needed for I1
 
 ---
 
@@ -326,7 +277,7 @@
 | **Week 1 COMPLETE** | **Week 1** | **✅ DONE** | **2026-01-31** |
 | **Week 2 COMPLETE** | **Week 2** | **✅ DONE** | **2026-01-31** |
 | **Week 3 COMPLETE** | **Week 3** | **✅ DONE** | **2026-01-31** |
-| Model Download | Week 4, Day 7 | 📅 Scheduled | - |
+| **Week 4 COMPLETE** | **Week 4** | **✅ DONE** | **2026-01-31** |
 | AI Summarization | Week 5, Day 7 | 📅 Scheduled | - |
 | Beta Release | Week 6, Day 7 | 📅 Scheduled | - |
 
@@ -344,110 +295,126 @@
 - **Workaround**: None needed for I1 beta (targeting Android 12-14)
 - **Future Fix Options**:
   1. Wait for SQLCipher 4.6+ with 16KB support
-  2. Switch to Android Jetpack Security's EncryptedFile (if SQLCipher not updated)
+  2. Switch to Android Jetpack Security's EncryptedFile (if needed)
   3. Add gradle configuration for page alignment
+
+### Week 4 Notes
+**Accompanist SwipeRefresh Deprecation**
+- **Issue**: Accompanist will migrate to Material3 PullToRefresh
+- **Impact**: Works perfectly now, migration needed later
+- **Status**: Monitoring Material3 updates
+- **Action**: Will migrate when Material3 PullToRefresh is stable
 
 ---
 
 ## 📝 Notes & Decisions
 
 ### 2026-01-31: Initial Setup
-- **AI Model**: Chose TinyLlama 1.1B Q4_K_M (~700MB) instead of Phi-2 for faster iteration
-- **Database**: Using SQLCipher with passphrase derived from Android ID
-- **Min SDK**: Set to API 31 (Android 12) based on user requirement
+- **AI Model**: TinyLlama 1.1B Q4_K_M (~700MB) - fastest iteration
+- **Database**: SQLCipher with passphrase from Android ID
+- **Min SDK**: API 31 (Android 12) per user requirement
 - **Package**: `com.summarizer.app`
 - **License**: MIT
 - **Beta Testers**: 5 parents
 - **Distribution**: APK via email/Google Drive
 
+### Week 2 Decisions
+**Message Handling**:
+- Deleted messages: Visible with styling, excluded from summaries (Option C)
+- System messages: Visible for context, excluded from summaries (Option C)
+- Media messages: Simple emoji indicators (Option A)
+- Database migrations: Destructive for I1, proper for production (Option A → C)
+- WhatsApp Business: Code supports, rely on beta feedback (Option B)
+
+### Week 4 Decisions (User-Confirmed)
+**Storage Management**:
+- Storage location: User picks with visual space display ✅
+- Download network: WiFi-only default with user override toggle ✅
+- Model deletion: Manual deletion only (user controls) ✅
+- Implementation scope: Full OkHttp + progress + pause/resume (Option A) ✅
+- Background downloads: Deferred to Week 5 (if time permits)
+
 ### Implementation Decisions
 - **Repository Pattern**: Clean separation between data and domain layers
-- **Hilt**: Chosen over Koin for official Google support
-- **Compose**: Declarative UI for modern development
+- **Hilt**: Official Google DI framework
+- **Compose**: Declarative UI with Material 3
 - **SQLCipher**: Database encryption for privacy
-- **Notification Listener**: Most reliable way to capture WhatsApp messages
-
----
-
-## 🚀 Next Actions (Week 2)
-
-1. **Test on physical device** (Android 12+)
-2. **Refine message parsing** for edge cases
-3. **Add message deduplication** logic
-4. **Test with various WhatsApp group formats**
-5. **Implement comprehensive error handling**
-6. **Start planning model download UI** (for Week 4)
+- **Notification Listener**: Most reliable WhatsApp message capture
+- **DataStore**: Type-safe preferences over SharedPreferences
+- **OkHttp**: Robust download with resume support
+- **StateFlow**: Reactive state management
 
 ---
 
 ## 📈 Velocity Tracking
 
 ### Week 1 Velocity 🚀
-- **Planned**: Entire Week 1 (7 days of work)
-- **Completed**: 100% of Week 1 milestones
+- **Planned**: 7 days of work
+- **Completed**: 100% of milestones
 - **Actual Time**: 1 day (2026-01-31)
-- **Velocity**: 700% (7x faster than planned!)
-- **Status**: EXTREMELY ahead of schedule ✅✅✅
+- **Velocity**: 700% (7x faster!)
 
 ### Week 2 Velocity 🚀
-- **Planned**: Entire Week 2 (7 days of work)
-- **Completed**: 100% of Week 2 milestones
+- **Planned**: 7 days of work
+- **Completed**: 100% of milestones
 - **Actual Time**: 1 day (2026-01-31)
-- **Velocity**: 700% (7x faster than planned!)
-- **Status**: EXTREMELY ahead of schedule ✅✅✅
+- **Velocity**: 700% (7x faster!)
 
 ### Week 3 Velocity 🚀
-- **Planned**: Entire Week 3 (7 days of work)
-- **Completed**: 100% of Week 3 milestones
+- **Planned**: 7 days of work
+- **Completed**: 100% of milestones
 - **Actual Time**: 1 day (2026-01-31)
-- **Velocity**: 700% (7x faster than planned!)
-- **Status**: EXTREMELY ahead of schedule ✅✅✅
+- **Velocity**: 700% (7x faster!)
 
-**Achievement Unlocked**: Completed Weeks 1, 2, and 3 in a single day!
+### Week 4 Velocity 🚀
+- **Planned**: 7 days of work
+- **Completed**: 100% of milestones
+- **Actual Time**: 1 day (2026-01-31)
+- **Velocity**: 700% (7x faster!)
+
+**Achievement Unlocked**: Completed 4 weeks of work in ONE day! 🎉🎉🎉🎉
 
 ---
 
 ## 🎉 Achievements
 
-### Weeks 1, 2 & 3 Complete! 🚀🚀🚀
-- ✅ Complete project foundation in 1 day
-- ✅ 37 Kotlin source files created
-- ✅ Full MVVM + Clean Architecture implemented
-- ✅ Database encryption configured (SQLCipher)
-- ✅ WhatsApp notification listener working
-- ✅ Message capture VERIFIED with real WhatsApp
-- ✅ Thread list displaying captured threads
-- ✅ Thread detail screen with message history
-- ✅ Complete PIN authentication system
-- ✅ Permission management UI
-- ✅ Navigation flow complete
-- ✅ First build successful
-- ✅ App running on emulator
-- ✅ All Week 1, 2, and 3 milestones achieved in ONE day
-- ✅ Complete onboarding flow implemented
+### Weeks 1-4 Complete! 🚀🚀🚀🚀
+- ✅ 60 Kotlin source files
+- ✅ Full MVVM + Clean Architecture
+- ✅ Database encryption (SQLCipher, version 3)
+- ✅ WhatsApp notification capture VERIFIED
+- ✅ Complete PIN authentication
+- ✅ Onboarding flow (Welcome → Permission → PIN → Storage → Model → App)
 - ✅ Pull-to-refresh functionality
-- ✅ Polished Material 3 UI with cards
-- ✅ Week 4 UI components ready
+- ✅ Material 3 UI polish
+- ✅ Model download system (OkHttp, pause/resume, checksum)
+- ✅ Storage management (internal/external selection)
+- ✅ Network awareness (WiFi-only with override)
+- ✅ All Week 1-4 milestones in ONE day
 
 ### Technical Achievements
-- 🔐 **Security**: SHA-256 PIN hashing with salt
-- 🔐 **Encryption**: EncryptedSharedPreferences + SQLCipher
-- 🎨 **Modern UI**: Material 3 + Jetpack Compose
-- 🏗️ **Architecture**: Clean separation of concerns
+- 🔐 **Security**: SHA-256 PIN + SQLCipher + EncryptedSharedPreferences
+- 🎨 **Modern UI**: Material 3 + Jetpack Compose + Animations
+- 🏗️ **Architecture**: Clean Architecture + Repository Pattern
 - 🔧 **DI**: Hilt fully configured
-- 📱 **UX**: Auto-permission detection, smooth navigation
+- 📥 **Downloads**: OkHttp + Resume support + Progress tracking
+- 📂 **Storage**: User-controlled location + Space monitoring
+- 🌐 **Network**: WiFi/mobile detection + User override
+- 📱 **UX**: Smooth navigation + Visual feedback
 
 ### Stats
-- **Kotlin Files**: 42
-- **Documentation**: 16 files (added WEEK2_SUMMARY, WEEK3_SUMMARY)
-- **Git Commits**: 17 (Week 3 pending)
-- **Build Status**: ✅ Success (debug + release)
-- **Tests Passed**: Manual verification complete
-- **Features Working**: Message capture, thread list, thread detail, PIN auth, onboarding, pull-to-refresh
+- **Kotlin Files**: 60+
+- **Documentation**: 18 files (including WEEK2_SUMMARY, WEEK3_SUMMARY, WEEK4_SUMMARY)
+- **Git Commits**: 19 (all pushed to main)
+- **Build Status**: ✅ Debug + Release passing
+- **Database Version**: 3
+- **Tests**: Manual verification complete
+- **Features Working**: Message capture, threading, PIN auth, onboarding, model download
 
 ---
 
-**Weeks 1, 2 & 3 Summary**: ALL COMPLETE 🎉🎉🎉
-**Next Milestone**: Week 4 - Model Download Implementation
-**Last Commit**: Week 3 - Onboarding flow & UI polish
-**Status**: Ready for Week 4 AI model download
+**Summary**: Weeks 1-4 ALL COMPLETE 🎉🎉🎉🎉
+**Next Milestone**: Week 5 - AI Integration with llama.cpp
+**Last Commit**: Week 4 - Model download system
+**Status**: Ready for AI model integration
+**Progress**: 67% of I1 MVP complete
