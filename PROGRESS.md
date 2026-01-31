@@ -94,11 +94,14 @@
 
 ### Week 1, Days 2-7: Core Features
 
-#### TODO: Testing & Verification
-- [ ] Open project in Android Studio
-- [ ] Complete Gradle sync
-- [ ] Run first build
-- [ ] Test on Android 12 device
+#### ✅ Testing & Verification (COMPLETE - 2026-01-31)
+- [x] Open project in Android Studio
+- [x] Complete Gradle sync
+- [x] Run first build
+- [x] Fixed launcher icon issue
+- [x] App running on emulator
+- [x] Empty state displaying correctly
+- [ ] Test on Android 12 physical device (next)
 - [ ] Grant notification permission
 - [ ] Test WhatsApp message capture
 - [ ] Verify messages appear in thread list
@@ -201,7 +204,7 @@
 | Milestone | Target | Status | Actual |
 |-----------|--------|--------|--------|
 | Project Setup | Week 1, Day 1 | ✅ Complete | 2026-01-31 |
-| First Build | Week 1, Day 2 | ⏳ Pending | - |
+| First Build | Week 1, Day 2 | ✅ Complete | 2026-01-31 |
 | Message Capture Working | Week 1, Day 3 | ⏳ Pending | - |
 | Thread Detail Screen | Week 1, Day 5 | ⏳ Pending | - |
 | PIN Authentication | Week 1, Day 7 | ⏳ Pending | - |
