@@ -1,8 +1,10 @@
 package com.summarizer.app.di
 
+import com.summarizer.app.data.repository.AuthRepositoryImpl
 import com.summarizer.app.data.repository.MessageRepositoryImpl
 import com.summarizer.app.data.repository.SummaryRepositoryImpl
 import com.summarizer.app.data.repository.ThreadRepositoryImpl
+import com.summarizer.app.domain.repository.AuthRepository
 import com.summarizer.app.domain.repository.MessageRepository
 import com.summarizer.app.domain.repository.SummaryRepository
 import com.summarizer.app.domain.repository.ThreadRepository
@@ -33,4 +35,10 @@ abstract class RepositoryModule {
     abstract fun bindSummaryRepository(
         summaryRepositoryImpl: SummaryRepositoryImpl
     ): SummaryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAuthRepository(
+        authRepositoryImpl: AuthRepositoryImpl
+    ): AuthRepository
 }
