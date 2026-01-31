@@ -1,5 +1,10 @@
 package com.summarizer.app.ui.screens.threads
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,7 +33,7 @@ fun ThreadListScreen(
     viewModel: ThreadListViewModel = hiltViewModel(),
     onThreadClick: (String) -> Unit
 ) {
-    val threads by viewModel.threads.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var hasPermission by remember { mutableStateOf(PermissionHelper.hasNotificationListenerPermission(context)) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -63,27 +68,45 @@ fun ThreadListScreen(
                 .padding(paddingValues)
         ) {
             // Show permission card if permission not granted
-            if (!hasPermission) {
+            AnimatedVisibility(
+                visible = !hasPermission,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
                 PermissionCard()
             }
 
-            // Show threads or empty state
-            if (threads.isEmpty()) {
-                EmptyState(
-                    modifier = Modifier.weight(1f),
-                    hasPermission = hasPermission
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(threads) { thread ->
-                        ThreadItem(
-                            thread = thread,
-                            onClick = { onThreadClick(thread.threadId) }
+            // Show content based on UI state
+            when (val state = uiState) {
+                is ThreadListUiState.Loading -> {
+                    LoadingState(modifier = Modifier.weight(1f))
+                }
+                is ThreadListUiState.Success -> {
+                    if (state.threads.isEmpty()) {
+                        EmptyState(
+                            modifier = Modifier.weight(1f),
+                            hasPermission = hasPermission
                         )
-                        Divider()
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 16.dp)
+                        ) {
+                            items(state.threads, key = { it.threadId }) { thread ->
+                                ThreadItem(
+                                    thread = thread,
+                                    onClick = { onThreadClick(thread.threadId) }
+                                )
+                                Divider()
+                            }
+                        }
                     }
+                }
+                is ThreadListUiState.Error -> {
+                    ErrorState(
+                        message = state.message,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
         }
@@ -181,6 +204,47 @@ fun ThreadItem(
             Text(
                 text = formatTimestamp(thread.lastMessageTimestamp),
                 style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+        }
+    }
+}
+
+@Composable
+fun LoadingState(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(48.dp),
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+@Composable
+fun ErrorState(
+    message: String,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(32.dp)
+        ) {
+            Text(
+                text = "Error",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.error
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
             )
         }

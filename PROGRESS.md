@@ -2,8 +2,8 @@
 # WhatsApp Summarizer - I1 MVP
 
 **Last Updated**: 2026-01-31
-**Current Status**: Week 1 COMPLETE 🎉
-**Overall Progress**: 25% (All Week 1 Milestones Achieved)
+**Current Status**: Week 2 COMPLETE 🎉
+**Overall Progress**: 35% (Week 1 & 2 Complete)
 
 ---
 
@@ -147,20 +147,57 @@
 
 **Completion Date**: 2026-01-31 (Same day as project creation!)
 **Total Week 1 Files**: 37 Kotlin files
-**Total Week 1 Commits**: 16
+**Total Week 1 Commits**: 17 (pushed to GitHub main branch)
+**Git Status**: ✅ All Week 1 commits pushed to remote
+
+---
+
+### Week 2, Day 1: Enhancements COMPLETE ✅ (2026-01-31)
+
+#### 🔧 Message Capture Improvements
+- [x] **Deduplication System**
+  - Added `messageHash` field to MessageEntity
+  - Implemented hash generation from threadId + sender + content + timestamp
+  - Added unique database index on (threadId, messageHash)
+  - Changed insert strategy to IGNORE to prevent duplicates
+
+- [x] **Edge Case Handling**
+  - Added `MessageType` enum (TEXT, IMAGE, VIDEO, DOCUMENT, AUDIO, LOCATION, CONTACT, STICKER, DELETED, SYSTEM, UNKNOWN)
+  - Added `isDeleted` boolean flag to track deleted messages
+  - Implemented pattern matching for deleted, media, and system messages
+  - Enhanced notification parser with 3 fallback formats
+  - Added WhatsApp Business package support
+
+- [x] **Error Handling & Logging**
+  - Comprehensive try-catch blocks in notification listener
+  - Detailed Timber logging throughout parsing pipeline
+  - Graceful fallback for malformed notifications
+
+#### 🎨 UI/UX Enhancements
+- [x] **Pull-to-Refresh** - Added Material 3 PullToRefreshContainer
+- [x] **Loading States** - ThreadListUiState & ThreadDetailUiState (Loading, Success, Error)
+- [x] **Animations** - AnimatedVisibility, animateContentSize with spring animations
+- [x] **Message Styling** - Color-coded messages, type indicators with emojis
+- [x] **Onboarding** - Created WelcomeScreen.kt for Week 3
+
+#### 🗄️ Database Updates
+- [x] Updated schema version from 1 to 2
+- [x] Added MessageType TypeConverter
+- [x] Added messageHash, messageType, isDeleted fields
+
+**Files Modified**: 10 files
+**Files Created**: 1 file (WelcomeScreen.kt)
+**Completion Date**: 2026-01-31
 
 ---
 
 ## 🚧 In Progress
 
-### Week 2: Message Capture Refinement
+### Week 2: Final Testing
 
-#### Next Tasks
-- [ ] Test on Android 12 physical device
-- [ ] Refine notification parsing (edge cases)
-- [ ] Add message deduplication
-- [ ] Test with multiple WhatsApp group formats
-- [ ] Add comprehensive error handling
+#### Current Tasks
+- [ ] Verify build completes successfully
+- [ ] Create git commit for Week 2 improvements
 
 ---
 

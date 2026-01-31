@@ -16,8 +16,11 @@ interface MessageDao {
     @Query("SELECT * FROM messages WHERE threadId = :threadId ORDER BY timestamp DESC LIMIT :limit")
     suspend fun getRecentMessagesForThread(threadId: String, limit: Int): List<MessageEntity>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(message: MessageEntity)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(message: MessageEntity): Long
+
+    @Query("SELECT * FROM messages WHERE messageHash = :messageHash LIMIT 1")
+    suspend fun getMessageByHash(messageHash: String): MessageEntity?
 
     @Query("SELECT COUNT(*) FROM messages WHERE threadId = :threadId")
     suspend fun getMessageCount(threadId: String): Int

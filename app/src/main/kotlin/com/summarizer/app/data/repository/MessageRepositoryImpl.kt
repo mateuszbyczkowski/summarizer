@@ -41,6 +41,9 @@ class MessageRepositoryImpl @Inject constructor(
         sender = sender,
         content = content,
         timestamp = timestamp,
+        messageHash = messageHash,
+        messageType = com.summarizer.app.domain.model.MessageType.valueOf(messageType.name),
+        isDeleted = isDeleted,
         createdAt = createdAt
     )
 
@@ -51,6 +54,9 @@ class MessageRepositoryImpl @Inject constructor(
         sender = sender,
         content = content,
         timestamp = timestamp,
+        messageHash = messageHash,
+        messageType = com.summarizer.app.data.local.entity.MessageType.valueOf(messageType.name),
+        isDeleted = isDeleted,
         createdAt = createdAt
     )
 }

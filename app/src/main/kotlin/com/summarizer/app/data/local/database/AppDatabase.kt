@@ -16,7 +16,7 @@ import com.summarizer.app.data.local.entity.ThreadEntity
         ThreadEntity::class,
         SummaryEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

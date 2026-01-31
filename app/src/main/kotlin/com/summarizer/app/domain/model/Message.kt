@@ -7,5 +7,22 @@ data class Message(
     val sender: String,
     val content: String,
     val timestamp: Long,
+    val messageHash: String = "",
+    val messageType: MessageType = MessageType.TEXT,
+    val isDeleted: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
 )
+
+enum class MessageType {
+    TEXT,
+    IMAGE,
+    VIDEO,
+    DOCUMENT,
+    AUDIO,
+    LOCATION,
+    CONTACT,
+    STICKER,
+    DELETED,
+    SYSTEM,
+    UNKNOWN
+}
