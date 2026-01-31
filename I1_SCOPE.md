@@ -374,14 +374,20 @@ data class ParticipantHighlight(
 ### Week 2: Message Capture
 **Goal**: Capture WhatsApp messages reliably
 
-- [ ] Implement NotificationListenerService
-- [ ] Parse WhatsApp notifications
-- [ ] Save messages to database
-- [ ] Auto-create threads
-- [ ] Test with real WhatsApp groups
-- [ ] Handle permission request in onboarding
+**COMPLETED (Week 1):**
+- [x] Implement NotificationListenerService
+- [x] Parse WhatsApp notifications (basic parsing)
+- [x] Save messages to database
+- [x] Auto-create threads
 
-**Deliverable**: Messages captured and stored
+**TODO (This Week):**
+- [ ] Test with real WhatsApp groups (verify parsing accuracy)
+- [ ] Handle permission request in onboarding
+- [ ] Refine message parsing (handle edge cases)
+- [ ] Add error handling and logging
+- [ ] Test on multiple group formats
+
+**Deliverable**: Messages captured and stored (basic version DONE, refinement needed)
 
 ---
 
