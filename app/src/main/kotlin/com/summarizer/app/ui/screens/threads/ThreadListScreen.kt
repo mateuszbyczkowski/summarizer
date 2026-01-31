@@ -7,15 +7,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.summarizer.app.domain.model.Thread
+import com.summarizer.app.util.PermissionHelper
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -26,6 +29,22 @@ fun ThreadListScreen(
     onThreadClick: (String) -> Unit
 ) {
     val threads by viewModel.threads.collectAsState()
+    val context = LocalContext.current
+    var hasPermission by remember { mutableStateOf(PermissionHelper.hasNotificationListenerPermission(context)) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Check permission when screen resumes (user might grant it in Settings)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasPermission = PermissionHelper.hasNotificationListenerPermission(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -38,20 +57,33 @@ fun ThreadListScreen(
             )
         }
     ) { paddingValues ->
-        if (threads.isEmpty()) {
-            EmptyState(modifier = Modifier.padding(paddingValues))
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-            ) {
-                items(threads) { thread ->
-                    ThreadItem(
-                        thread = thread,
-                        onClick = { onThreadClick(thread.threadId) }
-                    )
-                    Divider()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // Show permission card if permission not granted
+            if (!hasPermission) {
+                PermissionCard()
+            }
+
+            // Show threads or empty state
+            if (threads.isEmpty()) {
+                EmptyState(
+                    modifier = Modifier.weight(1f),
+                    hasPermission = hasPermission
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(threads) { thread ->
+                        ThreadItem(
+                            thread = thread,
+                            onClick = { onThreadClick(thread.threadId) }
+                        )
+                        HorizontalDivider()
+                    }
                 }
             }
         }
@@ -59,7 +91,10 @@ fun ThreadListScreen(
 }
 
 @Composable
-fun EmptyState(modifier: Modifier = Modifier) {
+fun EmptyState(
+    modifier: Modifier = Modifier,
+    hasPermission: Boolean = true
+) {
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -82,7 +117,11 @@ fun EmptyState(modifier: Modifier = Modifier) {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Messages from WhatsApp groups will appear here",
+                text = if (hasPermission) {
+                    "Messages from WhatsApp groups will appear here"
+                } else {
+                    "Grant notification access to start capturing messages"
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
             )
