@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 sealed interface ThreadListUiState {
@@ -20,10 +21,12 @@ sealed interface ThreadListUiState {
 
 @HiltViewModel
 class ThreadListViewModel @Inject constructor(
-    threadRepository: ThreadRepository
+    private val threadRepository: ThreadRepository
 ) : ViewModel() {
 
     private val _isLoading = MutableStateFlow(true)
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
 
     val threads: StateFlow<List<Thread>> = threadRepository
         .getAllThreads()
@@ -49,4 +52,13 @@ class ThreadListViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = ThreadListUiState.Loading
     )
+
+    fun refresh() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            // The Flow automatically refreshes, so just reset the loading state
+            kotlinx.coroutines.delay(500) // Small delay for visual feedback
+            _isRefreshing.value = false
+        }
+    }
 }

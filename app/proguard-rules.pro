@@ -33,3 +33,10 @@
 # SQLCipher
 -keep class net.sqlcipher.** { *; }
 -keep class net.sqlcipher.database.** { *; }
+
+# Google Tink (Encryption)
+-keep class com.google.crypto.tink.** { *; }
+-dontwarn com.google.crypto.tink.**
+
+# Google Error Prone annotations (used by Tink)
+-dontwarn com.google.errorprone.annotations.**

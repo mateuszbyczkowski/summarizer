@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.summarizer.app.domain.model.Thread
 import com.summarizer.app.util.PermissionHelper
 import java.text.SimpleDateFormat
@@ -34,6 +36,7 @@ fun ThreadListScreen(
     onThreadClick: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
     val context = LocalContext.current
     var hasPermission by remember { mutableStateOf(PermissionHelper.hasNotificationListenerPermission(context)) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -76,37 +79,42 @@ fun ThreadListScreen(
                 PermissionCard()
             }
 
-            // Show content based on UI state
-            when (val state = uiState) {
-                is ThreadListUiState.Loading -> {
-                    LoadingState(modifier = Modifier.weight(1f))
-                }
-                is ThreadListUiState.Success -> {
-                    if (state.threads.isEmpty()) {
-                        EmptyState(
-                            modifier = Modifier.weight(1f),
-                            hasPermission = hasPermission
-                        )
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(bottom = 16.dp)
-                        ) {
-                            items(state.threads, key = { it.threadId }) { thread ->
-                                ThreadItem(
-                                    thread = thread,
-                                    onClick = { onThreadClick(thread.threadId) }
-                                )
-                                Divider()
+            // Show content based on UI state with SwipeRefresh
+            SwipeRefresh(
+                state = rememberSwipeRefreshState(isRefreshing),
+                onRefresh = { viewModel.refresh() },
+                modifier = Modifier.weight(1f)
+            ) {
+                when (val state = uiState) {
+                    is ThreadListUiState.Loading -> {
+                        LoadingState(modifier = Modifier.fillMaxSize())
+                    }
+                    is ThreadListUiState.Success -> {
+                        if (state.threads.isEmpty()) {
+                            EmptyState(
+                                modifier = Modifier.fillMaxSize(),
+                                hasPermission = hasPermission
+                            )
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(vertical = 8.dp)
+                            ) {
+                                items(state.threads, key = { it.threadId }) { thread ->
+                                    ThreadItem(
+                                        thread = thread,
+                                        onClick = { onThreadClick(thread.threadId) }
+                                    )
+                                }
                             }
                         }
                     }
-                }
-                is ThreadListUiState.Error -> {
-                    ErrorState(
-                        message = state.message,
-                        modifier = Modifier.weight(1f)
-                    )
+                    is ThreadListUiState.Error -> {
+                        ErrorState(
+                            message = state.message,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
         }
@@ -127,7 +135,7 @@ fun EmptyState(
             modifier = Modifier.padding(32.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.Message,
+                imageVector = Icons.AutoMirrored.Filled.Message,
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
                 tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
@@ -152,60 +160,75 @@ fun EmptyState(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThreadItem(
     thread: Thread,
     onClick: () -> Unit
 ) {
-    Row(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        onClick = onClick,
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp,
+            pressedElevation = 8.dp
+        )
     ) {
-        // Thread icon/avatar
-        Surface(
-            modifier = Modifier.size(48.dp),
-            shape = MaterialTheme.shapes.medium,
-            color = MaterialTheme.colorScheme.primaryContainer
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    text = thread.threadName.take(1).uppercase(),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+            // Thread icon/avatar
+            Surface(
+                modifier = Modifier.size(56.dp),
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = thread.threadName.take(1).uppercase(),
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
             }
-        }
 
-        Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
-        // Thread info
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = thread.threadName,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "${thread.messageCount} messages",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
-        }
-
-        // Timestamp
-        Column(
-            horizontalAlignment = Alignment.End
-        ) {
-            Text(
-                text = formatTimestamp(thread.lastMessageTimestamp),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
+            // Thread info
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = thread.threadName,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "${thread.messageCount} messages",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    Text(
+                        text = "•",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                    )
+                    Text(
+                        text = formatTimestamp(thread.lastMessageTimestamp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+            }
         }
     }
 }

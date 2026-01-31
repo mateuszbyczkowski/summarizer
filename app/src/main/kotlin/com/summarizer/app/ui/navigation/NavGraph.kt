@@ -13,13 +13,18 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.summarizer.app.domain.repository.AuthRepository
+import com.summarizer.app.domain.repository.PreferencesRepository
 import com.summarizer.app.ui.screens.auth.PinLockScreen
 import com.summarizer.app.ui.screens.auth.PinSetupScreen
+import com.summarizer.app.ui.screens.onboarding.PermissionExplanationScreen
+import com.summarizer.app.ui.screens.onboarding.WelcomeScreen
 import com.summarizer.app.ui.screens.threads.ThreadDetailScreen
 import com.summarizer.app.ui.screens.threads.ThreadListScreen
 import dagger.hilt.android.EntryPointAccessors
 
 sealed class Screen(val route: String) {
+    object Welcome : Screen("welcome")
+    object PermissionExplanation : Screen("permission_explanation")
     object PinSetup : Screen("pin_setup")
     object PinLock : Screen("pin_lock")
     object ThreadList : Screen("thread_list")
@@ -33,18 +38,22 @@ fun NavGraph() {
     val navController = rememberNavController()
     val context = LocalContext.current
 
-    // Get AuthRepository from Hilt
-    val authRepository = remember {
+    // Get repositories from Hilt
+    val entryPoint = remember {
         EntryPointAccessors.fromApplication(
             context.applicationContext,
-            AuthEntryPoint::class.java
-        ).authRepository()
+            RepositoriesEntryPoint::class.java
+        )
     }
+    val authRepository = entryPoint.authRepository()
+    val preferencesRepository = entryPoint.preferencesRepository()
 
     var startDestination by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
+        val isFirstLaunch = preferencesRepository.isFirstLaunch()
         startDestination = when {
+            isFirstLaunch -> Screen.Welcome.route
             !authRepository.hasPin() -> Screen.PinSetup.route
             else -> Screen.PinLock.route
         }
@@ -55,6 +64,26 @@ fun NavGraph() {
             navController = navController,
             startDestination = startDestination!!
         ) {
+            composable(Screen.Welcome.route) {
+                WelcomeScreen(
+                    onContinueClick = {
+                        navController.navigate(Screen.PermissionExplanation.route) {
+                            popUpTo(Screen.Welcome.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            composable(Screen.PermissionExplanation.route) {
+                PermissionExplanationScreen(
+                    onContinueClick = {
+                        navController.navigate(Screen.PinSetup.route) {
+                            popUpTo(Screen.PermissionExplanation.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
             composable(Screen.PinSetup.route) {
                 PinSetupScreen(
                     onPinSet = {
@@ -101,6 +130,7 @@ fun NavGraph() {
 
 @dagger.hilt.EntryPoint
 @dagger.hilt.InstallIn(dagger.hilt.components.SingletonComponent::class)
-interface AuthEntryPoint {
+interface RepositoriesEntryPoint {
     fun authRepository(): AuthRepository
+    fun preferencesRepository(): PreferencesRepository
 }
