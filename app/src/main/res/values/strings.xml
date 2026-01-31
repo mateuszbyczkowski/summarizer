@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Summarizer</string>
+
+    <!-- Onboarding -->
+    <string name="welcome_title">Welcome to Summarizer</string>
+    <string name="welcome_subtitle">Never miss important school messages again</string>
+
+    <!-- Permissions -->
+    <string name="notification_permission_title">Notification Access Required</string>
+    <string name="notification_permission_message">Summarizer needs access to notifications to capture WhatsApp messages. Your messages stay private and are stored only on your device.</string>
+
+    <!-- Common -->
+    <string name="next">Next</string>
+    <string name="back">Back</string>
+    <string name="skip">Skip</string>
+    <string name="done">Done</string>
+    <string name="cancel">Cancel</string>
+    <string name="retry">Retry</string>
+</resources>
