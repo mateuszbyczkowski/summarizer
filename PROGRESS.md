@@ -213,7 +213,18 @@
 
 ## 🐛 Known Issues
 
-None yet (project just created)
+### Build Warnings
+
+**SQLCipher 16KB Page Size Compatibility**
+- **Issue**: `libsqlcipher.so` not aligned for 16KB page boundaries
+- **Impact**: Warning only - app works on current Android versions
+- **Deadline**: November 2025 for Android 15+ devices
+- **Status**: Monitoring SQLCipher updates
+- **Workaround**: None needed for I1 beta (targeting Android 12-14)
+- **Future Fix Options**:
+  1. Wait for SQLCipher 4.6+ with 16KB support
+  2. Switch to Android Jetpack Security's EncryptedFile (if SQLCipher not updated)
+  3. Add gradle configuration for page alignment
 
 ---
 
