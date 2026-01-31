@@ -150,14 +150,15 @@ Comprehensive functional and non-functional requirements:
 - WhatsApp message capture
 - Thread list view
 - On-demand summarization (manual only)
-- Single AI model: Phi-2 Q4_K_M from Hugging Face
+- Single AI model: TinyLlama 1.1B from Hugging Face
 
-**Week 1**: Project setup + foundation
-**Week 2**: Message capture implementation
-**Week 3**: Basic UI + thread list
-**Week 4**: Thread detail + model download
-**Week 5**: AI integration (llama.cpp + Phi-2)
-**Week 6**: Testing + polish for beta
+**Progress**:
+- ✅ **Week 1**: Project setup + foundation + PIN auth + message capture (COMPLETE 2026-01-31)
+- 🎯 **Week 2**: Message capture refinement + edge cases (CURRENT)
+- 📅 **Week 3**: Onboarding flow + UI polish
+- 📅 **Week 4**: Model download from Hugging Face
+- 📅 **Week 5**: AI integration (llama.cpp + TinyLlama)
+- 📅 **Week 6**: Testing + polish for beta
 
 **See [I1_SCOPE.md](./I1_SCOPE.md) for detailed I1 specifications.**
 
@@ -345,8 +346,8 @@ For questions about this project, please refer to the documentation files or con
 
 ---
 
-**Document Version**: 1.1
+**Document Version**: 1.2
 **Last Updated**: 2026-01-31
-**Project Status**: Development - Week 1 Day 1 Complete (15% overall)
-**Next Milestone**: First build and testing
+**Project Status**: Development - Week 1 COMPLETE 🎉 (25% overall)
+**Next Milestone**: Week 2 - Message capture refinement
 **Progress Tracking**: See [PROGRESS.md](./PROGRESS.md)
