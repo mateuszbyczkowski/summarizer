@@ -82,7 +82,7 @@ fun ThreadListScreen(
                             thread = thread,
                             onClick = { onThreadClick(thread.threadId) }
                         )
-                        HorizontalDivider()
+                        Divider()
                     }
                 }
             }
