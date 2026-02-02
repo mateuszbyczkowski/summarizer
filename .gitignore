@@ -83,6 +83,18 @@ lint-report_files/
 # AI Models (large files)
 app/src/main/assets/models/*.gguf
 
+# Secrets and credentials
+*.env
+*.env.*
+.env.local
+.env.*.local
+secrets.json
+credentials.json
+api-keys.txt
+*.pem
+*.p12
+*.key
+
 # Temporary files
 *.swp
 *~
