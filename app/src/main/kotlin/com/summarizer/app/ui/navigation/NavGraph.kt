@@ -20,6 +20,8 @@ import com.summarizer.app.ui.screens.models.ModelDownloadScreen
 import com.summarizer.app.ui.screens.models.StorageLocationScreen
 import com.summarizer.app.ui.screens.onboarding.PermissionExplanationScreen
 import com.summarizer.app.ui.screens.onboarding.WelcomeScreen
+import com.summarizer.app.ui.screens.settings.SettingsScreen
+import com.summarizer.app.ui.screens.summary.SummaryDisplayScreen
 import com.summarizer.app.ui.screens.threads.ThreadDetailScreen
 import com.summarizer.app.ui.screens.threads.ThreadListScreen
 import dagger.hilt.android.EntryPointAccessors
@@ -32,8 +34,12 @@ sealed class Screen(val route: String) {
     object ModelDownload : Screen("model_download")
     object PinLock : Screen("pin_lock")
     object ThreadList : Screen("thread_list")
+    object Settings : Screen("settings")
     object ThreadDetail : Screen("thread_detail/{threadId}") {
         fun createRoute(threadId: String) = "thread_detail/$threadId"
+    }
+    object SummaryDisplay : Screen("summary/{threadId}/{threadName}") {
+        fun createRoute(threadId: String, threadName: String) = "summary/$threadId/${java.net.URLEncoder.encode(threadName, "UTF-8")}"
     }
 }
 
@@ -91,34 +97,60 @@ fun NavGraph() {
             composable(Screen.PinSetup.route) {
                 PinSetupScreen(
                     onPinSet = {
-                        navController.navigate(Screen.StorageLocation.route) {
-                            popUpTo(Screen.PinSetup.route) { inclusive = true }
-                        }
+                        navController.navigate(Screen.StorageLocation.route)
                     }
                 )
             }
 
             composable(Screen.StorageLocation.route) {
+                val previousRoute = navController.previousBackStackEntry?.destination?.route
+                val isFromOnboarding = previousRoute == Screen.PinSetup.route ||
+                                       previousRoute == Screen.PermissionExplanation.route ||
+                                       previousRoute == Screen.Welcome.route
                 StorageLocationScreen(
                     onLocationSelected = { location ->
-                        navController.navigate(Screen.ModelDownload.route) {
-                            popUpTo(Screen.StorageLocation.route) { inclusive = true }
+                        if (isFromOnboarding) {
+                            navController.navigate(Screen.ModelDownload.route) {
+                                popUpTo(Screen.Welcome.route) { inclusive = true }
+                            }
+                        } else {
+                            navController.popBackStack()
                         }
+                    },
+                    onBackClick = if (!isFromOnboarding) {
+                        { navController.popBackStack() }
+                    } else {
+                        { navController.popBackStack() }
                     }
                 )
             }
 
             composable(Screen.ModelDownload.route) {
+                val isFromOnboarding = navController.previousBackStackEntry?.destination?.route == Screen.StorageLocation.route
                 ModelDownloadScreen(
                     onModelSelected = { model ->
-                        navController.navigate(Screen.ThreadList.route) {
-                            popUpTo(Screen.ModelDownload.route) { inclusive = true }
+                        if (isFromOnboarding) {
+                            navController.navigate(Screen.ThreadList.route) {
+                                popUpTo(Screen.ModelDownload.route) { inclusive = true }
+                            }
+                        } else {
+                            navController.popBackStack()
                         }
                     },
                     onSkip = {
-                        navController.navigate(Screen.ThreadList.route) {
-                            popUpTo(Screen.ModelDownload.route) { inclusive = true }
+                        if (isFromOnboarding) {
+                            navController.navigate(Screen.ThreadList.route) {
+                                popUpTo(Screen.ModelDownload.route) { inclusive = true }
+                            }
+                        } else {
+                            navController.popBackStack()
                         }
+                    },
+                    onBackClick = if (!isFromOnboarding) {
+                        { navController.popBackStack() }
+                    } else null,
+                    onStorageClick = {
+                        navController.navigate(Screen.StorageLocation.route)
                     }
                 )
             }
@@ -137,7 +169,16 @@ fun NavGraph() {
                 ThreadListScreen(
                     onThreadClick = { threadId ->
                         navController.navigate(Screen.ThreadDetail.createRoute(threadId))
+                    },
+                    onSettingsClick = {
+                        navController.navigate(Screen.Settings.route)
                     }
+                )
+            }
+
+            composable(Screen.Settings.route) {
+                SettingsScreen(
+                    onBackPressed = { navController.popBackStack() }
                 )
             }
 
@@ -150,6 +191,28 @@ fun NavGraph() {
                 val threadId = backStackEntry.arguments?.getString("threadId") ?: ""
                 ThreadDetailScreen(
                     threadId = threadId,
+                    onBackClick = { navController.popBackStack() },
+                    onSummarizeClick = { threadId, threadName ->
+                        navController.navigate(Screen.SummaryDisplay.createRoute(threadId, threadName))
+                    }
+                )
+            }
+
+            composable(
+                route = Screen.SummaryDisplay.route,
+                arguments = listOf(
+                    navArgument("threadId") { type = NavType.StringType },
+                    navArgument("threadName") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val threadId = backStackEntry.arguments?.getString("threadId") ?: ""
+                val threadName = java.net.URLDecoder.decode(
+                    backStackEntry.arguments?.getString("threadName") ?: "",
+                    "UTF-8"
+                )
+                SummaryDisplayScreen(
+                    threadId = threadId,
+                    threadName = threadName,
                     onBackClick = { navController.popBackStack() }
                 )
             }
