@@ -4,9 +4,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Speed
@@ -31,7 +35,9 @@ import com.summarizer.app.util.StorageHelper
 fun ModelDownloadScreen(
     viewModel: ModelDownloadViewModel = hiltViewModel(),
     onModelSelected: (AIModel) -> Unit,
-    onSkip: () -> Unit
+    onSkip: () -> Unit,
+    onBackClick: (() -> Unit)? = null,
+    onStorageClick: (() -> Unit)? = null
 ) {
     val models by viewModel.models.collectAsState()
     val downloadStates by viewModel.downloadStates.collectAsState()
@@ -44,7 +50,29 @@ fun ModelDownloadScreen(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                ),
+                navigationIcon = {
+                    if (onBackClick != null) {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                },
+                actions = {
+                    if (onStorageClick != null) {
+                        IconButton(onClick = onStorageClick) {
+                            Icon(
+                                imageVector = Icons.Default.FolderOpen,
+                                contentDescription = "Storage Settings",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                }
             )
         }
     ) { paddingValues ->
@@ -106,7 +134,11 @@ fun ModelDownloadScreen(
                         onDownloadClick = { viewModel.downloadModel(model) },
                         onPauseClick = { viewModel.pauseDownload(model.id) },
                         onResumeClick = { viewModel.resumeDownload(model.id) },
-                        onSelectClick = { onModelSelected(model) }
+                        onSelectClick = {
+                            viewModel.preloadModel(model)  // Pre-load model in background
+                            onModelSelected(model)
+                        },
+                        onDeleteClick = { viewModel.deleteModel(model.id) }
                     )
                 }
             }
@@ -132,8 +164,11 @@ fun ModelCard(
     onDownloadClick: () -> Unit,
     onPauseClick: () -> Unit,
     onResumeClick: () -> Unit,
-    onSelectClick: () -> Unit
+    onSelectClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -233,8 +268,40 @@ fun ModelCard(
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }
-                            Button(onClick = onSelectClick) {
-                                Text("Use This Model")
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Button(onClick = onSelectClick) {
+                                    Text("Use This Model")
+                                }
+                                Box {
+                                    IconButton(onClick = { showMenu = true }) {
+                                        Icon(
+                                            imageVector = Icons.Default.MoreVert,
+                                            contentDescription = "More options"
+                                        )
+                                    }
+                                    DropdownMenu(
+                                        expanded = showMenu,
+                                        onDismissRequest = { showMenu = false }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text("Delete Model") },
+                                            onClick = {
+                                                showMenu = false
+                                                onDeleteClick()
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = Icons.Default.Delete,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.error
+                                                )
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
                     } else {

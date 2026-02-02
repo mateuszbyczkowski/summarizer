@@ -47,7 +47,8 @@ class SummaryRepositoryImpl @Inject constructor(
         messageCount = messageCount,
         startTimestamp = startTimestamp,
         endTimestamp = endTimestamp,
-        generatedAt = generatedAt
+        generatedAt = generatedAt,
+        rawAIResponse = rawAIResponse
     )
 
     private fun Summary.toEntity() = SummaryEntity(
@@ -61,6 +62,7 @@ class SummaryRepositoryImpl @Inject constructor(
         messageCount = messageCount,
         startTimestamp = startTimestamp,
         endTimestamp = endTimestamp,
-        generatedAt = generatedAt
+        generatedAt = generatedAt,
+        rawAIResponse = rawAIResponse
     )
 }

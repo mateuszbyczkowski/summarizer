@@ -9,7 +9,9 @@ data class AIModel(
     val isDownloaded: Boolean = false,
     val isRecommended: Boolean = false,
     val minimumRAM: Int = 4, // GB
-    val estimatedSpeed: String = "Medium" // Fast, Medium, Slow
+    val estimatedSpeed: String = "Medium", // Fast, Medium, Slow
+    val localFilePath: String? = null,
+    val checksum: String? = null
 )
 
 enum class DownloadStatus {

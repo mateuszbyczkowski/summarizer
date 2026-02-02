@@ -26,6 +26,7 @@ import java.util.*
 fun ThreadDetailScreen(
     threadId: String,
     onBackClick: () -> Unit,
+    onSummarizeClick: (threadId: String, threadName: String) -> Unit,
     viewModel: ThreadDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -93,19 +94,19 @@ fun ThreadDetailScreen(
                                 }
                             }
 
-                            // Placeholder for "Summarize Now" button (Week 5)
+                            // Summarize Now button
                             Surface(
                                 modifier = Modifier.fillMaxWidth(),
                                 tonalElevation = 3.dp
                             ) {
                                 Button(
-                                    onClick = { /* TODO: Implement summarization in Week 5 */ },
+                                    onClick = { onSummarizeClick(threadId, threadName) },
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(16.dp),
-                                    enabled = false
+                                    enabled = state.messages.isNotEmpty()
                                 ) {
-                                    Text("Summarize Now (Coming Soon)")
+                                    Text("Summarize Now")
                                 }
                             }
                         }

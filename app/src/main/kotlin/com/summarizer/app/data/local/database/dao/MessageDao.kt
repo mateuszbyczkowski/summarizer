@@ -30,4 +30,7 @@ interface MessageDao {
 
     @Query("DELETE FROM messages WHERE timestamp < :cutoffTimestamp")
     suspend fun deleteMessagesBefore(cutoffTimestamp: Long)
+
+    @Query("UPDATE messages SET threadId = :newThreadId WHERE threadId = :oldThreadId")
+    suspend fun updateThreadId(oldThreadId: String, newThreadId: String)
 }

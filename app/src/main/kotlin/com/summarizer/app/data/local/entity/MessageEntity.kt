@@ -26,7 +26,8 @@ data class MessageEntity(
 ) {
     companion object {
         fun generateHash(threadId: String, sender: String, content: String, timestamp: Long): String {
-            return "${threadId}_${sender}_${content.take(100)}_${timestamp / 1000}".hashCode().toString()
+            // Use full millisecond timestamp to avoid hash collisions for rapid messages
+            return "${threadId}_${sender}_${content.take(100)}_$timestamp".hashCode().toString()
         }
     }
 }

@@ -1,8 +1,5 @@
 package com.summarizer.app.domain.model
 
-import com.summarizer.app.data.local.entity.ActionItem
-import com.summarizer.app.data.local.entity.ParticipantHighlight
-
 data class Summary(
     val id: Long = 0,
     val threadId: String,
@@ -14,5 +11,6 @@ data class Summary(
     val messageCount: Int,
     val startTimestamp: Long,
     val endTimestamp: Long,
-    val generatedAt: Long = System.currentTimeMillis()
+    val generatedAt: Long = System.currentTimeMillis(),
+    val rawAIResponse: String? = null  // Raw output from AI for debugging
 )

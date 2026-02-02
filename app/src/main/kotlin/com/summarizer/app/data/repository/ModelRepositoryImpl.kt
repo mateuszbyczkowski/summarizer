@@ -73,7 +73,9 @@ class ModelRepositoryImpl @Inject constructor(
             isDownloaded = isDownloaded,
             isRecommended = isRecommended,
             minimumRAM = minimumRAM,
-            estimatedSpeed = estimatedSpeed
+            estimatedSpeed = estimatedSpeed,
+            localFilePath = localFilePath,
+            checksum = checksum
         )
     }
 
@@ -87,7 +89,9 @@ class ModelRepositoryImpl @Inject constructor(
             isDownloaded = isDownloaded,
             isRecommended = isRecommended,
             minimumRAM = minimumRAM,
-            estimatedSpeed = estimatedSpeed
+            estimatedSpeed = estimatedSpeed,
+            localFilePath = localFilePath,
+            checksum = checksum
         )
     }
 }

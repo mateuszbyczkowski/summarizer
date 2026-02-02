@@ -3,6 +3,8 @@ package com.summarizer.app.data.local.entity
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.summarizer.app.domain.model.ActionItem
+import com.summarizer.app.domain.model.ParticipantHighlight
 
 @Entity(tableName = "summaries")
 data class SummaryEntity(
@@ -26,18 +28,8 @@ data class SummaryEntity(
     val messageCount: Int,
     val startTimestamp: Long,
     val endTimestamp: Long,
-    val generatedAt: Long = System.currentTimeMillis()
-)
+    val generatedAt: Long = System.currentTimeMillis(),
 
-@kotlinx.serialization.Serializable
-data class ActionItem(
-    val task: String,
-    val deadline: String? = null,
-    val mentionedBy: String? = null
-)
-
-@kotlinx.serialization.Serializable
-data class ParticipantHighlight(
-    val person: String,
-    val message: String
+    @ColumnInfo(name = "raw_ai_response")
+    val rawAIResponse: String? = null
 )

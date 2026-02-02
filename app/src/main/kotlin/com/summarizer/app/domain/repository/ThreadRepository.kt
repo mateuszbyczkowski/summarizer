@@ -10,4 +10,5 @@ interface ThreadRepository {
     suspend fun updateThread(thread: Thread)
     suspend fun deleteThread(threadId: String)
     suspend fun updateThreadStats(threadId: String, messageCount: Int, lastMessageTimestamp: Long)
+    suspend fun mergeDuplicateThreads()
 }

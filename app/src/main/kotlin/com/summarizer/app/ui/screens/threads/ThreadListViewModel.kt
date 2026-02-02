@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 sealed interface ThreadListUiState {
-    object Loading : ThreadListUiState
+    data object Loading : ThreadListUiState
     data class Success(val threads: List<Thread>) : ThreadListUiState
     data class Error(val message: String) : ThreadListUiState
 }
@@ -27,6 +27,16 @@ class ThreadListViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(true)
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
+
+    init {
+        // Merge any duplicate threads on startup
+        viewModelScope.launch {
+            threadRepository.mergeDuplicateThreads()
+            // Set loading to false after initial load
+            kotlinx.coroutines.delay(500)
+            _isLoading.value = false
+        }
+    }
 
     val threads: StateFlow<List<Thread>> = threadRepository
         .getAllThreads()
@@ -41,11 +51,8 @@ class ThreadListViewModel @Inject constructor(
         _isLoading
     ) { threadList, isLoading ->
         when {
-            isLoading && threadList.isEmpty() -> ThreadListUiState.Loading
-            else -> {
-                _isLoading.value = false
-                ThreadListUiState.Success(threadList)
-            }
+            isLoading -> ThreadListUiState.Loading
+            else -> ThreadListUiState.Success(threadList)
         }
     }.stateIn(
         scope = viewModelScope,

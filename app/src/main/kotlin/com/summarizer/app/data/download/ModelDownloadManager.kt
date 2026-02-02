@@ -58,14 +58,19 @@ class ModelDownloadManager @Inject constructor(
                     ?: StorageHelper.getInternalStorageInfo(context)
             }
 
+            Timber.d("Download storage check - Location: $storageLocation, Available: ${storageInfo.availableSpaceMB}MB, Required: ${expectedSizeMB}MB")
+
             // Check storage space
             if (!StorageHelper.hasEnoughSpace(expectedSizeMB, storageInfo.availableSpaceMB)) {
+                val requiredWithBuffer = (expectedSizeMB * 1.05).toLong()
+                val errorMsg = "Insufficient storage: ${storageInfo.availableSpaceMB}MB available, ${requiredWithBuffer}MB required (${expectedSizeMB}MB + 5% buffer)"
+                Timber.e(errorMsg)
                 updateDownloadState(
                     modelId,
                     DownloadStatus.FAILED,
-                    error = "Insufficient storage space"
+                    error = errorMsg
                 )
-                return@withContext Result.failure(Exception("Insufficient storage"))
+                return@withContext Result.failure(Exception(errorMsg))
             }
 
             // Create download directory

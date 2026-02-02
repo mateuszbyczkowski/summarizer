@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,7 +34,8 @@ import java.util.*
 @Composable
 fun ThreadListScreen(
     viewModel: ThreadListViewModel = hiltViewModel(),
-    onThreadClick: (String) -> Unit
+    onThreadClick: (String) -> Unit,
+    onSettingsClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
@@ -61,7 +63,16 @@ fun ThreadListScreen(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                ),
+                actions = {
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
             )
         }
     ) { paddingValues ->
@@ -79,15 +90,21 @@ fun ThreadListScreen(
                 PermissionCard()
             }
 
-            // Show content based on UI state with SwipeRefresh
+            // SwipeRefresh wraps the entire content
             SwipeRefresh(
                 state = rememberSwipeRefreshState(isRefreshing),
                 onRefresh = { viewModel.refresh() },
                 modifier = Modifier.weight(1f)
             ) {
+                // Show content based on UI state
                 when (val state = uiState) {
                     is ThreadListUiState.Loading -> {
-                        LoadingState(modifier = Modifier.fillMaxSize())
+                        // Don't show loading spinner when SwipeRefresh is active
+                        if (!isRefreshing) {
+                            LoadingState(modifier = Modifier.fillMaxSize())
+                        } else {
+                            Box(modifier = Modifier.fillMaxSize())
+                        }
                     }
                     is ThreadListUiState.Success -> {
                         if (state.threads.isEmpty()) {

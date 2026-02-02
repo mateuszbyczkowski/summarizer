@@ -19,7 +19,7 @@ import com.summarizer.app.data.local.entity.ThreadEntity
         SummaryEntity::class,
         AIModelEntity::class
     ],
-    version = 3,
+    version = 6,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

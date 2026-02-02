@@ -1,9 +1,9 @@
 package com.summarizer.app.data.local.database
 
 import androidx.room.TypeConverter
-import com.summarizer.app.data.local.entity.ActionItem
 import com.summarizer.app.data.local.entity.MessageType
-import com.summarizer.app.data.local.entity.ParticipantHighlight
+import com.summarizer.app.domain.model.ActionItem
+import com.summarizer.app.domain.model.ParticipantHighlight
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -27,31 +27,31 @@ class Converters {
 
     @TypeConverter
     fun fromStringList(value: List<String>): String {
-        return json.encodeToString(value)
+        return json.encodeToString<List<String>>(value)
     }
 
     @TypeConverter
     fun toStringList(value: String): List<String> {
-        return json.decodeFromString(value)
+        return json.decodeFromString<List<String>>(value)
     }
 
     @TypeConverter
     fun fromActionItemList(value: List<ActionItem>): String {
-        return json.encodeToString(value)
+        return json.encodeToString<List<ActionItem>>(value)
     }
 
     @TypeConverter
     fun toActionItemList(value: String): List<ActionItem> {
-        return json.decodeFromString(value)
+        return json.decodeFromString<List<ActionItem>>(value)
     }
 
     @TypeConverter
     fun fromParticipantHighlightList(value: List<ParticipantHighlight>): String {
-        return json.encodeToString(value)
+        return json.encodeToString<List<ParticipantHighlight>>(value)
     }
 
     @TypeConverter
     fun toParticipantHighlightList(value: String): List<ParticipantHighlight> {
-        return json.decodeFromString(value)
+        return json.decodeFromString<List<ParticipantHighlight>>(value)
     }
 }

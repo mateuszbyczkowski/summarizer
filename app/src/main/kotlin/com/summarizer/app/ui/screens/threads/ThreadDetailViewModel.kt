@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 sealed interface ThreadDetailUiState {
-    object Loading : ThreadDetailUiState
+    data object Loading : ThreadDetailUiState
     data class Success(val messages: List<Message>) : ThreadDetailUiState
     data class Error(val message: String) : ThreadDetailUiState
 }

@@ -42,15 +42,25 @@ object StorageHelper {
 
     fun getExternalStorageInfo(context: Context): StorageInfo? {
         return if (isExternalStorageAvailable()) {
-            val externalDir = context.getExternalFilesDir(null) ?: return null
-            val stat = StatFs(externalDir.path)
+            // getExternalFilesDirs returns array: [0] = primary (usually internal), [1+] = removable SD card
+            val externalDirs = context.getExternalFilesDirs(null)
+
+            // Check if there's actual removable storage (index 1 or higher)
+            val removableDir = if (externalDirs.size > 1 && externalDirs[1] != null) {
+                externalDirs[1]
+            } else {
+                // No removable storage found
+                return null
+            }
+
+            val stat = StatFs(removableDir!!.path)
             val totalBytes = stat.totalBytes
             val availableBytes = stat.availableBytes
             val usedBytes = totalBytes - availableBytes
 
             StorageInfo(
                 location = StorageLocation.EXTERNAL,
-                path = externalDir.absolutePath,
+                path = removableDir.absolutePath,
                 totalSpaceMB = totalBytes / (1024 * 1024),
                 availableSpaceMB = availableBytes / (1024 * 1024),
                 usedSpaceMB = usedBytes / (1024 * 1024)
@@ -66,15 +76,24 @@ object StorageHelper {
     }
 
     fun hasEnoughSpace(requiredMB: Long, availableMB: Long): Boolean {
-        // Require 10% buffer on top of required space
-        val requiredWithBuffer = requiredMB * 1.1
+        // Require 5% buffer on top of required space (reduced from 10% for large model files)
+        val requiredWithBuffer = requiredMB * 1.05
         return availableMB >= requiredWithBuffer
     }
 
     fun getModelStorageDirectory(context: Context, location: StorageLocation): File {
         val baseDir = when (location) {
             StorageLocation.INTERNAL -> context.filesDir
-            StorageLocation.EXTERNAL -> context.getExternalFilesDir(null) ?: context.filesDir
+            StorageLocation.EXTERNAL -> {
+                // Get removable storage (SD card) if available
+                val externalDirs = context.getExternalFilesDirs(null)
+                if (externalDirs.size > 1 && externalDirs[1] != null) {
+                    externalDirs[1]!!
+                } else {
+                    // Fallback to internal if no removable storage
+                    context.filesDir
+                }
+            }
         }
         val modelDir = File(baseDir, "models")
         if (!modelDir.exists()) {

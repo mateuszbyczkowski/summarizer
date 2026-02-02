@@ -1,0 +1,243 @@
+package com.summarizer.app.data.ai
+
+import com.llamatik.GenStream
+import com.llamatik.LlamaBridge
+import com.summarizer.app.domain.ai.AIEngine
+import com.summarizer.app.domain.ai.AIEngineError
+import com.summarizer.app.domain.ai.GenerationEvent
+import com.summarizer.app.domain.ai.ModelInfo
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeout
+import timber.log.Timber
+import java.io.File
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlin.coroutines.resume
+
+/**
+ * Llamatik-based implementation of AIEngine for on-device LLM inference.
+ *
+ * This implementation uses the Llamatik library (KMP wrapper around llama.cpp)
+ * to load and run GGUF models locally on Android devices.
+ */
+@Singleton
+class LlamatikEngine @Inject constructor() : AIEngine {
+
+    private var currentModelInfo: ModelInfo? = null
+    private var isGenerating: Boolean = false
+
+    companion object {
+        private const val DEFAULT_CONTEXT_LENGTH = 2048
+        private const val GENERATION_TIMEOUT_MS = 60_000L // 60 seconds
+    }
+
+    override suspend fun loadModel(modelPath: String): Result<Unit> = runCatching {
+        Timber.d("Loading model from: $modelPath")
+
+        // Verify file exists
+        val modelFile = File(modelPath)
+        if (!modelFile.exists()) {
+            throw AIEngineError.ModelNotFound(modelPath)
+        }
+
+        // Get model path using Llamatik's path resolver
+        val resolvedPath = try {
+            // If the file is already in the correct location, use it directly
+            // Otherwise, Llamatik expects models in specific directories
+            if (modelFile.canRead()) {
+                modelPath
+            } else {
+                LlamaBridge.getModelPath(modelFile.name)
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to resolve model path, using direct path")
+            modelPath
+        }
+
+        // Initialize the model
+        val success = try {
+            LlamaBridge.initGenerateModel(resolvedPath)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to initialize model")
+            throw AIEngineError.ModelLoadFailed("Failed to load model: ${e.message}", e)
+        }
+
+        if (!success) {
+            throw AIEngineError.ModelLoadFailed("Model initialization returned false")
+        }
+
+        // Store model info
+        currentModelInfo = ModelInfo(
+            name = modelFile.nameWithoutExtension,
+            path = resolvedPath,
+            contextLength = DEFAULT_CONTEXT_LENGTH,
+            loadedAt = System.currentTimeMillis()
+        )
+
+        Timber.i("Model loaded successfully: ${modelFile.name}")
+    }
+
+    override suspend fun generate(
+        prompt: String,
+        systemPrompt: String?,
+        maxTokens: Int,
+        temperature: Float
+    ): Result<String> = runCatching {
+        if (!isModelLoaded()) {
+            throw AIEngineError.ModelNotLoaded
+        }
+
+        Timber.d("Generating text with prompt length: ${prompt.length}")
+        isGenerating = true
+
+        try {
+            withTimeout(GENERATION_TIMEOUT_MS) {
+                val result = if (systemPrompt != null) {
+                    // Use context-aware generation
+                    LlamaBridge.generateWithContext(
+                        systemPrompt = systemPrompt,
+                        contextBlock = "", // No additional context for now
+                        userPrompt = prompt
+                    )
+                } else {
+                    // Simple generation
+                    LlamaBridge.generate(prompt)
+                }
+
+                result?.takeIf { it.isNotBlank() }
+                    ?: throw AIEngineError.InvalidResponse("Empty response from model")
+            }
+        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+            LlamaBridge.nativeCancelGenerate()
+            throw AIEngineError.GenerationTimeout
+        } catch (e: Exception) {
+            when {
+                e.message?.contains("out of memory", ignoreCase = true) == true ->
+                    throw AIEngineError.OutOfMemory("Insufficient memory for generation")
+                else ->
+                    throw AIEngineError.GenerationFailed("Generation failed: ${e.message}", e)
+            }
+        } finally {
+            isGenerating = false
+        }
+    }
+
+    override fun generateStream(
+        prompt: String,
+        systemPrompt: String?,
+        maxTokens: Int,
+        temperature: Float
+    ): Flow<GenerationEvent> = callbackFlow {
+        if (!isModelLoaded()) {
+            trySend(GenerationEvent.Error("No model loaded", AIEngineError.ModelNotLoaded))
+            close()
+            return@callbackFlow
+        }
+
+        isGenerating = true
+        val fullTextBuilder = StringBuilder()
+
+        val callback = object : GenStream {
+            override fun onDelta(text: String) {
+                fullTextBuilder.append(text)
+                trySend(GenerationEvent.TokenGenerated(text))
+            }
+
+            override fun onComplete() {
+                trySend(GenerationEvent.Completed(fullTextBuilder.toString()))
+                isGenerating = false
+                close()
+            }
+
+            override fun onError(message: String) {
+                trySend(GenerationEvent.Error(message))
+                isGenerating = false
+                close()
+            }
+        }
+
+        // Emit start event
+        trySend(GenerationEvent.Started)
+
+        try {
+            // Start streaming generation
+            if (systemPrompt != null) {
+                LlamaBridge.generateStreamWithContext(
+                    systemPrompt = systemPrompt,
+                    contextBlock = "",
+                    userPrompt = prompt,
+                    callback = callback
+                )
+            } else {
+                LlamaBridge.generateStream(prompt, callback)
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Stream generation failed")
+            trySend(GenerationEvent.Error("Stream failed: ${e.message}", e))
+            isGenerating = false
+            close()
+        }
+
+        awaitClose {
+            isGenerating = false
+        }
+    }
+
+    override suspend fun generateJson(
+        prompt: String,
+        jsonSchema: String?
+    ): Result<String> = runCatching {
+        if (!isModelLoaded()) {
+            throw AIEngineError.ModelNotLoaded
+        }
+
+        Timber.d("Generating JSON with schema: ${jsonSchema != null}")
+        isGenerating = true
+
+        try {
+            withTimeout(GENERATION_TIMEOUT_MS) {
+                val result = LlamaBridge.generateJson(prompt, jsonSchema)
+
+                result?.takeIf { it.isNotBlank() }
+                    ?: throw AIEngineError.InvalidResponse("Empty JSON response from model")
+            }
+        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+            LlamaBridge.nativeCancelGenerate()
+            throw AIEngineError.GenerationTimeout
+        } catch (e: Exception) {
+            throw AIEngineError.GenerationFailed("JSON generation failed: ${e.message}", e)
+        } finally {
+            isGenerating = false
+        }
+    }
+
+    override fun cancelGeneration() {
+        if (isGenerating) {
+            Timber.d("Cancelling generation")
+            LlamaBridge.nativeCancelGenerate()
+            isGenerating = false
+        }
+    }
+
+    override suspend fun unloadModel() {
+        Timber.d("Unloading model")
+        try {
+            LlamaBridge.shutdown()
+            currentModelInfo = null
+            isGenerating = false
+        } catch (e: Exception) {
+            Timber.e(e, "Error during model unload")
+        }
+    }
+
+    override fun isModelLoaded(): Boolean {
+        return currentModelInfo != null
+    }
+
+    override fun getModelInfo(): ModelInfo? {
+        return currentModelInfo
+    }
+}

@@ -3,6 +3,7 @@ package com.summarizer.app.ui.screens.models
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.SdCard
@@ -18,7 +19,8 @@ import com.summarizer.app.util.StorageHelper
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StorageLocationScreen(
-    onLocationSelected: (StorageHelper.StorageLocation) -> Unit
+    onLocationSelected: (StorageHelper.StorageLocation) -> Unit,
+    onBackClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val internalStorage = remember { StorageHelper.getInternalStorageInfo(context) }
@@ -41,7 +43,18 @@ fun StorageLocationScreen(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                ),
+                navigationIcon = {
+                    if (onBackClick != null) {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                }
             )
         }
     ) { paddingValues ->
@@ -124,19 +137,36 @@ fun StorageLocationScreen(
                 }
 
                 selectedStorageInfo?.let { info ->
-                    if (info.availableSpaceMB < 2000) { // Less than 2GB
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer
-                            )
-                        ) {
-                            Text(
-                                text = "⚠️ Low storage space. Consider freeing up space or choosing another location.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.padding(16.dp)
-                            )
+                    when {
+                        info.availableSpaceMB < 700 -> {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer
+                                )
+                            ) {
+                                Text(
+                                    text = "⚠️ Insufficient storage space (${info.availableSpaceMB}MB available, 700MB minimum required). Please free up space or choose another location.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            }
+                        }
+                        info.availableSpaceMB < 2000 -> {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                                )
+                            ) {
+                                Text(
+                                    text = "ℹ️ Low storage space (${info.availableSpaceMB}MB available). You can continue, but consider freeing up space for larger models.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -146,15 +176,8 @@ fun StorageLocationScreen(
                 onClick = { onLocationSelected(selectedLocation) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                enabled = run {
-                    val info = if (selectedLocation == StorageHelper.StorageLocation.INTERNAL) {
-                        internalStorage
-                    } else {
-                        externalStorage
-                    }
-                    info?.let { StorageHelper.hasEnoughSpace(700, it.availableSpaceMB) } ?: false
-                }
+                    .height(56.dp)
+                // Always enabled - users can skip model download anyway
             ) {
                 Text("Continue")
             }
