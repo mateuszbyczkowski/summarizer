@@ -3,22 +3,44 @@
 
 > **Helping busy parents stay informed about their children's school activities without drowning in WhatsApp group messages.**
 
+**Status**: ✅ **I1 MVP 100% COMPLETE** (2026-02-02)
+**Build**: ✅ Passing | **Features**: 100% I1 + Bonus | **Docs**: 📚 Comprehensive
+
+---
+
+## 🚀 Quick Links
+
+- **New Developer?** Start with [START_DEVELOPING.md](START_DEVELOPING.md)
+- **Project Status?** See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)
+- **Current State?** Read [CURRENT_STATUS.md](CURRENT_STATUS.md)
+- **Want to Build?** Check [START_DEVELOPING.md](START_DEVELOPING.md)
+
 ---
 
 ## Project Overview
 
-WhatsApp Thread Summarizer is an Android mobile application designed to automatically capture, organize, and summarize WhatsApp group conversations using local AI models. The app helps parents manage the overwhelming volume of messages from school and kindergarten WhatsApp groups by providing concise, structured summaries of conversations.
+WhatsApp Thread Summarizer is an Android mobile application that automatically captures, organizes, and summarizes WhatsApp group conversations using **dual AI providers** (local LLM or OpenAI API). The app helps parents manage the overwhelming volume of messages from school and kindergarten WhatsApp groups by providing concise, structured summaries of conversations.
 
-### Key Features
+### Key Features (I1 MVP - COMPLETE)
 
-- **Automatic Message Capture**: Listens to WhatsApp group notifications and saves messages locally
-- **AI-Powered Summarization**: Uses on-device AI models to generate intelligent summaries
-- **Complete Privacy**: 100% offline operation, no data leaves the device
-- **Smart Summaries**: Extracts key topics, action items, deadlines, and important announcements
-- **Secure Access**: Protected by PIN and biometric authentication
-- **Thread Prioritization**: Mark important groups for detailed summaries
-- **Smart Notifications**: Get notified only about truly important messages
-- **Search**: Find specific information across all summaries
+**Core Features** ✅
+- **Automatic Message Capture**: Listens to WhatsApp/WhatsApp Business notifications and saves messages locally
+- **AI-Powered Summarization**: Generate on-demand summaries with structured output (topics, action items, highlights)
+- **Dual AI Providers**: Choose between:
+  - **Local LLM** (Llamatik + TinyLlama 1.1B): Privacy-first, offline, free
+  - **OpenAI API** (gpt-4o-mini): Cloud-based, fast, ~$0.0006/summary
+- **Complete Privacy**: Local provider = 100% on-device, no data leaves your phone
+- **Secure Access**: Protected by 6-digit PIN with SHA-256 encryption
+- **Encrypted Storage**: SQLCipher database + EncryptedSharedPreferences
+- **Model Download**: In-app model download with pause/resume support
+- **Material 3 UI**: Beautiful, modern interface with smooth animations
+- **Complete Onboarding**: Welcome → Permissions → PIN → Storage → AI Setup
+
+**Bonus Features** ✅ (Week 8)
+- **Settings Screen**: Configure AI provider, manage API keys
+- **API Key Management**: Secure encrypted storage, validation, clear UI
+- **Cost Transparency**: Clear pricing information for OpenAI usage
+- **Runtime Provider Switching**: No restart needed to change AI providers
 
 ### Why This App?
 
@@ -26,28 +48,29 @@ Parents with children in schools and kindergartens often belong to multiple What
 
 ---
 
-## Documentation
+## 📚 Documentation
 
-This repository contains comprehensive documentation for the project:
+This repository contains **comprehensive documentation** (20+ files):
 
-### 📋 [Product Requirements Document (PRD.md)](./PRD.md)
-The complete product specification including:
-- Product vision and target audience
-- Detailed feature descriptions
-- User flows and information architecture
-- Success criteria and metrics
-- Risk analysis and mitigation strategies
-- Timeline and phasing
+### 🚀 Getting Started
+- **[START_DEVELOPING.md](START_DEVELOPING.md)** - Development setup and quick start guide
+- **[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)** - Complete implementation summary
+- **[CURRENT_STATUS.md](CURRENT_STATUS.md)** - Current project state and what's working
 
-**Start here** to understand the product vision and business requirements.
+### 📊 Progress & Status
+- **[PROGRESS.md](PROGRESS.md)** - Week-by-week detailed progress tracking
+- **[DECISIONS.md](DECISIONS.md)** - Major design decisions and rationale
+- **[WEEK2-8_COMPLETION.md](WEEK8_COMPLETION.md)** - Weekly completion reports
 
-### 🔧 [Technical Specification (TECHNICAL_SPECIFICATION.md)](./TECHNICAL_SPECIFICATION.md)
-Detailed technical architecture and implementation details:
-- Technology stack and frameworks
-- System architecture diagrams
-- Core component designs (message capture, AI, security)
-- Database schema and data models
-- AI inference implementation
+### 📋 Planning & Requirements
+- **[PRD.md](PRD.md)** - Product Requirements Document (original vision)
+- **[TECHNICAL_SPECIFICATION.md](TECHNICAL_SPECIFICATION.md)** - Architecture and technical details
+- **[I1_SCOPE.md](I1_SCOPE.md)** - I1 MVP scope (completed)
+
+### 🔧 Development & Troubleshooting
+- **[TROUBLESHOOTING_MESSAGE_CAPTURE.md](TROUBLESHOOTING_MESSAGE_CAPTURE.md)** - Debug message capture issues
+- **[MIUI_FIX.md](MIUI_FIX.md)** - MIUI-specific fixes
+- **[ROM_PERMISSION_GUIDE.md](ROM_PERMISSION_GUIDE.md)** - Custom ROM permission guide
 - Performance optimization strategies
 - Security implementation
 
