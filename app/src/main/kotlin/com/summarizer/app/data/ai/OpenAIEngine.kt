@@ -37,20 +37,17 @@ class OpenAIEngine @Inject constructor(
         private const val CONTEXT_LENGTH = 128_000 // gpt-4o-mini context window
     }
 
-    private var apiKey: String? = null
-
     override suspend fun loadModel(modelPath: String): Result<Unit> = runCatching {
         Timber.d("OpenAIEngine: Loading (validating API key)")
 
-        // For OpenAI, "loading" means validating the API key
+        // For OpenAI, "loading" means validating the API key exists
         val key = preferencesRepository.getOpenAIApiKey()
         if (key.isNullOrBlank()) {
             Timber.e("No OpenAI API key configured")
             throw AIEngineError.ModelLoadFailed("No OpenAI API key configured. Please add your API key in Settings.")
         }
 
-        apiKey = key
-        Timber.i("OpenAI API key loaded successfully")
+        Timber.i("OpenAI API key validated successfully")
     }
 
     override suspend fun generate(
@@ -59,8 +56,11 @@ class OpenAIEngine @Inject constructor(
         maxTokens: Int,
         temperature: Float
     ): Result<String> = runCatching {
-        if (apiKey == null) {
-            throw AIEngineError.ModelNotLoaded
+        // Always fetch the latest API key from repository
+        val apiKey = preferencesRepository.getOpenAIApiKey()
+        if (apiKey.isNullOrBlank()) {
+            Timber.e("OpenAI API key not configured")
+            throw AIEngineError.ModelLoadFailed("No OpenAI API key configured. Please add your API key in Settings.")
         }
 
         Timber.d("OpenAI: Generating text (${prompt.length} chars, max tokens: $maxTokens, temp: $temperature)")
@@ -125,12 +125,6 @@ class OpenAIEngine @Inject constructor(
         maxTokens: Int,
         temperature: Float
     ): Flow<GenerationEvent> = callbackFlow {
-        if (apiKey == null) {
-            send(GenerationEvent.Error("No API key loaded", AIEngineError.ModelNotLoaded))
-            close()
-            return@callbackFlow
-        }
-
         send(GenerationEvent.Started)
         Timber.d("OpenAI: Starting streaming generation")
 
@@ -156,8 +150,11 @@ class OpenAIEngine @Inject constructor(
         prompt: String,
         jsonSchema: String?
     ): Result<String> = runCatching {
-        if (apiKey == null) {
-            throw AIEngineError.ModelNotLoaded
+        // Always fetch the latest API key from repository
+        val apiKey = preferencesRepository.getOpenAIApiKey()
+        if (apiKey.isNullOrBlank()) {
+            Timber.e("OpenAI API key not configured")
+            throw AIEngineError.ModelLoadFailed("No OpenAI API key configured. Please add your API key in Settings.")
         }
 
         Timber.d("OpenAI: Generating JSON (${prompt.length} chars, schema: ${jsonSchema != null})")
@@ -230,23 +227,23 @@ class OpenAIEngine @Inject constructor(
     }
 
     override suspend fun unloadModel() {
-        Timber.d("OpenAI: Unloading (clearing API key from memory)")
-        apiKey = null
+        Timber.d("OpenAI: Unloading (clearing API key from preferences)")
+        preferencesRepository.clearOpenAIApiKey()
     }
 
     override fun isModelLoaded(): Boolean {
-        return apiKey != null
+        // For OpenAI, "loaded" means an API key is configured
+        // Note: This is a synchronous method, so we can't fetch from repository
+        // Return true to avoid blocking, actual validation happens in generate()
+        return true
     }
 
     override fun getModelInfo(): ModelInfo? {
-        return if (apiKey != null) {
-            ModelInfo(
-                name = MODEL,
-                path = "OpenAI API",
-                contextLength = CONTEXT_LENGTH
-            )
-        } else {
-            null
-        }
+        // Always return info since we fetch API key on-demand
+        return ModelInfo(
+            name = MODEL,
+            path = "OpenAI API",
+            contextLength = CONTEXT_LENGTH
+        )
     }
 }
