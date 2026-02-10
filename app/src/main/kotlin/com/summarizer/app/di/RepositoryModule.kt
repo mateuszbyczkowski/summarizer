@@ -6,12 +6,14 @@ import com.summarizer.app.data.repository.ModelRepositoryImpl
 import com.summarizer.app.data.repository.PreferencesRepositoryImpl
 import com.summarizer.app.data.repository.SummaryRepositoryImpl
 import com.summarizer.app.data.repository.ThreadRepositoryImpl
+import com.summarizer.app.data.repository.ThreadSettingsRepositoryImpl
 import com.summarizer.app.domain.repository.AuthRepository
 import com.summarizer.app.domain.repository.MessageRepository
 import com.summarizer.app.domain.repository.ModelRepository
 import com.summarizer.app.domain.repository.PreferencesRepository
 import com.summarizer.app.domain.repository.SummaryRepository
 import com.summarizer.app.domain.repository.ThreadRepository
+import com.summarizer.app.domain.repository.ThreadSettingsRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -57,4 +59,10 @@ abstract class RepositoryModule {
     abstract fun bindModelRepository(
         modelRepositoryImpl: ModelRepositoryImpl
     ): ModelRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindThreadSettingsRepository(
+        threadSettingsRepositoryImpl: ThreadSettingsRepositoryImpl
+    ): ThreadSettingsRepository
 }

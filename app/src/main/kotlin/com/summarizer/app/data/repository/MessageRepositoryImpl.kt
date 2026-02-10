@@ -22,6 +22,10 @@ class MessageRepositoryImpl @Inject constructor(
         return messageDao.getRecentMessagesForThread(threadId, limit).map { it.toDomainModel() }
     }
 
+    override suspend fun getMessagesForThreadSince(threadId: String, sinceTimestamp: Long): List<Message> {
+        return messageDao.getMessagesForThreadSince(threadId, sinceTimestamp).map { it.toDomainModel() }
+    }
+
     override suspend fun saveMessage(message: Message) {
         messageDao.insert(message.toEntity())
     }

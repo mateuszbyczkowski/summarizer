@@ -33,9 +33,8 @@ class OpenAIEngine @Inject constructor(
 ) : AIEngine {
 
     companion object {
-        private const val MODEL = "gpt-4o-mini"
+        private const val DEFAULT_MODEL = "gpt-4o-mini"
         private const val TIMEOUT_MS = 30_000L // 30 seconds
-        private const val CONTEXT_LENGTH = 128_000 // gpt-4o-mini context window
     }
 
     override suspend fun loadModel(modelPath: String): Result<Unit> = runCatching {
@@ -64,7 +63,10 @@ class OpenAIEngine @Inject constructor(
             throw AIEngineError.ModelLoadFailed("No OpenAI API key configured. Please add your API key in Settings.")
         }
 
-        Timber.d("OpenAI: Generating text (${prompt.length} chars, max tokens: $maxTokens, temp: $temperature)")
+        // Get selected model from preferences
+        val selectedModel = preferencesRepository.getSelectedOpenAIModel()
+
+        Timber.d("OpenAI: Generating text with model: $selectedModel (${prompt.length} chars, max tokens: $maxTokens, temp: $temperature)")
 
         val messages = buildList {
             if (systemPrompt != null) {
@@ -74,7 +76,7 @@ class OpenAIEngine @Inject constructor(
         }
 
         val request = ChatCompletionRequest(
-            model = MODEL,
+            model = selectedModel,
             messages = messages,
             temperature = temperature,
             maxTokens = maxTokens,
@@ -167,7 +169,10 @@ class OpenAIEngine @Inject constructor(
             throw AIEngineError.ModelLoadFailed("No OpenAI API key configured. Please add your API key in Settings.")
         }
 
-        Timber.d("OpenAI: Generating JSON (${prompt.length} chars, schema: ${jsonSchema != null})")
+        // Get selected model from preferences
+        val selectedModel = preferencesRepository.getSelectedOpenAIModel()
+
+        Timber.d("OpenAI: Generating JSON with model: $selectedModel (${prompt.length} chars, schema: ${jsonSchema != null})")
 
         val systemPrompt = "You are a helpful assistant that ALWAYS responds with valid JSON only. " +
                 "Never include explanations, markdown formatting, or any text outside the JSON object."
@@ -185,7 +190,7 @@ class OpenAIEngine @Inject constructor(
         )
 
         val request = ChatCompletionRequest(
-            model = MODEL,
+            model = selectedModel,
             messages = messages,
             temperature = 0.2f, // Low temperature for consistent JSON
             maxTokens = 2048,
@@ -259,10 +264,12 @@ class OpenAIEngine @Inject constructor(
 
     override fun getModelInfo(): ModelInfo? {
         // Always return info since we fetch API key on-demand
+        // Note: This is synchronous, so we return default model name
+        // Actual model is determined at generation time
         return ModelInfo(
-            name = MODEL,
+            name = DEFAULT_MODEL,
             path = "OpenAI API",
-            contextLength = CONTEXT_LENGTH
+            contextLength = 128_000
         )
     }
 }

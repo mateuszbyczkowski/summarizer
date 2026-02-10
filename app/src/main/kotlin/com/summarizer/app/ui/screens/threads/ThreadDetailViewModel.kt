@@ -5,8 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.summarizer.app.domain.model.Message
 import com.summarizer.app.domain.model.Thread
+import com.summarizer.app.domain.model.SummarizationMode
+import com.summarizer.app.domain.model.ThreadSettings
 import com.summarizer.app.domain.repository.MessageRepository
 import com.summarizer.app.domain.repository.ThreadRepository
+import com.summarizer.app.domain.repository.ThreadSettingsRepository
 import kotlinx.coroutines.launch
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +29,8 @@ sealed interface ThreadDetailUiState {
 class ThreadDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     messageRepository: MessageRepository,
-    private val threadRepository: ThreadRepository
+    private val threadRepository: ThreadRepository,
+    private val threadSettingsRepository: ThreadSettingsRepository
 ) : ViewModel() {
 
     private val threadId: String = savedStateHandle.get<String>("threadId") ?: ""
@@ -56,6 +60,14 @@ class ThreadDetailViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    val threadSettings: StateFlow<ThreadSettings?> = threadSettingsRepository
+        .getSettingsFlow(threadId)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
+
     val uiState: StateFlow<ThreadDetailUiState> = combine(
         messages,
         _isLoading
@@ -76,6 +88,20 @@ class ThreadDetailViewModel @Inject constructor(
     fun toggleFollowStatus(isFollowed: Boolean) {
         viewModelScope.launch {
             threadRepository.updateFollowStatus(threadId, isFollowed)
+        }
+    }
+
+    fun updateSummarizationMode(mode: SummarizationMode) {
+        viewModelScope.launch {
+            // Get or create settings first
+            val settings = threadSettingsRepository.getOrCreateSettings(threadId)
+            // Update the mode
+            threadSettingsRepository.saveSettings(
+                settings.copy(
+                    summarizationMode = mode,
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
         }
     }
 }

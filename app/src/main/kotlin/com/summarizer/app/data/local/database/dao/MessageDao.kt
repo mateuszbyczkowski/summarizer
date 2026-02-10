@@ -16,6 +16,13 @@ interface MessageDao {
     @Query("SELECT * FROM messages WHERE threadId = :threadId ORDER BY timestamp DESC LIMIT :limit")
     suspend fun getRecentMessagesForThread(threadId: String, limit: Int): List<MessageEntity>
 
+    /**
+     * Get messages for a thread since a specific timestamp (inclusive).
+     * Used for incremental summarization.
+     */
+    @Query("SELECT * FROM messages WHERE threadId = :threadId AND timestamp >= :sinceTimestamp ORDER BY timestamp ASC")
+    suspend fun getMessagesForThreadSince(threadId: String, sinceTimestamp: Long): List<MessageEntity>
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(message: MessageEntity): Long
 

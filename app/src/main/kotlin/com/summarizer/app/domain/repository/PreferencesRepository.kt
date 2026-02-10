@@ -24,6 +24,10 @@ interface PreferencesRepository {
     suspend fun setOpenAIApiKey(apiKey: String)
     suspend fun clearOpenAIApiKey()
 
+    // OpenAI Model Selection
+    suspend fun getSelectedOpenAIModel(): String // Returns model ID (e.g., "gpt-4o-mini")
+    suspend fun setSelectedOpenAIModel(modelId: String)
+
     // Auto-summarization preferences
     suspend fun isAutoSummarizationEnabled(): Boolean
     suspend fun setAutoSummarizationEnabled(enabled: Boolean)

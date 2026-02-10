@@ -33,6 +33,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.summarizer.app.domain.model.AIProvider
+import com.summarizer.app.domain.model.OpenAIModel
 import com.summarizer.app.util.PermissionHelper
 
 /**
@@ -83,6 +84,7 @@ fun SettingsScreen(
                     onApiKeyValidate = viewModel::validateApiKey,
                     onApiKeyCleared = viewModel::clearApiKey,
                     onModelConfigClick = onModelConfigClick,
+                    onSelectedModelChanged = viewModel::setSelectedModel,
                     onAutoSummarizationEnabledChanged = viewModel::setAutoSummarizationEnabled,
                     onAutoSummarizationHourChanged = viewModel::setAutoSummarizationHour,
                     onDataRetentionDaysChanged = viewModel::setDataRetentionDays,
@@ -133,6 +135,7 @@ private fun SettingsContent(
     onApiKeyValidate: () -> Unit,
     onApiKeyCleared: () -> Unit,
     onModelConfigClick: () -> Unit,
+    onSelectedModelChanged: (OpenAIModel) -> Unit,
     onAutoSummarizationEnabledChanged: (Boolean) -> Unit,
     onAutoSummarizationHourChanged: (Int) -> Unit,
     onDataRetentionDaysChanged: (Int) -> Unit,
@@ -749,6 +752,57 @@ private fun SettingsContent(
             }
         }
 
+        // OpenAI Model Selection (only shown if OpenAI selected)
+        if (state.aiProvider == AIProvider.OPENAI) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Model Selection",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+
+                    Text(
+                        text = "Choose which OpenAI model to use for summaries",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Model options with radio buttons
+                    OpenAIModel.values().forEach { model ->
+                        ModelOption(
+                            model = model,
+                            isSelected = state.selectedModel == model,
+                            onClick = { onSelectedModelChanged(model) }
+                        )
+                    }
+
+                    // Info card with recommendation
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                        )
+                    ) {
+                        Text(
+                            text = "💡 Recommended: GPT-4o Mini offers the best balance of quality and cost for most users.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                }
+            }
+        }
+
         // Cost Information (if OpenAI selected)
         if (state.aiProvider == AIProvider.OPENAI) {
             Card(
@@ -766,14 +820,15 @@ private fun SettingsContent(
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
-                        text = "Using gpt-4o-mini model:",
+                        text = "Using ${state.selectedModel.displayName}:",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "• ~$0.0006 per summary\n" +
-                                "• ~10,000 summaries per $1\n" +
-                                "• Very affordable for personal use",
+                        text = "• ${state.selectedModel.formatPricing()}\n" +
+                                "• Input: $${String.format("%.2f", state.selectedModel.inputPricePer1MTokens)} per 1M tokens\n" +
+                                "• Output: $${String.format("%.2f", state.selectedModel.outputPricePer1MTokens)} per 1M tokens",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
@@ -1210,6 +1265,67 @@ private fun ProviderOption(
                     imageVector = Icons.Default.Check,
                     contentDescription = "Selected",
                     tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModelOption(
+    model: OpenAIModel,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        ),
+        border = if (isSelected) {
+            CardDefaults.outlinedCardBorder().copy(width = 2.dp)
+        } else {
+            CardDefaults.outlinedCardBorder()
+        }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RadioButton(
+                selected = isSelected,
+                onClick = null
+            )
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = model.displayName,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = model.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = model.formatPricing(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }

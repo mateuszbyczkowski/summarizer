@@ -8,18 +8,23 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.summarizer.app.domain.model.Message
 import com.summarizer.app.domain.model.MessageType
+import com.summarizer.app.domain.model.SummarizationMode
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -33,6 +38,8 @@ fun ThreadDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val thread by viewModel.thread.collectAsState()
+    val threadSettings by viewModel.threadSettings.collectAsState()
+    var showMenu by remember { mutableStateOf(false) }
     val threadName = when (val state = uiState) {
         is ThreadDetailUiState.Success -> state.messages.firstOrNull()?.threadName ?: thread?.threadName ?: "Thread"
         else -> thread?.threadName ?: "Thread"
@@ -66,6 +73,80 @@ fun ThreadDetailScreen(
                                     MaterialTheme.colorScheme.primary
                                 } else {
                                     MaterialTheme.colorScheme.onPrimaryContainer
+                                }
+                            )
+                        }
+                    }
+
+                    // Three-dot menu
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "More options"
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            Text(
+                                text = "Summarization Mode",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(
+                                            text = "Incremental",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Text(
+                                            text = "New messages only",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    viewModel.updateSummarizationMode(SummarizationMode.INCREMENTAL)
+                                    showMenu = false
+                                },
+                                leadingIcon = {
+                                    RadioButton(
+                                        selected = threadSettings?.summarizationMode == SummarizationMode.INCREMENTAL,
+                                        onClick = null
+                                    )
+                                }
+                            )
+
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(
+                                            text = "Full",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Text(
+                                            text = "All messages",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    viewModel.updateSummarizationMode(SummarizationMode.FULL)
+                                    showMenu = false
+                                },
+                                leadingIcon = {
+                                    RadioButton(
+                                        selected = threadSettings?.summarizationMode == SummarizationMode.FULL,
+                                        onClick = null
+                                    )
                                 }
                             )
                         }

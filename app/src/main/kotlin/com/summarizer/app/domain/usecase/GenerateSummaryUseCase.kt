@@ -10,6 +10,8 @@ import com.summarizer.app.domain.repository.MessageRepository
 import com.summarizer.app.domain.repository.ModelRepository
 import com.summarizer.app.domain.repository.SummaryRepository
 import com.summarizer.app.domain.repository.ThreadRepository
+import com.summarizer.app.domain.repository.ThreadSettingsRepository
+import com.summarizer.app.domain.model.SummarizationMode
 import com.summarizer.app.util.RetryHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -35,6 +37,7 @@ class GenerateSummaryUseCase @Inject constructor(
     private val messageRepository: MessageRepository,
     private val summaryRepository: SummaryRepository,
     private val threadRepository: ThreadRepository,
+    private val threadSettingsRepository: ThreadSettingsRepository,
     private val modelRepository: ModelRepository
 ) {
 
@@ -77,13 +80,42 @@ class GenerateSummaryUseCase @Inject constructor(
                 }
             }
 
-            // Step 2: Fetch thread and messages
+            // Step 2: Fetch thread and check settings
             val thread = threadRepository.getThread(threadId)
                 ?: throw IllegalArgumentException("Thread not found: $threadId").also {
                     Timber.e("Thread with ID $threadId does not exist in database")
                 }
 
-            val messages = messageRepository.getMessagesForThread(threadId).first()
+            // Get or create thread settings
+            val settings = threadSettingsRepository.getOrCreateSettings(threadId)
+
+            // Step 3: Fetch messages based on summarization mode
+            val messages = when (settings.summarizationMode) {
+                SummarizationMode.INCREMENTAL -> {
+                    // Only fetch new messages since last summarization
+                    val lastTimestamp = settings.lastSummarizedMessageTimestamp
+                    if (lastTimestamp != null) {
+                        Timber.d("Fetching messages since timestamp: $lastTimestamp (INCREMENTAL mode)")
+                        val newMessages = messageRepository.getMessagesForThreadSince(threadId, lastTimestamp + 1)
+                        if (newMessages.isEmpty()) {
+                            Timber.i("No new messages since last summarization")
+                            // Fall back to recent messages if no new messages
+                            messageRepository.getMessagesForThread(threadId).first()
+                        } else {
+                            newMessages
+                        }
+                    } else {
+                        // No previous summarization, fetch all messages
+                        Timber.d("No previous summarization found, fetching all messages")
+                        messageRepository.getMessagesForThread(threadId).first()
+                    }
+                }
+                SummarizationMode.FULL -> {
+                    // Fetch all messages
+                    Timber.d("Fetching all messages (FULL mode)")
+                    messageRepository.getMessagesForThread(threadId).first()
+                }
+            }
 
             if (messages.isEmpty()) {
                 throw IllegalStateException("No messages to summarize for thread: ${thread.threadName}").also {
@@ -91,7 +123,7 @@ class GenerateSummaryUseCase @Inject constructor(
                 }
             }
 
-            Timber.d("Loaded ${messages.size} messages for summarization")
+            Timber.d("Loaded ${messages.size} messages for summarization (mode: ${settings.summarizationMode})")
 
             // Step 3: Build prompt (simple text format, no JSON)
             val prompt = PromptTemplate.buildSummarizationPrompt(
@@ -155,6 +187,16 @@ class GenerateSummaryUseCase @Inject constructor(
 
             // Step 7: Save to database
             val summaryId = summaryRepository.saveSummary(summary)
+
+            // Step 8: Update thread settings with last summarized timestamp
+            val lastMessageTimestamp = messages.maxOf { it.timestamp }
+            threadSettingsRepository.updateLastSummarized(
+                threadId = threadId,
+                messageTimestamp = lastMessageTimestamp,
+                summarizedAt = summary.generatedAt
+            )
+            Timber.d("Updated thread settings: lastSummarizedMessageTimestamp=$lastMessageTimestamp")
+
             val executionTime = System.currentTimeMillis() - startTime
             Timber.i("Summary saved with ID: $summaryId (execution time: ${executionTime}ms)")
 

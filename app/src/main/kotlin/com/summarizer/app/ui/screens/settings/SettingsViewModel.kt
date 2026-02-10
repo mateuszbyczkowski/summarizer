@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.summarizer.app.data.ai.OpenAIEngine
 import com.summarizer.app.domain.model.AIProvider
+import com.summarizer.app.domain.model.OpenAIModel
 import com.summarizer.app.domain.repository.MessageRepository
 import com.summarizer.app.domain.repository.ModelRepository
 import com.summarizer.app.domain.repository.PreferencesRepository
@@ -47,6 +48,8 @@ class SettingsViewModel @Inject constructor(
             try {
                 val provider = preferencesRepository.getAIProvider()
                 val apiKey = preferencesRepository.getOpenAIApiKey()
+                val selectedModelId = preferencesRepository.getSelectedOpenAIModel()
+                val selectedModel = OpenAIModel.fromModelId(selectedModelId)
                 val autoSummarizationEnabled = preferencesRepository.isAutoSummarizationEnabled()
                 val autoSummarizationHour = preferencesRepository.getAutoSummarizationHour()
                 val dataRetentionDays = preferencesRepository.getDataRetentionDays()
@@ -58,6 +61,7 @@ class SettingsViewModel @Inject constructor(
                     aiProvider = provider,
                     hasApiKey = !apiKey.isNullOrBlank(),
                     apiKeyMasked = apiKey?.let { "*".repeat(20) } ?: "",
+                    selectedModel = selectedModel,
                     autoSummarizationEnabled = autoSummarizationEnabled,
                     autoSummarizationHour = autoSummarizationHour,
                     dataRetentionDays = dataRetentionDays,
@@ -283,6 +287,21 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setSelectedModel(model: OpenAIModel) {
+        viewModelScope.launch {
+            try {
+                Timber.d("Setting selected OpenAI model: ${model.modelId}")
+                preferencesRepository.setSelectedOpenAIModel(model.modelId)
+
+                // Reload settings to update UI
+                loadSettings()
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to set selected model")
+                _uiState.value = SettingsUiState.Error("Failed to update model: ${e.message}")
+            }
+        }
+    }
+
     fun resetApplication() {
         viewModelScope.launch {
             try {
@@ -330,6 +349,7 @@ sealed class SettingsUiState {
         val aiProvider: AIProvider,
         val hasApiKey: Boolean,
         val apiKeyMasked: String,
+        val selectedModel: OpenAIModel = OpenAIModel.DEFAULT,
         val isValidating: Boolean = false,
         val validationMessage: String? = null,
         val autoSummarizationEnabled: Boolean = false,

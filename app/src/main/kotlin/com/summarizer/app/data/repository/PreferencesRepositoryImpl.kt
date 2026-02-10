@@ -55,6 +55,7 @@ class PreferencesRepositoryImpl @Inject constructor(
         val BIOMETRIC_ENABLED = booleanPreferencesKey("biometric_enabled")
         val SMART_NOTIFICATIONS_ENABLED = booleanPreferencesKey("smart_notifications_enabled")
         val SMART_NOTIFICATION_THRESHOLD = stringPreferencesKey("smart_notification_threshold")
+        val SELECTED_OPENAI_MODEL = stringPreferencesKey("selected_openai_model")
 
         // EncryptedSharedPreferences keys (for API key)
         const val OPENAI_API_KEY = "openai_api_key"
@@ -221,6 +222,19 @@ class PreferencesRepositoryImpl @Inject constructor(
     override suspend fun setSmartNotificationThreshold(threshold: Float) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.SMART_NOTIFICATION_THRESHOLD] = threshold.toString()
+        }
+    }
+
+    // OpenAI Model Selection
+    override suspend fun getSelectedOpenAIModel(): String {
+        return context.dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.SELECTED_OPENAI_MODEL] ?: "gpt-4o-mini" // Default to gpt-4o-mini
+        }.first()
+    }
+
+    override suspend fun setSelectedOpenAIModel(modelId: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SELECTED_OPENAI_MODEL] = modelId
         }
     }
 

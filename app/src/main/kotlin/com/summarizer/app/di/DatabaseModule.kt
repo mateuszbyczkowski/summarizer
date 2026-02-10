@@ -9,6 +9,7 @@ import com.summarizer.app.data.local.database.AppDatabase
 import com.summarizer.app.data.local.database.dao.MessageDao
 import com.summarizer.app.data.local.database.dao.SummaryDao
 import com.summarizer.app.data.local.database.dao.ThreadDao
+import com.summarizer.app.data.local.database.dao.ThreadSettingsDao
 import com.summarizer.app.util.Constants
 import dagger.Module
 import dagger.Provides
@@ -27,6 +28,28 @@ object DatabaseModule {
         override fun migrate(database: SupportSQLiteDatabase) {
             // Add isFollowed column to threads table with default value true (1)
             database.execSQL("ALTER TABLE threads ADD COLUMN isFollowed INTEGER NOT NULL DEFAULT 1")
+        }
+    }
+
+    private val MIGRATION_7_8 = object : Migration(7, 8) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            // Create thread_settings table for per-thread summarization configuration
+            database.execSQL("""
+                CREATE TABLE IF NOT EXISTS thread_settings (
+                    threadId TEXT PRIMARY KEY NOT NULL,
+                    summarizationMode TEXT NOT NULL DEFAULT 'INCREMENTAL',
+                    autoSummarizationEnabled INTEGER DEFAULT NULL,
+                    summaryScheduleHour INTEGER DEFAULT NULL,
+                    lastSummarizedMessageTimestamp INTEGER DEFAULT NULL,
+                    lastSummarizedAt INTEGER DEFAULT NULL,
+                    createdAt INTEGER NOT NULL,
+                    updatedAt INTEGER NOT NULL,
+                    FOREIGN KEY (threadId) REFERENCES threads(threadId) ON DELETE CASCADE
+                )
+            """.trimIndent())
+
+            // Create index on threadId for faster lookups
+            database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_thread_settings_threadId ON thread_settings(threadId)")
         }
     }
 
@@ -50,7 +73,7 @@ object DatabaseModule {
             Constants.DATABASE_NAME
         )
             .openHelperFactory(factory)
-            .addMigrations(MIGRATION_6_7)
+            .addMigrations(MIGRATION_6_7, MIGRATION_7_8)
             .fallbackToDestructiveMigration() // Only if migration fails
             .build()
     }
@@ -73,5 +96,10 @@ object DatabaseModule {
     @Provides
     fun provideAIModelDao(database: AppDatabase): AIModelDao {
         return database.aiModelDao()
+    }
+
+    @Provides
+    fun provideThreadSettingsDao(database: AppDatabase): ThreadSettingsDao {
+        return database.threadSettingsDao()
     }
 }

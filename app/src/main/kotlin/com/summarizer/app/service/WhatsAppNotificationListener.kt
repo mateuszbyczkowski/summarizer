@@ -3,9 +3,12 @@ package com.summarizer.app.service
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Intent
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
+import com.summarizer.app.MainActivity
 import com.summarizer.app.R
 import com.summarizer.app.data.local.entity.MessageEntity
 import com.summarizer.app.domain.model.Message
@@ -289,7 +292,7 @@ class WhatsAppNotificationListener : NotificationListenerService() {
                 Timber.tag(TAG).d( "Processed message from $sender in $groupName (type: $messageType)")
 
                 // Smart Notifications: Analyze importance and show notification if needed
-                handleSmartNotification(groupName, sender, messageContent, timestamp)
+                handleSmartNotification(threadId, groupName, sender, messageContent, timestamp)
 
             } catch (e: Exception) {
                 Timber.tag(TAG).e(e, "Error saving message: ${e.message}")
@@ -301,6 +304,7 @@ class WhatsAppNotificationListener : NotificationListenerService() {
      * Handle smart notification - analyze message importance and show notification if important enough.
      */
     private suspend fun handleSmartNotification(
+        threadId: String,
         threadName: String,
         senderName: String,
         messageContent: String,
@@ -323,7 +327,7 @@ class WhatsAppNotificationListener : NotificationListenerService() {
             if (shouldNotify) {
                 // Get the full importance score to determine notification priority
                 val importanceScore = analyzeMessageImportanceUseCase.execute(messageContent, senderName) ?: 0.5f
-                showSmartNotification(threadName, senderName, messageContent, importanceScore)
+                showSmartNotification(threadId, threadName, senderName, messageContent, importanceScore)
                 Timber.tag(TAG).i("✅ Showed notification for important message (score: $importanceScore)")
             } else {
                 Timber.tag(TAG).d("⏭️ Message not important enough, notification suppressed")
@@ -331,7 +335,7 @@ class WhatsAppNotificationListener : NotificationListenerService() {
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Error in smart notification handling, showing notification as fallback")
             // Fallback: show notification on error to avoid missing important messages
-            showSmartNotification(threadName, senderName, messageContent, 0.7f)
+            showSmartNotification(threadId, threadName, senderName, messageContent, 0.7f)
         }
     }
 
@@ -339,6 +343,7 @@ class WhatsAppNotificationListener : NotificationListenerService() {
      * Show a smart notification with appropriate priority based on importance score.
      */
     private fun showSmartNotification(
+        threadId: String,
         threadName: String,
         senderName: String,
         messageContent: String,
@@ -349,6 +354,18 @@ class WhatsAppNotificationListener : NotificationListenerService() {
 
             // Create notification channel if needed
             createNotificationChannel(notificationManager)
+
+            // Create intent to open thread detail when notification is clicked
+            val intent = Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra(MainActivity.EXTRA_THREAD_ID, threadId)
+            }
+            val pendingIntent = PendingIntent.getActivity(
+                this,
+                threadId.hashCode(), // Unique request code per thread
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
 
             // Determine priority based on importance score
             // 0.0-0.6: Default priority
@@ -369,6 +386,7 @@ class WhatsAppNotificationListener : NotificationListenerService() {
                 .setPriority(priority)
                 .setAutoCancel(true)
                 .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+                .setContentIntent(pendingIntent)
                 .build()
 
             // Use timestamp as notification ID to allow multiple notifications

@@ -56,7 +56,10 @@ sealed class Screen(val route: String) {
 }
 
 @Composable
-fun NavGraph() {
+fun NavGraph(
+    initialThreadId: String? = null,
+    navigateToThreadsOnStart: Boolean = false
+) {
     val navController = rememberNavController()
     val context = LocalContext.current
 
@@ -71,6 +74,8 @@ fun NavGraph() {
     val preferencesRepository = entryPoint.preferencesRepository()
 
     var startDestination by remember { mutableStateOf<String?>(null) }
+    var pendingThreadNavigation by remember { mutableStateOf(initialThreadId) }
+    var shouldNavigateToThreads by remember { mutableStateOf(navigateToThreadsOnStart) }
 
     LaunchedEffect(Unit) {
         val isFirstLaunch = preferencesRepository.isFirstLaunch()
@@ -78,6 +83,14 @@ fun NavGraph() {
             isFirstLaunch -> Screen.Welcome.route
             !authRepository.hasPin() -> Screen.PinSetup.route
             else -> Screen.PinLock.route
+        }
+    }
+
+    // Handle navigation after authentication
+    LaunchedEffect(pendingThreadNavigation, shouldNavigateToThreads) {
+        // Wait for navigation to be ready (not on PinLock screen)
+        if (startDestination == Screen.PinLock.route) {
+            // Will be handled in PinLock screen's onSuccess callback
         }
     }
 
@@ -291,8 +304,25 @@ fun NavGraph() {
             ) {
                 PinLockScreen(
                     onUnlocked = {
-                        navController.navigate(Screen.ThreadList.route) {
-                            popUpTo(Screen.PinLock.route) { inclusive = true }
+                        // Handle deep link navigation from notifications
+                        when {
+                            pendingThreadNavigation != null -> {
+                                navController.navigate(Screen.ThreadDetail.createRoute(pendingThreadNavigation!!)) {
+                                    popUpTo(Screen.PinLock.route) { inclusive = true }
+                                }
+                                pendingThreadNavigation = null
+                            }
+                            shouldNavigateToThreads -> {
+                                navController.navigate(Screen.ThreadList.route) {
+                                    popUpTo(Screen.PinLock.route) { inclusive = true }
+                                }
+                                shouldNavigateToThreads = false
+                            }
+                            else -> {
+                                navController.navigate(Screen.ThreadList.route) {
+                                    popUpTo(Screen.PinLock.route) { inclusive = true }
+                                }
+                            }
                         }
                     }
                 )
