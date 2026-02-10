@@ -22,6 +22,12 @@ class ThreadRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun getFollowedThreads(): Flow<List<Thread>> {
+        return threadDao.getFollowedThreads().map { entities ->
+            entities.map { it.toDomainModel() }
+        }
+    }
+
     override suspend fun getThread(threadId: String): Thread? {
         return threadDao.getThread(threadId)?.toDomainModel()
     }
@@ -40,6 +46,10 @@ class ThreadRepositoryImpl @Inject constructor(
 
     override suspend fun updateThreadStats(threadId: String, messageCount: Int, lastMessageTimestamp: Long) {
         threadDao.updateThreadStats(threadId, messageCount, lastMessageTimestamp)
+    }
+
+    override suspend fun updateFollowStatus(threadId: String, isFollowed: Boolean) {
+        threadDao.updateFollowStatus(threadId, isFollowed)
     }
 
     override suspend fun mergeDuplicateThreads() {
@@ -118,7 +128,8 @@ class ThreadRepositoryImpl @Inject constructor(
         threadName = threadName,
         messageCount = messageCount,
         lastMessageTimestamp = lastMessageTimestamp,
-        createdAt = createdAt
+        createdAt = createdAt,
+        isFollowed = isFollowed
     )
 
     private fun Thread.toEntity() = ThreadEntity(
@@ -126,6 +137,7 @@ class ThreadRepositoryImpl @Inject constructor(
         threadName = threadName,
         messageCount = messageCount,
         lastMessageTimestamp = lastMessageTimestamp,
-        createdAt = createdAt
+        createdAt = createdAt,
+        isFollowed = isFollowed
     )
 }

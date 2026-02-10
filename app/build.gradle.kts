@@ -94,6 +94,11 @@ dependencies {
     ksp("com.google.dagger:hilt-compiler:2.57")
     implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
 
+    // WorkManager (Background Tasks)
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.hilt:hilt-work:1.1.0")
+    ksp("androidx.hilt:hilt-compiler:1.1.0")
+
     // Room (Database)
     val roomVersion = "2.8.0"
     implementation("androidx.room:room-runtime:$roomVersion")
@@ -109,6 +114,9 @@ dependencies {
 
     // Security (EncryptedSharedPreferences)
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+    // Biometric Authentication
+    implementation("androidx.biometric:biometric:1.1.0")
 
     // OkHttp (Model Download + OpenAI API)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")

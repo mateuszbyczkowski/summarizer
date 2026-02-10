@@ -49,6 +49,12 @@ class PreferencesRepositoryImpl @Inject constructor(
         val STORAGE_LOCATION = stringPreferencesKey("storage_location")
         val WIFI_ONLY_DOWNLOAD = booleanPreferencesKey("wifi_only_download")
         val AI_PROVIDER = stringPreferencesKey("ai_provider")
+        val AUTO_SUMMARIZATION_ENABLED = booleanPreferencesKey("auto_summarization_enabled")
+        val AUTO_SUMMARIZATION_HOUR = stringPreferencesKey("auto_summarization_hour")
+        val DATA_RETENTION_DAYS = stringPreferencesKey("data_retention_days")
+        val BIOMETRIC_ENABLED = booleanPreferencesKey("biometric_enabled")
+        val SMART_NOTIFICATIONS_ENABLED = booleanPreferencesKey("smart_notifications_enabled")
+        val SMART_NOTIFICATION_THRESHOLD = stringPreferencesKey("smart_notification_threshold")
 
         // EncryptedSharedPreferences keys (for API key)
         const val OPENAI_API_KEY = "openai_api_key"
@@ -139,6 +145,94 @@ class PreferencesRepositoryImpl @Inject constructor(
     override suspend fun clearOpenAIApiKey() {
         withContext(Dispatchers.IO) {
             encryptedPrefs.edit().remove(PreferencesKeys.OPENAI_API_KEY).apply()
+        }
+    }
+
+    // Auto-summarization preferences
+    override suspend fun isAutoSummarizationEnabled(): Boolean {
+        return context.dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.AUTO_SUMMARIZATION_ENABLED] ?: false
+        }.first()
+    }
+
+    override suspend fun setAutoSummarizationEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.AUTO_SUMMARIZATION_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun getAutoSummarizationHour(): Int {
+        return context.dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.AUTO_SUMMARIZATION_HOUR]?.toIntOrNull() ?: 20 // Default to 8 PM
+        }.first()
+    }
+
+    override suspend fun setAutoSummarizationHour(hour: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.AUTO_SUMMARIZATION_HOUR] = hour.toString()
+        }
+    }
+
+    // Data retention preferences
+    override suspend fun getDataRetentionDays(): Int {
+        return context.dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.DATA_RETENTION_DAYS]?.toIntOrNull() ?: 30 // Default to 30 days
+        }.first()
+    }
+
+    override suspend fun setDataRetentionDays(days: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.DATA_RETENTION_DAYS] = days.toString()
+        }
+    }
+
+    // Biometric authentication preferences
+    override suspend fun isBiometricEnabled(): Boolean {
+        return context.dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.BIOMETRIC_ENABLED] ?: false // Default to disabled
+        }.first()
+    }
+
+    override suspend fun setBiometricEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.BIOMETRIC_ENABLED] = enabled
+        }
+    }
+
+    // Smart notification preferences
+    override suspend fun isSmartNotificationsEnabled(): Boolean {
+        return context.dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.SMART_NOTIFICATIONS_ENABLED] ?: false // Default to disabled
+        }.first()
+    }
+
+    override suspend fun setSmartNotificationsEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SMART_NOTIFICATIONS_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun getSmartNotificationThreshold(): Float {
+        return context.dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.SMART_NOTIFICATION_THRESHOLD]?.toFloatOrNull() ?: 0.6f // Default to 0.6
+        }.first()
+    }
+
+    override suspend fun setSmartNotificationThreshold(threshold: Float) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SMART_NOTIFICATION_THRESHOLD] = threshold.toString()
+        }
+    }
+
+    override suspend fun clearAll() {
+        // Clear DataStore preferences
+        context.dataStore.edit { preferences ->
+            preferences.clear()
+        }
+
+        // Clear encrypted preferences
+        withContext(Dispatchers.IO) {
+            encryptedPrefs.edit().clear().apply()
         }
     }
 }

@@ -9,4 +9,5 @@ interface SummaryRepository {
     fun getRecentSummaries(limit: Int = 20): Flow<List<Summary>>
     suspend fun saveSummary(summary: Summary): Long
     suspend fun deleteSummariesForThread(threadId: String)
+    suspend fun searchSummaries(query: String): List<Summary>
 }

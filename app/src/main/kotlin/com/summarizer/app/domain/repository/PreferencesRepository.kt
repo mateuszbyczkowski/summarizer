@@ -23,4 +23,27 @@ interface PreferencesRepository {
     suspend fun getOpenAIApiKey(): String?
     suspend fun setOpenAIApiKey(apiKey: String)
     suspend fun clearOpenAIApiKey()
+
+    // Auto-summarization preferences
+    suspend fun isAutoSummarizationEnabled(): Boolean
+    suspend fun setAutoSummarizationEnabled(enabled: Boolean)
+    suspend fun getAutoSummarizationHour(): Int // 0-23, default 20 (8 PM)
+    suspend fun setAutoSummarizationHour(hour: Int)
+
+    // Data retention preferences
+    suspend fun getDataRetentionDays(): Int // Default 30 days
+    suspend fun setDataRetentionDays(days: Int)
+
+    // Biometric authentication preferences
+    suspend fun isBiometricEnabled(): Boolean
+    suspend fun setBiometricEnabled(enabled: Boolean)
+
+    // Smart notification preferences
+    suspend fun isSmartNotificationsEnabled(): Boolean
+    suspend fun setSmartNotificationsEnabled(enabled: Boolean)
+    suspend fun getSmartNotificationThreshold(): Float // 0.0-1.0, default 0.6
+    suspend fun setSmartNotificationThreshold(threshold: Float)
+
+    // Reset all preferences
+    suspend fun clearAll()
 }

@@ -8,6 +8,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -30,9 +32,10 @@ fun ThreadDetailScreen(
     viewModel: ThreadDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val thread by viewModel.thread.collectAsState()
     val threadName = when (val state = uiState) {
-        is ThreadDetailUiState.Success -> state.messages.firstOrNull()?.threadName ?: "Thread"
-        else -> "Thread"
+        is ThreadDetailUiState.Success -> state.messages.firstOrNull()?.threadName ?: thread?.threadName ?: "Thread"
+        else -> thread?.threadName ?: "Thread"
     }
 
     Scaffold(
@@ -45,6 +48,27 @@ fun ThreadDetailScreen(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
                         )
+                    }
+                },
+                actions = {
+                    thread?.let { currentThread ->
+                        IconButton(
+                            onClick = { viewModel.toggleFollowStatus(!currentThread.isFollowed) }
+                        ) {
+                            Icon(
+                                imageVector = if (currentThread.isFollowed) {
+                                    Icons.Filled.Star
+                                } else {
+                                    Icons.Outlined.StarOutline
+                                },
+                                contentDescription = if (currentThread.isFollowed) "Unfollow" else "Follow",
+                                tint = if (currentThread.isFollowed) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                }
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

@@ -1,13 +1,20 @@
 package com.summarizer.app.service
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import androidx.core.app.NotificationCompat
+import com.summarizer.app.R
 import com.summarizer.app.data.local.entity.MessageEntity
 import com.summarizer.app.domain.model.Message
 import com.summarizer.app.domain.model.MessageType
 import com.summarizer.app.domain.model.Thread
 import com.summarizer.app.domain.repository.MessageRepository
+import com.summarizer.app.domain.repository.PreferencesRepository
 import com.summarizer.app.domain.repository.ThreadRepository
+import com.summarizer.app.domain.usecase.AnalyzeMessageImportanceUseCase
 import com.summarizer.app.util.Constants
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -27,6 +34,12 @@ class WhatsAppNotificationListener : NotificationListenerService() {
     @Inject
     lateinit var threadRepository: ThreadRepository
 
+    @Inject
+    lateinit var preferencesRepository: PreferencesRepository
+
+    @Inject
+    lateinit var analyzeMessageImportanceUseCase: AnalyzeMessageImportanceUseCase
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
@@ -36,6 +49,8 @@ class WhatsAppNotificationListener : NotificationListenerService() {
 
     companion object {
         private const val TAG = "WhatsAppListener"
+        private const val NOTIFICATION_CHANNEL_ID = "smart_whatsapp_notifications"
+        private const val NOTIFICATION_CHANNEL_NAME = "WhatsApp Important Messages"
         private val DELETED_MESSAGE_PATTERNS = listOf(
             "This message was deleted",
             "You deleted this message",
@@ -273,10 +288,113 @@ class WhatsAppNotificationListener : NotificationListenerService() {
 
                 Timber.tag(TAG).d( "Processed message from $sender in $groupName (type: $messageType)")
 
+                // Smart Notifications: Analyze importance and show notification if needed
+                handleSmartNotification(groupName, sender, messageContent, timestamp)
+
             } catch (e: Exception) {
                 Timber.tag(TAG).e(e, "Error saving message: ${e.message}")
             }
         }
+    }
+
+    /**
+     * Handle smart notification - analyze message importance and show notification if important enough.
+     */
+    private suspend fun handleSmartNotification(
+        threadName: String,
+        senderName: String,
+        messageContent: String,
+        timestamp: Long
+    ) {
+        try {
+            val smartNotificationsEnabled = preferencesRepository.isSmartNotificationsEnabled()
+
+            if (!smartNotificationsEnabled) {
+                Timber.tag(TAG).d("Smart notifications disabled, skipping importance analysis")
+                return
+            }
+
+            Timber.tag(TAG).d("Analyzing message importance...")
+            val shouldNotify = analyzeMessageImportanceUseCase.shouldNotify(
+                messageContent = messageContent,
+                senderName = senderName
+            )
+
+            if (shouldNotify) {
+                // Get the full importance score to determine notification priority
+                val importanceScore = analyzeMessageImportanceUseCase.execute(messageContent, senderName) ?: 0.5f
+                showSmartNotification(threadName, senderName, messageContent, importanceScore)
+                Timber.tag(TAG).i("✅ Showed notification for important message (score: $importanceScore)")
+            } else {
+                Timber.tag(TAG).d("⏭️ Message not important enough, notification suppressed")
+            }
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Error in smart notification handling, showing notification as fallback")
+            // Fallback: show notification on error to avoid missing important messages
+            showSmartNotification(threadName, senderName, messageContent, 0.7f)
+        }
+    }
+
+    /**
+     * Show a smart notification with appropriate priority based on importance score.
+     */
+    private fun showSmartNotification(
+        threadName: String,
+        senderName: String,
+        messageContent: String,
+        importanceScore: Float
+    ) {
+        try {
+            val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+
+            // Create notification channel if needed
+            createNotificationChannel(notificationManager)
+
+            // Determine priority based on importance score
+            // 0.0-0.6: Default priority
+            // 0.6-0.8: High priority
+            // 0.8-1.0: Max priority (heads-up)
+            val priority = when {
+                importanceScore >= 0.8f -> NotificationCompat.PRIORITY_MAX
+                importanceScore >= 0.6f -> NotificationCompat.PRIORITY_HIGH
+                else -> NotificationCompat.PRIORITY_DEFAULT
+            }
+
+            val notification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentTitle(threadName)
+                .setContentText("$senderName: $messageContent")
+                .setStyle(NotificationCompat.BigTextStyle()
+                    .bigText("$senderName: $messageContent"))
+                .setPriority(priority)
+                .setAutoCancel(true)
+                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+                .build()
+
+            // Use timestamp as notification ID to allow multiple notifications
+            val notificationId = (System.currentTimeMillis() % Int.MAX_VALUE).toInt()
+            notificationManager.notify(notificationId, notification)
+
+            Timber.tag(TAG).d("Notification shown with priority: $priority (score: $importanceScore)")
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Error showing smart notification")
+        }
+    }
+
+    /**
+     * Create notification channel for smart notifications.
+     */
+    private fun createNotificationChannel(notificationManager: NotificationManager) {
+        val channel = NotificationChannel(
+            NOTIFICATION_CHANNEL_ID,
+            NOTIFICATION_CHANNEL_NAME,
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Important WhatsApp messages filtered by AI"
+            enableVibration(true)
+            enableLights(true)
+        }
+        notificationManager.createNotificationChannel(channel)
     }
 
     private fun parseNotificationContent(title: String, text: String): Triple<String, String, String> {

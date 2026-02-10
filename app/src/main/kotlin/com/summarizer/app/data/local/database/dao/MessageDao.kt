@@ -31,6 +31,32 @@ interface MessageDao {
     @Query("DELETE FROM messages WHERE timestamp < :cutoffTimestamp")
     suspend fun deleteMessagesBefore(cutoffTimestamp: Long)
 
+    /**
+     * Delete old messages for a thread, keeping at least the most recent N messages.
+     * This ensures we never delete all messages from a thread even if they're old.
+     */
+    @Query("""
+        DELETE FROM messages
+        WHERE threadId = :threadId
+        AND timestamp < :cutoffTimestamp
+        AND messageHash NOT IN (
+            SELECT messageHash FROM messages
+            WHERE threadId = :threadId
+            ORDER BY timestamp DESC
+            LIMIT :keepCount
+        )
+    """)
+    suspend fun deleteOldMessagesForThread(threadId: String, cutoffTimestamp: Long, keepCount: Int)
+
+    /**
+     * Get all unique thread IDs that have messages.
+     */
+    @Query("SELECT DISTINCT threadId FROM messages")
+    suspend fun getAllThreadIds(): List<String>
+
     @Query("UPDATE messages SET threadId = :newThreadId WHERE threadId = :oldThreadId")
     suspend fun updateThreadId(oldThreadId: String, newThreadId: String)
+
+    @Query("SELECT * FROM messages WHERE content LIKE '%' || :query || '%' OR sender LIKE '%' || :query || '%' OR threadName LIKE '%' || :query || '%' ORDER BY timestamp DESC LIMIT 100")
+    suspend fun searchMessages(query: String): List<MessageEntity>
 }

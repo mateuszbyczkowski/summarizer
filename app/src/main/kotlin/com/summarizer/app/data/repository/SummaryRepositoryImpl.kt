@@ -36,6 +36,10 @@ class SummaryRepositoryImpl @Inject constructor(
         summaryDao.deleteSummariesForThread(threadId)
     }
 
+    override suspend fun searchSummaries(query: String): List<Summary> {
+        return summaryDao.searchSummaries(query).map { it.toDomainModel() }
+    }
+
     private fun SummaryEntity.toDomainModel() = Summary(
         id = id,
         threadId = threadId,

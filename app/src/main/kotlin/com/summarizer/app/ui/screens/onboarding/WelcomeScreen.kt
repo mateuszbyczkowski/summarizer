@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -48,7 +50,7 @@ fun WelcomeScreen(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Stay informed without the overwhelm.\nAutomatically summarize your WhatsApp groups.",
+                    text = "Never miss important school updates.\nStay on top of what matters from your groups.",
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
@@ -61,19 +63,19 @@ fun WelcomeScreen(
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 FeatureItem(
-                    icon = Icons.Default.Message,
-                    title = "Auto-Capture Messages",
-                    description = "Automatically capture WhatsApp group messages in the background"
+                    icon = Icons.Default.Notifications,
+                    title = "Never Miss Updates",
+                    description = "Track important announcements, deadlines, and action items from your groups"
                 )
                 FeatureItem(
                     icon = Icons.Default.AutoAwesome,
-                    title = "AI-Powered Summaries",
-                    description = "Get concise, on-device AI summaries of long conversations"
+                    title = "Smart AI Summaries",
+                    description = "Get key points from busy conversations without reading hundreds of messages"
                 )
                 FeatureItem(
                     icon = Icons.Default.Lock,
-                    title = "Completely Private",
-                    description = "All processing happens locally on your device, no data leaves your phone"
+                    title = "100% Private & Offline",
+                    description = "Everything stays on your device. Zero cloud, zero tracking, zero data sharing."
                 )
             }
 

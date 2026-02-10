@@ -1,8 +1,11 @@
 package com.summarizer.app.ui.screens.summary
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,6 +18,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -68,23 +74,32 @@ fun SummaryDisplayScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            when (val state = uiState) {
-                is SummaryUiState.Initial -> {
-                    InitialPrompt(
-                        onGenerateClick = { viewModel.generateSummary() }
-                    )
-                }
-                is SummaryUiState.Generating -> {
-                    GeneratingIndicator()
-                }
-                is SummaryUiState.Success -> {
-                    SummaryContent(summary = state.summary)
-                }
-                is SummaryUiState.Error -> {
-                    ErrorContent(
-                        message = state.message,
-                        onRetryClick = { viewModel.retry() }
-                    )
+            AnimatedContent(
+                targetState = uiState,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(300)) togetherWith
+                    fadeOut(animationSpec = tween(200))
+                },
+                label = "summaryStateTransition"
+            ) { state ->
+                when (state) {
+                    is SummaryUiState.Initial -> {
+                        InitialPrompt(
+                            onGenerateClick = { viewModel.generateSummary() }
+                        )
+                    }
+                    is SummaryUiState.Generating -> {
+                        GeneratingIndicator()
+                    }
+                    is SummaryUiState.Success -> {
+                        SummaryContent(summary = state.summary)
+                    }
+                    is SummaryUiState.Error -> {
+                        ErrorContent(
+                            message = state.message,
+                            onRetryClick = { viewModel.retry() }
+                        )
+                    }
                 }
             }
         }
@@ -161,91 +176,117 @@ private fun GeneratingIndicator() {
 
 @Composable
 private fun SummaryContent(summary: Summary) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Metadata card
-        item {
-            SummaryMetadataCard(summary = summary)
+    var showRawOutput by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Metadata card
+            item {
+                SummaryMetadataCard(summary = summary)
+            }
+
+            // Raw AI Response (for debugging) - Hidden by default
+            if (showRawOutput && !summary.rawAIResponse.isNullOrBlank()) {
+                item {
+                    SectionCard(
+                        title = "Raw AI Output",
+                        icon = "🤖"
+                    ) {
+                        Text(
+                            text = summary.rawAIResponse,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+
+            // Key Topics section
+            if (summary.keyTopics.isNotEmpty()) {
+                item {
+                    SectionCard(
+                        title = "Key Topics",
+                        icon = "💡"
+                    ) {
+                        summary.keyTopics.forEach { topic ->
+                            BulletPoint(text = topic)
+                        }
+                    }
+                }
+            }
+
+            // Action Items section
+            if (summary.actionItems.isNotEmpty()) {
+                item {
+                    SectionCard(
+                        title = "Action Items",
+                        icon = "✅"
+                    ) {
+                        summary.actionItems.forEach { item ->
+                            ActionItemCard(
+                                task = item.task,
+                                assignedTo = item.assignedTo,
+                                priority = item.priority
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Announcements section
+            if (summary.announcements.isNotEmpty()) {
+                item {
+                    SectionCard(
+                        title = "Announcements",
+                        icon = "📢"
+                    ) {
+                        summary.announcements.forEach { announcement ->
+                            BulletPoint(text = announcement)
+                        }
+                    }
+                }
+            }
+
+            // Participant Highlights section
+            if (summary.participantHighlights.isNotEmpty()) {
+                item {
+                    SectionCard(
+                        title = "Participant Highlights",
+                        icon = "👤"
+                    ) {
+                        summary.participantHighlights.forEach { highlight ->
+                            ParticipantHighlightCard(
+                                participant = highlight.participant,
+                                contribution = highlight.contribution
+                            )
+                        }
+                    }
+                }
+            }
         }
 
-        // Raw AI Response (for debugging)
+        // Toggle button for raw output at the bottom
         if (!summary.rawAIResponse.isNullOrBlank()) {
-            item {
-                SectionCard(
-                    title = "Raw AI Output",
-                    icon = "🤖"
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                tonalElevation = 3.dp,
+                shadowElevation = 8.dp
+            ) {
+                TextButton(
+                    onClick = { showRawOutput = !showRawOutput },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
                 ) {
                     Text(
-                        text = summary.rawAIResponse,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = if (showRawOutput) "Hide Raw Output" else "Show Raw Output",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
-                }
-            }
-        }
-
-        // Key Topics section
-        if (summary.keyTopics.isNotEmpty()) {
-            item {
-                SectionCard(
-                    title = "Key Topics",
-                    icon = "💡"
-                ) {
-                    summary.keyTopics.forEach { topic ->
-                        BulletPoint(text = topic)
-                    }
-                }
-            }
-        }
-
-        // Action Items section
-        if (summary.actionItems.isNotEmpty()) {
-            item {
-                SectionCard(
-                    title = "Action Items",
-                    icon = "✅"
-                ) {
-                    summary.actionItems.forEach { item ->
-                        ActionItemCard(
-                            task = item.task,
-                            assignedTo = item.assignedTo,
-                            priority = item.priority
-                        )
-                    }
-                }
-            }
-        }
-
-        // Announcements section
-        if (summary.announcements.isNotEmpty()) {
-            item {
-                SectionCard(
-                    title = "Announcements",
-                    icon = "📢"
-                ) {
-                    summary.announcements.forEach { announcement ->
-                        BulletPoint(text = announcement)
-                    }
-                }
-            }
-        }
-
-        // Participant Highlights section
-        if (summary.participantHighlights.isNotEmpty()) {
-            item {
-                SectionCard(
-                    title = "Participant Highlights",
-                    icon = "👤"
-                ) {
-                    summary.participantHighlights.forEach { highlight ->
-                        ParticipantHighlightCard(
-                            participant = highlight.participant,
-                            contribution = highlight.contribution
-                        )
-                    }
                 }
             }
         }

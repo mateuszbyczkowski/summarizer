@@ -1,5 +1,8 @@
 package com.summarizer.app.ui.screens.models
 
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -168,6 +171,16 @@ fun ModelCard(
     onDeleteClick: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
+
+    // Animate progress changes smoothly
+    val animatedProgress by animateFloatAsState(
+        targetValue = downloadState.progress.coerceIn(0f, 1f),
+        animationSpec = tween(
+            durationMillis = 500,
+            easing = LinearOutSlowInEasing
+        ),
+        label = "downloadProgress"
+    )
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -352,7 +365,7 @@ fun ModelCard(
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         LinearProgressIndicator(
-                            progress = downloadState.progress.coerceIn(0f, 1f),
+                            progress = { animatedProgress },
                             modifier = Modifier.fillMaxWidth()
                         )
                     }

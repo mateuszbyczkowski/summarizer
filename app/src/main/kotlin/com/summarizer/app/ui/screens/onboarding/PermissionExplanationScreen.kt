@@ -1,6 +1,8 @@
 package com.summarizer.app.ui.screens.onboarding
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Security
@@ -45,53 +47,60 @@ fun PermissionExplanationScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+                .padding(paddingValues),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Header
+            // Scrollable content
             Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(
-                    imageVector = Icons.Default.Notifications,
-                    contentDescription = null,
-                    modifier = Modifier.size(80.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
                 Spacer(modifier = Modifier.height(24.dp))
-                Text(
-                    text = "Notification Access",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "To summarize your WhatsApp conversations, we need permission to read notifications.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
-            }
 
-            // Privacy assurances
-            Column(
-                modifier = Modifier.padding(vertical = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
-            ) {
+                // Header
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = null,
+                        modifier = Modifier.size(80.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        text = "Notification Access",
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "ThreadSummarizer helps you stay on top of school group chats by tracking important announcements, deadlines, and action items.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // Privacy assurances
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
                 PrivacyAssuranceItem(
                     icon = Icons.Default.Security,
-                    title = "Your Data is Safe",
-                    description = "We only read WhatsApp notifications. All other apps are ignored."
+                    title = "What We Capture",
+                    description = "Only messages from WhatsApp groups. Direct messages and other apps are completely ignored."
                 )
                 PrivacyAssuranceItem(
                     icon = Icons.Default.Visibility,
-                    title = "100% Private",
-                    description = "All messages are processed and stored locally on your device. Nothing is sent to external servers."
+                    title = "100% On-Device Processing",
+                    description = "All messages stay on your phone. Zero cloud storage, zero tracking, zero data sharing. Completely offline."
                 )
 
                 Card(
@@ -131,7 +140,7 @@ fun PermissionExplanationScreen(
                             modifier = Modifier.padding(16.dp)
                         ) {
                             Text(
-                                text = "${PermissionHelper.getROMType()} Additional Step Required",
+                                text = "${PermissionHelper.getROMType()} - Additional Steps Required",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onErrorContainer
@@ -143,6 +152,33 @@ fun PermissionExplanationScreen(
                                 color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.9f),
                                 fontWeight = FontWeight.Medium
                             )
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Detailed instructions
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp)
+                                ) {
+                                    Text(
+                                        text = "Steps to enable AutoStart:",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = PermissionHelper.getAutoStartInstructions(),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.9f)
+                                    )
+                                }
+                            }
+
                             Spacer(modifier = Modifier.height(12.dp))
                             OutlinedButton(
                                 onClick = {
@@ -158,10 +194,15 @@ fun PermissionExplanationScreen(
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(24.dp))
+                }
             }
 
-            // Continue button
-            Column {
+            // Continue button - Fixed at bottom
+            Column(
+                modifier = Modifier.padding(24.dp)
+            ) {
                 if (hasPermission) {
                     Button(
                         onClick = onContinueClick,

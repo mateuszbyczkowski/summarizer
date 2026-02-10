@@ -1,6 +1,8 @@
 package com.summarizer.app.ui.screens.threads
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -11,13 +13,18 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -35,10 +42,12 @@ import java.util.*
 fun ThreadListScreen(
     viewModel: ThreadListViewModel = hiltViewModel(),
     onThreadClick: (String) -> Unit,
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    onSearchClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val showOnlyFollowed by viewModel.showOnlyFollowed.collectAsState()
     val context = LocalContext.current
     var hasPermission by remember { mutableStateOf(PermissionHelper.hasNotificationListenerPermission(context)) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -65,6 +74,13 @@ fun ThreadListScreen(
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
                 actions = {
+                    IconButton(onClick = onSearchClick) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             imageVector = Icons.Default.Settings,
@@ -90,6 +106,29 @@ fun ThreadListScreen(
                 PermissionCard()
             }
 
+            // Filter chip
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                FilterChip(
+                    selected = !showOnlyFollowed,
+                    onClick = { viewModel.toggleFilter() },
+                    label = {
+                        Text(if (showOnlyFollowed) "Followed only" else "All threads")
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.FilterList,
+                            contentDescription = "Filter",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                )
+            }
+
             // SwipeRefresh wraps the entire content
             SwipeRefresh(
                 state = rememberSwipeRefreshState(isRefreshing),
@@ -110,17 +149,35 @@ fun ThreadListScreen(
                         if (state.threads.isEmpty()) {
                             EmptyState(
                                 modifier = Modifier.fillMaxSize(),
-                                hasPermission = hasPermission
+                                hasPermission = hasPermission,
+                                showOnlyFollowed = showOnlyFollowed
                             )
                         } else {
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = PaddingValues(vertical = 8.dp)
                             ) {
-                                items(state.threads, key = { it.threadId }) { thread ->
+                                items(
+                                    items = state.threads,
+                                    key = { it.threadId }
+                                ) { thread ->
                                     ThreadItem(
                                         thread = thread,
-                                        onClick = { onThreadClick(thread.threadId) }
+                                        showOnlyFollowed = showOnlyFollowed,
+                                        modifier = Modifier.animateItem(
+                                            fadeInSpec = spring(
+                                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                stiffness = Spring.StiffnessLow
+                                            ),
+                                            placementSpec = spring(
+                                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                stiffness = Spring.StiffnessLow
+                                            )
+                                        ),
+                                        onClick = { onThreadClick(thread.threadId) },
+                                        onToggleFollow = { isFollowed ->
+                                            viewModel.toggleFollowStatus(thread.threadId, isFollowed)
+                                        }
                                     )
                                 }
                             }
@@ -141,7 +198,8 @@ fun ThreadListScreen(
 @Composable
 fun EmptyState(
     modifier: Modifier = Modifier,
-    hasPermission: Boolean = true
+    hasPermission: Boolean = true,
+    showOnlyFollowed: Boolean = true
 ) {
     Box(
         modifier = modifier.fillMaxSize(),
@@ -159,18 +217,23 @@ fun EmptyState(
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "No messages yet",
+                text = when {
+                    !hasPermission -> "No messages yet"
+                    showOnlyFollowed -> "No followed threads"
+                    else -> "No messages yet"
+                },
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = if (hasPermission) {
-                    "Messages from WhatsApp groups will appear here"
-                } else {
-                    "Grant notification access to start capturing messages"
+                text = when {
+                    !hasPermission -> "Grant notification access to start tracking important updates from your groups"
+                    showOnlyFollowed -> "You haven't followed any threads yet.\nTap the filter to see all threads and follow the ones you care about."
+                    else -> "Important updates from your groups will appear here.\nStay informed about announcements and deadlines."
                 },
                 style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
             )
         }
@@ -181,17 +244,27 @@ fun EmptyState(
 @Composable
 fun ThreadItem(
     thread: Thread,
-    onClick: () -> Unit
+    showOnlyFollowed: Boolean,
+    onClick: () -> Unit,
+    onToggleFollow: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp),
         onClick = onClick,
         elevation = CardDefaults.cardElevation(
             defaultElevation = 2.dp,
             pressedElevation = 8.dp
-        )
+        ),
+        colors = if (!thread.isFollowed && !showOnlyFollowed) {
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            )
+        } else {
+            CardDefaults.cardColors()
+        }
     ) {
         Row(
             modifier = Modifier
@@ -203,13 +276,21 @@ fun ThreadItem(
             Surface(
                 modifier = Modifier.size(56.dp),
                 shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.primaryContainer
+                color = if (thread.isFollowed) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                }
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = thread.threadName.take(1).uppercase(),
                         style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = if (thread.isFollowed) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        }
                     )
                 }
             }
@@ -222,7 +303,12 @@ fun ThreadItem(
                     text = thread.threadName,
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    color = if (thread.isFollowed) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    }
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(
@@ -245,6 +331,25 @@ fun ThreadItem(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                 }
+            }
+
+            // Follow/unfollow star icon
+            IconButton(
+                onClick = { onToggleFollow(!thread.isFollowed) }
+            ) {
+                Icon(
+                    imageVector = if (thread.isFollowed) {
+                        Icons.Filled.Star
+                    } else {
+                        Icons.Outlined.StarOutline
+                    },
+                    contentDescription = if (thread.isFollowed) "Unfollow" else "Follow",
+                    tint = if (thread.isFollowed) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                    }
+                )
             }
         }
     }

@@ -34,6 +34,10 @@ class MessageRepositoryImpl @Inject constructor(
         messageDao.deleteMessagesForThread(threadId)
     }
 
+    override suspend fun searchMessages(query: String): List<Message> {
+        return messageDao.searchMessages(query).map { it.toDomainModel() }
+    }
+
     private fun MessageEntity.toDomainModel() = Message(
         id = id,
         threadId = threadId,

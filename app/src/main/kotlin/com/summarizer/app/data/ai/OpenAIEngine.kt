@@ -9,6 +9,7 @@ import com.summarizer.app.domain.ai.AIEngineError
 import com.summarizer.app.domain.ai.GenerationEvent
 import com.summarizer.app.domain.ai.ModelInfo
 import com.summarizer.app.domain.repository.PreferencesRepository
+import com.summarizer.app.util.RetryHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -81,24 +82,33 @@ class OpenAIEngine @Inject constructor(
         )
 
         try {
-            withTimeout(TIMEOUT_MS) {
-                withContext(Dispatchers.IO) {
-                    val response = openAIService.createChatCompletion(
-                        authorization = "Bearer $apiKey",
-                        request = request
-                    )
+            // Retry network calls with exponential backoff (3 attempts, 2s initial delay, 10s max)
+            RetryHelper.retryResult<String>(times = 3, initialDelay = 2000, maxDelay = 10000) {
+                runCatching {
+                    withTimeout(TIMEOUT_MS) {
+                        withContext(Dispatchers.IO) {
+                            Timber.d("OpenAI: Attempting API call...")
+                            val response = openAIService.createChatCompletion(
+                                authorization = "Bearer $apiKey",
+                                request = request
+                            )
 
-                    if (response.choices.isEmpty()) {
-                        throw AIEngineError.InvalidResponse("No choices in OpenAI response")
+                            if (response.choices.isEmpty()) {
+                                throw AIEngineError.InvalidResponse("No choices in OpenAI response")
+                            }
+
+                            val generatedText = response.choices[0].message.content
+
+                            Timber.i("OpenAI: Generation complete (${generatedText.length} chars, ${response.usage.totalTokens} tokens)")
+                            Timber.d("OpenAI: Token usage - Prompt: ${response.usage.promptTokens}, Completion: ${response.usage.completionTokens}")
+
+                            generatedText
+                        }
                     }
-
-                    val generatedText = response.choices[0].message.content
-
-                    Timber.i("OpenAI: Generation complete (${generatedText.length} chars, ${response.usage.totalTokens} tokens)")
-                    Timber.d("OpenAI: Token usage - Prompt: ${response.usage.promptTokens}, Completion: ${response.usage.completionTokens}")
-
-                    generatedText
                 }
+            }.getOrElse { error ->
+                Timber.e(error, "OpenAI: Generation failed after retries")
+                throw error
             }
         } catch (e: Exception) {
             Timber.e(e, "OpenAI: Generation failed")
@@ -184,23 +194,32 @@ class OpenAIEngine @Inject constructor(
         )
 
         try {
-            withTimeout(TIMEOUT_MS) {
-                withContext(Dispatchers.IO) {
-                    val response = openAIService.createChatCompletion(
-                        authorization = "Bearer $apiKey",
-                        request = request
-                    )
+            // Retry network calls with exponential backoff (3 attempts, 2s initial delay, 10s max)
+            RetryHelper.retryResult<String>(times = 3, initialDelay = 2000, maxDelay = 10000) {
+                runCatching {
+                    withTimeout(TIMEOUT_MS) {
+                        withContext(Dispatchers.IO) {
+                            Timber.d("OpenAI: Attempting JSON API call...")
+                            val response = openAIService.createChatCompletion(
+                                authorization = "Bearer $apiKey",
+                                request = request
+                            )
 
-                    if (response.choices.isEmpty()) {
-                        throw AIEngineError.InvalidResponse("No choices in OpenAI response")
+                            if (response.choices.isEmpty()) {
+                                throw AIEngineError.InvalidResponse("No choices in OpenAI response")
+                            }
+
+                            val jsonText = response.choices[0].message.content
+
+                            Timber.i("OpenAI: JSON generation complete (${jsonText.length} chars, ${response.usage.totalTokens} tokens)")
+
+                            jsonText
+                        }
                     }
-
-                    val jsonText = response.choices[0].message.content
-
-                    Timber.i("OpenAI: JSON generation complete (${jsonText.length} chars, ${response.usage.totalTokens} tokens)")
-
-                    jsonText
                 }
+            }.getOrElse { error ->
+                Timber.e(error, "OpenAI: JSON generation failed after retries")
+                throw error
             }
         } catch (e: Exception) {
             Timber.e(e, "OpenAI: JSON generation failed")

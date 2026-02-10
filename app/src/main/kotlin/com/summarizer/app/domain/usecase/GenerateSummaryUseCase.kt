@@ -10,6 +10,7 @@ import com.summarizer.app.domain.repository.MessageRepository
 import com.summarizer.app.domain.repository.ModelRepository
 import com.summarizer.app.domain.repository.SummaryRepository
 import com.summarizer.app.domain.repository.ThreadRepository
+import com.summarizer.app.util.RetryHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -53,27 +54,41 @@ class GenerateSummaryUseCase @Inject constructor(
             val startTime = System.currentTimeMillis()
             Timber.d("Starting summary generation for thread: $threadId")
 
-            // Step 1: Ensure model is loaded
+            // Step 1: Ensure model is loaded (with retry)
             if (!aiEngine.isModelLoaded()) {
                 val downloadedModel = modelRepository.getDownloadedModel()
-                    ?: throw AIEngineError.ModelNotLoaded
+                    ?: throw AIEngineError.ModelNotLoaded.also {
+                        Timber.e("No model downloaded. Please download a model first.")
+                    }
 
                 if (downloadedModel.localFilePath == null) {
-                    throw IllegalStateException("Downloaded model has no local file path")
+                    throw IllegalStateException("Downloaded model has no local file path").also {
+                        Timber.e("Model file path is missing for: ${downloadedModel.name}")
+                    }
                 }
 
                 Timber.i("Loading model: ${downloadedModel.name}")
-                aiEngine.loadModel(downloadedModel.localFilePath).getOrThrow()
+                // Retry model loading in case of transient errors
+                RetryHelper.retryResult(times = 2, initialDelay = 500) {
+                    aiEngine.loadModel(downloadedModel.localFilePath)
+                }.getOrElse { error ->
+                    Timber.e(error, "Failed to load model after retries")
+                    throw IllegalStateException("Failed to load AI model: ${error.message}", error)
+                }
             }
 
             // Step 2: Fetch thread and messages
             val thread = threadRepository.getThread(threadId)
-                ?: throw IllegalArgumentException("Thread not found: $threadId")
+                ?: throw IllegalArgumentException("Thread not found: $threadId").also {
+                    Timber.e("Thread with ID $threadId does not exist in database")
+                }
 
             val messages = messageRepository.getMessagesForThread(threadId).first()
 
             if (messages.isEmpty()) {
-                throw IllegalStateException("No messages found for thread: $threadId")
+                throw IllegalStateException("No messages to summarize for thread: ${thread.threadName}").also {
+                    Timber.w("Thread $threadId has no messages to summarize")
+                }
             }
 
             Timber.d("Loaded ${messages.size} messages for summarization")
@@ -87,13 +102,23 @@ class GenerateSummaryUseCase @Inject constructor(
 
             Timber.d("Generated prompt with ${prompt.length} characters")
 
-            // Step 4: Generate summary using AI (simple text generation)
-            val rawResponse = aiEngine.generate(
-                prompt = prompt,
-                systemPrompt = "You are a helpful assistant that summarizes conversations clearly and concisely. Focus on specific details.",
-                maxTokens = 512,
-                temperature = 0.3f  // Lower temperature for more focused output
-            ).getOrThrow()
+            // Step 4: Generate summary using AI (with retry for transient failures)
+            val rawResponse = RetryHelper.retryResult(
+                times = 3,
+                initialDelay = 1000,
+                maxDelay = 5000
+            ) {
+                Timber.d("Attempting AI generation...")
+                aiEngine.generate(
+                    prompt = prompt,
+                    systemPrompt = "You are a helpful assistant that summarizes conversations clearly and concisely. Focus on specific details.",
+                    maxTokens = 512,
+                    temperature = 0.3f  // Lower temperature for more focused output
+                )
+            }.getOrElse { error ->
+                Timber.e(error, "AI generation failed after retries")
+                throw IllegalStateException("Failed to generate summary: ${error.message ?: "AI generation error"}", error)
+            }
 
             Timber.d("Received AI response (${rawResponse.length} chars)")
             Timber.d("Full AI response: $rawResponse")
@@ -183,7 +208,14 @@ class GenerateSummaryUseCase @Inject constructor(
         val announcements = announcementsText
             .split("\n", ";")
             .map { it.trim().removePrefix("-").removePrefix("*").removePrefix("•").trim() }
-            .filter { it.isNotBlank() && it.length > 3 }
+            .filter { announcement ->
+                announcement.isNotBlank() &&
+                announcement.length > 3 &&
+                // Filter out placeholder/instruction text
+                !announcement.startsWith("List any", ignoreCase = true) &&
+                !announcement.startsWith("(List", ignoreCase = true) &&
+                !announcement.contains("important news or announcements", ignoreCase = true)
+            }
 
         return ParsedSummary(
             overview = overview.takeIf { it.isNotBlank() } ?: "Discussion in progress",
@@ -206,6 +238,12 @@ class GenerateSummaryUseCase @Inject constructor(
 
         if (sectionStartIndex == -1) return ""
 
+        // Check if there's content on the same line as the header (after the colon)
+        val headerLine = lines[sectionStartIndex]
+        val headerContent = headerLine.substringAfter(sectionHeader, "")
+            .removePrefix("(").removeSuffix(")")  // Remove placeholder text in parentheses
+            .trim()
+
         // Find the next section header or end of text
         val nextSectionIndex = lines.drop(sectionStartIndex + 1).indexOfFirst { line ->
             line.contains("OVERVIEW:", ignoreCase = true) ||
@@ -220,9 +258,21 @@ class GenerateSummaryUseCase @Inject constructor(
             sectionStartIndex + 1 + nextSectionIndex
         }
 
-        return lines.subList(sectionStartIndex + 1, endIndex)
+        // Combine header line content (if any) with subsequent lines
+        val subsequentLines = lines.subList(sectionStartIndex + 1, endIndex)
             .joinToString("\n")
             .trim()
+
+        return if (headerContent.isNotBlank() && !headerContent.startsWith("(")) {
+            // Content exists on header line and it's not just placeholder text
+            if (subsequentLines.isNotBlank()) {
+                "$headerContent\n$subsequentLines"
+            } else {
+                headerContent
+            }
+        } else {
+            subsequentLines
+        }
     }
 
     /**

@@ -5,5 +5,6 @@ data class Thread(
     val threadName: String,
     val messageCount: Int = 0,
     val lastMessageTimestamp: Long,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val isFollowed: Boolean = true
 )

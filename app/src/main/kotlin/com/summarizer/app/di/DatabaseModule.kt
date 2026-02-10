@@ -2,6 +2,8 @@ package com.summarizer.app.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.summarizer.app.data.local.dao.AIModelDao
 import com.summarizer.app.data.local.database.AppDatabase
 import com.summarizer.app.data.local.database.dao.MessageDao
@@ -20,6 +22,13 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
+
+    private val MIGRATION_6_7 = object : Migration(6, 7) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            // Add isFollowed column to threads table with default value true (1)
+            database.execSQL("ALTER TABLE threads ADD COLUMN isFollowed INTEGER NOT NULL DEFAULT 1")
+        }
+    }
 
     @Provides
     @Singleton
@@ -41,7 +50,8 @@ object DatabaseModule {
             Constants.DATABASE_NAME
         )
             .openHelperFactory(factory)
-            .fallbackToDestructiveMigration() // For I1, we can afford to lose data
+            .addMigrations(MIGRATION_6_7)
+            .fallbackToDestructiveMigration() // Only if migration fails
             .build()
     }
 

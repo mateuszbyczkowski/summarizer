@@ -28,6 +28,9 @@ class ThreadListViewModel @Inject constructor(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
 
+    private val _showOnlyFollowed = MutableStateFlow(true)
+    val showOnlyFollowed: StateFlow<Boolean> = _showOnlyFollowed
+
     init {
         // Merge any duplicate threads on startup
         viewModelScope.launch {
@@ -38,13 +41,17 @@ class ThreadListViewModel @Inject constructor(
         }
     }
 
-    val threads: StateFlow<List<Thread>> = threadRepository
-        .getAllThreads()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+    val threads: StateFlow<List<Thread>> = combine(
+        _showOnlyFollowed,
+        threadRepository.getAllThreads(),
+        threadRepository.getFollowedThreads()
+    ) { showOnlyFollowed, allThreads, followedThreads ->
+        if (showOnlyFollowed) followedThreads else allThreads
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     val uiState: StateFlow<ThreadListUiState> = combine(
         threads,
@@ -66,6 +73,16 @@ class ThreadListViewModel @Inject constructor(
             // The Flow automatically refreshes, so just reset the loading state
             kotlinx.coroutines.delay(500) // Small delay for visual feedback
             _isRefreshing.value = false
+        }
+    }
+
+    fun toggleFilter() {
+        _showOnlyFollowed.value = !_showOnlyFollowed.value
+    }
+
+    fun toggleFollowStatus(threadId: String, isFollowed: Boolean) {
+        viewModelScope.launch {
+            threadRepository.updateFollowStatus(threadId, isFollowed)
         }
     }
 }

@@ -26,8 +26,10 @@ data class MessageEntity(
 ) {
     companion object {
         fun generateHash(threadId: String, sender: String, content: String, timestamp: Long): String {
-            // Use full millisecond timestamp to avoid hash collisions for rapid messages
-            return "${threadId}_${sender}_${content.take(100)}_$timestamp".hashCode().toString()
+            // Round timestamp to nearest 0.5 seconds to deduplicate repeated notifications
+            // while still allowing rapid successive messages with the same content
+            val roundedTimestamp = (timestamp / 500) * 500
+            return "${threadId}_${sender}_${content}_$roundedTimestamp".hashCode().toString()
         }
     }
 }
