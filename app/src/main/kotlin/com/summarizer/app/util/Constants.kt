@@ -5,11 +5,7 @@ object Constants {
     const val WHATSAPP_PACKAGE = "com.whatsapp"
     const val WHATSAPP_BUSINESS_PACKAGE = "com.whatsapp.w4b"
 
-    // Model configuration
-    const val TINYLLAMA_MODEL_NAME = "TinyLlama-1.1B Q4_K_M"
-    const val TINYLLAMA_MODEL_URL = "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
-    const val TINYLLAMA_MODEL_FILENAME = "tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
-    const val TINYLLAMA_MODEL_SIZE_MB = 700
+    // Model catalog now lives in ModelDownloadViewModel.DEFAULT_MODELS (Qwen3.5 + LFM2.5).
 
     // Database
     const val DATABASE_NAME = "summarizer_database"

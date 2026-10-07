@@ -13,7 +13,7 @@ interface AIModelDao {
     @Query("SELECT * FROM ai_models WHERE id = :modelId")
     suspend fun getModelById(modelId: String): AIModelEntity?
 
-    @Query("SELECT * FROM ai_models WHERE isDownloaded = 1 LIMIT 1")
+    @Query("SELECT * FROM ai_models WHERE isDownloaded = 1 ORDER BY downloadedTimestamp DESC LIMIT 1")
     suspend fun getDownloadedModel(): AIModelEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

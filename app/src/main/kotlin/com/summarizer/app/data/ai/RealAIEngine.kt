@@ -35,6 +35,11 @@ class RealAIEngine @Inject constructor() : AIEngine {
         private const val DEFAULT_TOP_P = 0.9f
         private const val DEFAULT_TOP_K = 40
         private const val DEFAULT_REPEAT_PENALTY = 1.1f
+
+        // Catalog models support 120K-256K natively; we cap on-device at 16K to keep KV-cache RAM reasonable on
+        // mid-range phones. Llamatik 0.13.0's generateWithContext reads the model's embedded ChatML
+        // chat template from the GGUF, so no manual <|im_start|>/<|im_end|> wrapping is needed here.
+        private const val MODEL_CONTEXT_TOKENS = 16_384
     }
 
     override suspend fun loadModel(modelPath: String): Result<Unit> = runCatching {
@@ -75,7 +80,7 @@ class RealAIEngine @Inject constructor() : AIEngine {
             currentModelInfo = ModelInfo(
                 name = modelFile.nameWithoutExtension,
                 path = modelPath,
-                contextLength = 2048, // TinyLlama default
+                contextLength = MODEL_CONTEXT_TOKENS,
                 loadedAt = System.currentTimeMillis()
             )
 

@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -43,47 +44,38 @@ class ModelDownloadViewModel @Inject constructor(
 
     private fun loadModels() {
         viewModelScope.launch {
-            // For now, insert sample models if none exist
-            val existingModels = modelRepository.getAllModels()
-            existingModels.collect { models ->
-                if (models.isEmpty()) {
-                    // Insert default models
-                    val defaultModels = listOf(
-                        AIModel(
-                            id = "qwen2.5-3b",
-                            name = "Qwen2.5 3B",
-                            description = "Alibaba's latest model with excellent understanding and summarization. Great balance of quality and speed.",
-                            sizeInMB = 1900,
-                            downloadUrl = "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf",
-                            isRecommended = true,
-                            minimumRAM = 6,
-                            estimatedSpeed = "Medium"
-                        ),
-                        AIModel(
-                            id = "phi-3-mini-3.8b",
-                            name = "Phi-3 Mini 3.8B",
-                            description = "Microsoft's newest Phi model with significantly improved instruction following and reasoning.",
-                            sizeInMB = 2300,
-                            downloadUrl = "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf/resolve/main/Phi-3-mini-4k-instruct-q4.gguf",
-                            isRecommended = false,
-                            minimumRAM = 6,
-                            estimatedSpeed = "Medium"
-                        ),
-                        AIModel(
-                            id = "llama-3.2-3b",
-                            name = "Llama 3.2 3B",
-                            description = "Meta's latest compact model with strong performance on conversation understanding.",
-                            sizeInMB = 2000,
-                            downloadUrl = "https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf",
-                            isRecommended = false,
-                            minimumRAM = 6,
-                            estimatedSpeed = "Medium"
-                        )
-                    )
-                    modelRepository.insertModels(defaultModels)
-                }
+            reconcileCatalog()
+            modelRepository.getAllModels().collect { models ->
                 _models.value = models
             }
+        }
+    }
+
+    /**
+     * Bring the seeded catalog up to date with [DEFAULT_MODELS]:
+     *  - Insert/overwrite the current catalog rows (OnConflictStrategy.REPLACE preserves nothing
+     *    other than what we re-supply; downloaded flags on these IDs stay correct because we never
+     *    re-seed an existing ID — see check below).
+     *  - Delete any previously seeded rows whose IDs are no longer in the catalog, so users
+     *    upgrading from a prior model list (Qwen3 / Phi-4-mini, earlier Qwen2.5 / Phi-3 / Llama-3.2) don't see stale
+     *    entries. Downloaded files for retired IDs are wiped via deleteModelFile().
+     */
+    private suspend fun reconcileCatalog() {
+        val existing = modelRepository.getAllModels().first()
+        val catalogIds = DEFAULT_MODELS.map { it.id }.toSet()
+
+        val staleIds = existing.map { it.id }.filterNot { it in catalogIds }
+        for (id in staleIds) {
+            Timber.i("Removing stale catalog model: $id")
+            modelRepository.deleteModelFile(id) // best-effort, ignored if not downloaded
+            modelRepository.deleteModel(id)
+        }
+
+        val existingIds = existing.map { it.id }.toSet()
+        val toInsert = DEFAULT_MODELS.filterNot { it.id in existingIds }
+        if (toInsert.isNotEmpty()) {
+            Timber.i("Seeding catalog with ${toInsert.size} new model(s): ${toInsert.map { it.id }}")
+            modelRepository.insertModels(toInsert)
         }
     }
 
@@ -158,9 +150,59 @@ class ModelDownloadViewModel @Inject constructor(
         }
     }
 
+    companion object {
+        // On-device catalog (Sep 2026). Qwen3.5 small series (Apache 2.0, 256K native context,
+        // reasoning off by default on <=4B) plus LFM2.5 as the lowest-RAM option.
+        // Q4_K_M quantization across the board. Text-only GGUFs; the Qwen3.5 vision projector
+        // (mmproj) is a separate file we don't download. Sizes are approximate GGUF artifact sizes.
+        // Requires a llama.cpp build with qwen35 / lfm2 architecture support (Llamatik 1.x).
+        internal val DEFAULT_MODELS = listOf(
+            AIModel(
+                id = "qwen3.5-0.8b",
+                name = "Qwen3.5 0.8B (Fast)",
+                description = "Fastest option. Best for low-end devices and quick previews. 256K context, 201 languages.",
+                sizeInMB = 530,
+                downloadUrl = "https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf",
+                isRecommended = false,
+                minimumRAM = 3,
+                estimatedSpeed = "Fast"
+            ),
+            AIModel(
+                id = "lfm2.5-1.2b-instruct",
+                name = "LFM2.5 1.2B (Efficient)",
+                description = "Liquid AI hybrid model. Runs in under 1GB RAM with very fast decoding — ideal for older phones. ~120K context.",
+                sizeInMB = 730,
+                downloadUrl = "https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF/resolve/main/LFM2.5-1.2B-Instruct-Q4_K_M.gguf",
+                isRecommended = false,
+                minimumRAM = 3,
+                estimatedSpeed = "Fast"
+            ),
+            AIModel(
+                id = "qwen3.5-2b",
+                name = "Qwen3.5 2B (Balanced)",
+                description = "Recommended daily driver. Strong multilingual summaries with snappy on-device speed. 256K context.",
+                sizeInMB = 1300,
+                downloadUrl = "https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/Qwen3.5-2B-Q4_K_M.gguf",
+                isRecommended = true,
+                minimumRAM = 4,
+                estimatedSpeed = "Medium"
+            ),
+            AIModel(
+                id = "qwen3.5-4b",
+                name = "Qwen3.5 4B (Quality)",
+                description = "Best summary quality on flagship phones. Outperforms Qwen3 4B 2507 by a wide margin. 256K context.",
+                sizeInMB = 2700,
+                downloadUrl = "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf",
+                isRecommended = false,
+                minimumRAM = 6,
+                estimatedSpeed = "Slow"
+            )
+        )
+    }
+
     /**
-     * Pre-load the model in the background to make summarization faster.
-     * Called when user clicks "Use This Model".
+     * Pre-load the selected model and mark it active. Active = most recent downloadedTimestamp,
+     * so re-marking here is how the user switches between multiple downloaded models.
      */
     fun preloadModel(model: AIModel) {
         if (model.localFilePath == null) {
@@ -168,8 +210,21 @@ class ModelDownloadViewModel @Inject constructor(
             return
         }
 
-        // Launch in application scope so it survives screen navigation
         applicationScope.launch {
+            modelRepository.markAsDownloaded(
+                modelId = model.id,
+                filePath = model.localFilePath,
+                timestamp = System.currentTimeMillis()
+            )
+
+            // Unload any previously loaded model so the new one takes effect immediately.
+            if (aiEngine.isModelLoaded() &&
+                aiEngine.getModelInfo()?.path != model.localFilePath
+            ) {
+                Timber.i("Unloading previous model before loading ${model.name}")
+                aiEngine.unloadModel()
+            }
+
             try {
                 Timber.i("Pre-loading model in background: ${model.name}")
                 aiEngine.loadModel(model.localFilePath).getOrThrow()

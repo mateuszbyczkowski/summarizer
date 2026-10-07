@@ -7,6 +7,8 @@ import com.summarizer.app.domain.model.Message
  */
 object PromptTemplate {
 
+    private const val MAX_TRANSCRIPT_CHARS = 48_000
+
     /**
      * System prompt that defines the AI's role and behavior for summarization.
      */
@@ -102,9 +104,11 @@ Guidelines:
         // Build conversation transcript
         val transcript = buildConversationTranscript(validMessages)
 
-        // Truncate if necessary to fit context window (conservative limit: ~1500 tokens = ~6000 chars)
-        val truncatedTranscript = if (transcript.length > 5000) {
-            "${transcript.take(5000)}...\n[Transcript truncated due to length]"
+        // Catalog models support 120K+ context; RealAIEngine caps the runtime at 16K tokens. Reserve room for
+        // the system prompt, the instruction footer, and ~512 generated tokens. ~4 chars/token gives
+        // a safe transcript budget around 48K characters.
+        val truncatedTranscript = if (transcript.length > MAX_TRANSCRIPT_CHARS) {
+            "${transcript.take(MAX_TRANSCRIPT_CHARS)}...\n[Transcript truncated due to length]"
         } else {
             transcript
         }
