@@ -3,19 +3,12 @@ package com.summarizer.app.data.local.database
 import android.annotation.SuppressLint
 import android.content.Context
 import android.provider.Settings
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
 import androidx.core.content.edit
+import com.summarizer.app.util.KeystoreCipher
 import net.sqlcipher.database.SQLiteDatabase
 import timber.log.Timber
 import java.io.File
-import java.security.KeyStore
 import java.security.SecureRandom
-import java.util.Base64
-import javax.crypto.Cipher
-import javax.crypto.KeyGenerator
-import javax.crypto.SecretKey
-import javax.crypto.spec.GCMParameterSpec
 
 /**
  * Provides the SQLCipher passphrase: 32 random bytes, stored wrapped by a non-exportable
@@ -31,15 +24,14 @@ class DatabaseKeyProvider(
 ) {
 
     companion object {
-        private const val KEYSTORE = "AndroidKeyStore"
         private const val WRAPPING_KEY_ALIAS = "summarizer_database_key"
         private const val PREFS_NAME = "summarizer_database_key"
         private const val KEY_CURRENT = "wrapped_key"
         private const val KEY_PENDING = "wrapped_key_pending"
-        private const val GCM_TAG_BITS = 128
     }
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val cipher = KeystoreCipher(WRAPPING_KEY_ALIAS)
 
     @Synchronized
     fun getPassphrase(): ByteArray {
@@ -112,35 +104,7 @@ class DatabaseKeyProvider(
         Timber.w("Unreadable database moved aside")
     }
 
-    private fun wrappingKey(): SecretKey {
-        val keyStore = KeyStore.getInstance(KEYSTORE).apply { load(null) }
-        (keyStore.getKey(WRAPPING_KEY_ALIAS, null) as? SecretKey)?.let { return it }
-        return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE).run {
-            init(
-                KeyGenParameterSpec.Builder(
-                    WRAPPING_KEY_ALIAS,
-                    KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-                )
-                    .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                    .setKeySize(256)
-                    .build()
-            )
-            generateKey()
-        }
-    }
+    private fun wrap(passphrase: ByteArray): String = cipher.encrypt(passphrase)
 
-    private fun wrap(passphrase: ByteArray): String {
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, wrappingKey()) }
-        val encoder = Base64.getEncoder()
-        return encoder.encodeToString(cipher.iv) + ":" + encoder.encodeToString(cipher.doFinal(passphrase))
-    }
-
-    private fun unwrap(wrapped: String): ByteArray {
-        val (iv, data) = wrapped.split(':').map { Base64.getDecoder().decode(it) }
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
-            init(Cipher.DECRYPT_MODE, wrappingKey(), GCMParameterSpec(GCM_TAG_BITS, iv))
-        }
-        return cipher.doFinal(data)
-    }
+    private fun unwrap(wrapped: String): ByteArray = cipher.decrypt(wrapped)
 }

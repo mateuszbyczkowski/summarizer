@@ -1,15 +1,13 @@
 package com.summarizer.app.data.repository
 
 import android.content.Context
-import android.content.SharedPreferences
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
+import com.summarizer.app.data.local.preferences.SecurePreferences
 import com.summarizer.app.domain.model.AIProvider
 import com.summarizer.app.domain.repository.PreferencesRepository
 import com.summarizer.app.util.StorageHelper
@@ -25,26 +23,11 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 
 @Singleton
 class PreferencesRepositoryImpl @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val securePreferences: SecurePreferences
 ) : PreferencesRepository {
 
-    // EncryptedSharedPreferences for sensitive data (API keys)
-    private val encryptedPrefs: SharedPreferences by lazy {
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-
-        EncryptedSharedPreferences.create(
-            context,
-            "encrypted_prefs",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
-    }
-
     private object PreferencesKeys {
-        val FIRST_LAUNCH = booleanPreferencesKey("first_launch")
         val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
         val STORAGE_LOCATION = stringPreferencesKey("storage_location")
         val WIFI_ONLY_DOWNLOAD = booleanPreferencesKey("wifi_only_download")
@@ -57,20 +40,8 @@ class PreferencesRepositoryImpl @Inject constructor(
         val SMART_NOTIFICATION_THRESHOLD = stringPreferencesKey("smart_notification_threshold")
         val SELECTED_OPENAI_MODEL = stringPreferencesKey("selected_openai_model")
 
-        // EncryptedSharedPreferences keys (for API key)
+        // SecurePreferences keys
         const val OPENAI_API_KEY = "openai_api_key"
-    }
-
-    override suspend fun isFirstLaunch(): Boolean {
-        return context.dataStore.data.map { preferences ->
-            preferences[PreferencesKeys.FIRST_LAUNCH] ?: true
-        }.first()
-    }
-
-    override suspend fun setFirstLaunchComplete() {
-        context.dataStore.edit { preferences: androidx.datastore.preferences.core.MutablePreferences ->
-            preferences[PreferencesKeys.FIRST_LAUNCH] = false
-        }
     }
 
     override suspend fun hasCompletedOnboarding(): Boolean {
@@ -133,19 +104,19 @@ class PreferencesRepositoryImpl @Inject constructor(
     // OpenAI API Key (encrypted storage)
     override suspend fun getOpenAIApiKey(): String? {
         return withContext(Dispatchers.IO) {
-            encryptedPrefs.getString(PreferencesKeys.OPENAI_API_KEY, null)
+            securePreferences.getString(PreferencesKeys.OPENAI_API_KEY)
         }
     }
 
     override suspend fun setOpenAIApiKey(apiKey: String) {
         withContext(Dispatchers.IO) {
-            encryptedPrefs.edit().putString(PreferencesKeys.OPENAI_API_KEY, apiKey).apply()
+            securePreferences.putString(PreferencesKeys.OPENAI_API_KEY, apiKey)
         }
     }
 
     override suspend fun clearOpenAIApiKey() {
         withContext(Dispatchers.IO) {
-            encryptedPrefs.edit().remove(PreferencesKeys.OPENAI_API_KEY).apply()
+            securePreferences.remove(PreferencesKeys.OPENAI_API_KEY)
         }
     }
 
@@ -244,9 +215,9 @@ class PreferencesRepositoryImpl @Inject constructor(
             preferences.clear()
         }
 
-        // Clear encrypted preferences
+        // Clear secrets (API key, PIN, lock state)
         withContext(Dispatchers.IO) {
-            encryptedPrefs.edit().clear().apply()
+            securePreferences.clear()
         }
     }
 }

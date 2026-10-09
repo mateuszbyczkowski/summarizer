@@ -4,8 +4,6 @@ import com.summarizer.app.domain.model.AIProvider
 import com.summarizer.app.util.StorageHelper
 
 interface PreferencesRepository {
-    suspend fun isFirstLaunch(): Boolean
-    suspend fun setFirstLaunchComplete()
     suspend fun hasCompletedOnboarding(): Boolean
     suspend fun setOnboardingComplete()
 
