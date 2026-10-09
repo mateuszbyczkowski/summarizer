@@ -1,9 +1,10 @@
 package com.summarizer.app.ui.screens.models
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.SdCard
@@ -11,15 +12,25 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.summarizer.app.R
+import com.summarizer.app.ui.components.AppTopBar
+import com.summarizer.app.ui.components.InfoCard
+import com.summarizer.app.ui.components.InfoCardTone
+import com.summarizer.app.ui.components.formatModelSize
 import com.summarizer.app.util.StorageHelper
 
-@OptIn(ExperimentalMaterial3Api::class)
+private const val MIN_REQUIRED_SPACE_MB = 700L
+private const val LOW_SPACE_MB = 2000L
+
 @Composable
 fun StorageLocationScreen(
     onLocationSelected: (StorageHelper.StorageLocation) -> Unit,
@@ -43,23 +54,9 @@ fun StorageLocationScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Choose Storage Location") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
-                navigationIcon = {
-                    if (onBackClick != null) {
-                        IconButton(onClick = onBackClick) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
-                }
+            AppTopBar(
+                title = stringResource(R.string.storage_title),
+                onBackClick = onBackClick
             )
         }
     ) { paddingValues ->
@@ -68,19 +65,27 @@ fun StorageLocationScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(24.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Column {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+            ) {
                 Text(
-                    text = "Where would you like to store AI models?",
+                    text = stringResource(R.string.storage_heading),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "AI models are large files (700MB - 1.8GB). Choose a storage location with sufficient space.",
+                    text = stringResource(
+                        R.string.storage_subtitle,
+                        formatModelSize(ModelDownloadViewModel.DEFAULT_MODELS.minOf { it.sizeInMB }),
+                        formatModelSize(ModelDownloadViewModel.DEFAULT_MODELS.maxOf { it.sizeInMB })
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
@@ -88,7 +93,7 @@ fun StorageLocationScreen(
                 // Internal Storage Option
                 StorageOptionCard(
                     icon = Icons.Default.PhoneAndroid,
-                    title = "Internal Storage",
+                    title = stringResource(R.string.storage_internal),
                     storageInfo = internalStorage,
                     isSelected = selectedLocation == StorageHelper.StorageLocation.INTERNAL,
                     onSelect = { selectedLocation = StorageHelper.StorageLocation.INTERNAL }
@@ -100,17 +105,14 @@ fun StorageLocationScreen(
                 if (externalStorage != null) {
                     StorageOptionCard(
                         icon = Icons.Default.SdCard,
-                        title = "External Storage",
+                        title = stringResource(R.string.storage_external),
                         storageInfo = externalStorage,
                         isSelected = selectedLocation == StorageHelper.StorageLocation.EXTERNAL,
                         onSelect = { selectedLocation = StorageHelper.StorageLocation.EXTERNAL }
                     )
                 } else {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                        )
+                    OutlinedCard(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
                             modifier = Modifier.padding(16.dp),
@@ -120,13 +122,13 @@ fun StorageLocationScreen(
                                 imageVector = Icons.Default.SdCard,
                                 contentDescription = null,
                                 modifier = Modifier.size(40.dp),
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                             )
                             Spacer(modifier = Modifier.width(16.dp))
                             Text(
-                                text = "External Storage (Not Available)",
+                                text = stringResource(R.string.storage_external_unavailable),
                                 style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                             )
                         }
                     }
@@ -143,35 +145,20 @@ fun StorageLocationScreen(
 
                 selectedStorageInfo?.let { info ->
                     when {
-                        info.availableSpaceMB < 700 -> {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer
-                                )
-                            ) {
-                                Text(
-                                    text = "⚠️ Insufficient storage space (${info.availableSpaceMB}MB available, 700MB minimum required). Please free up space or choose another location.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onErrorContainer,
-                                    modifier = Modifier.padding(16.dp)
-                                )
-                            }
+                        info.availableSpaceMB < MIN_REQUIRED_SPACE_MB -> {
+                            InfoCard(
+                                text = stringResource(
+                                    R.string.storage_insufficient,
+                                    info.availableSpaceMB,
+                                    MIN_REQUIRED_SPACE_MB
+                                ),
+                                tone = InfoCardTone.Warning
+                            )
                         }
-                        info.availableSpaceMB < 2000 -> {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                                )
-                            ) {
-                                Text(
-                                    text = "ℹ️ Low storage space (${info.availableSpaceMB}MB available). You can continue, but consider freeing up space for larger models.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                    modifier = Modifier.padding(16.dp)
-                                )
-                            }
+                        info.availableSpaceMB < LOW_SPACE_MB -> {
+                            InfoCard(
+                                text = stringResource(R.string.storage_low, info.availableSpaceMB)
+                            )
                         }
                     }
                 }
@@ -184,13 +171,12 @@ fun StorageLocationScreen(
                     .height(56.dp)
                 // Always enabled - users can skip model download anyway
             ) {
-                Text("Continue")
+                Text(stringResource(R.string.continue_button))
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StorageOptionCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -202,8 +188,10 @@ fun StorageOptionCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(CardDefaults.shape)
             .selectable(
                 selected = isSelected,
+                role = Role.RadioButton,
                 onClick = onSelect
             ),
         colors = CardDefaults.cardColors(
@@ -247,9 +235,12 @@ fun StorageOptionCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Available: ${StorageHelper.formatStorageSizeGB(storageInfo.availableSpaceGB)}",
+                    text = stringResource(
+                        R.string.storage_available,
+                        StorageHelper.formatStorageSizeGB(storageInfo.availableSpaceGB)
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(4.dp))
 
@@ -267,9 +258,9 @@ fun StorageOptionCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${storageInfo.usedPercent}% used",
+                    text = stringResource(R.string.storage_used_percent, storageInfo.usedPercent),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -277,7 +268,7 @@ fun StorageOptionCard(
                 Spacer(modifier = Modifier.width(16.dp))
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
+                    contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(32.dp)
                 )

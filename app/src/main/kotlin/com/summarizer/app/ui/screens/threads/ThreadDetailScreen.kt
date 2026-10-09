@@ -1,5 +1,6 @@
 package com.summarizer.app.ui.screens.threads
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -7,9 +8,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -20,15 +22,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.summarizer.app.R
 import com.summarizer.app.domain.model.Message
 import com.summarizer.app.domain.model.MessageType
 import com.summarizer.app.domain.model.SummarizationMode
+import com.summarizer.app.ui.components.AppTopBar
+import com.summarizer.app.ui.components.EmptyState
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThreadDetailScreen(
     threadId: String,
@@ -41,22 +48,15 @@ fun ThreadDetailScreen(
     val threadSettings by viewModel.threadSettings.collectAsStateWithLifecycle()
     var showMenu by remember { mutableStateOf(false) }
     val threadName = when (val state = uiState) {
-        is ThreadDetailUiState.Success -> state.messages.firstOrNull()?.threadName ?: thread?.threadName ?: "Thread"
-        else -> thread?.threadName ?: "Thread"
-    }
+        is ThreadDetailUiState.Success -> state.messages.firstOrNull()?.threadName ?: thread?.threadName
+        else -> thread?.threadName
+    } ?: stringResource(R.string.thread_detail_fallback_title)
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(threadName) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
+            AppTopBar(
+                title = threadName,
+                onBackClick = onBackClick,
                 actions = {
                     thread?.let { currentThread ->
                         IconButton(
@@ -68,7 +68,9 @@ fun ThreadDetailScreen(
                                 } else {
                                     Icons.Outlined.StarOutline
                                 },
-                                contentDescription = if (currentThread.isFollowed) "Unfollow" else "Follow",
+                                contentDescription = stringResource(
+                                    if (currentThread.isFollowed) R.string.cd_unfollow else R.string.cd_follow
+                                ),
                                 tint = if (currentThread.isFollowed) {
                                     MaterialTheme.colorScheme.primary
                                 } else {
@@ -83,7 +85,7 @@ fun ThreadDetailScreen(
                         IconButton(onClick = { showMenu = true }) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
-                                contentDescription = "More options"
+                                contentDescription = stringResource(R.string.cd_more_options)
                             )
                         }
 
@@ -92,70 +94,34 @@ fun ThreadDetailScreen(
                             onDismissRequest = { showMenu = false }
                         ) {
                             Text(
-                                text = "Summarization Mode",
+                                text = stringResource(R.string.thread_detail_mode_title),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
 
-                            DropdownMenuItem(
-                                text = {
-                                    Column {
-                                        Text(
-                                            text = "Incremental",
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
-                                        Text(
-                                            text = "New messages only",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                        )
-                                    }
-                                },
+                            SummarizationModeItem(
+                                title = R.string.thread_detail_mode_incremental,
+                                description = R.string.thread_detail_mode_incremental_description,
+                                selected = threadSettings?.summarizationMode == SummarizationMode.INCREMENTAL,
                                 onClick = {
                                     viewModel.updateSummarizationMode(SummarizationMode.INCREMENTAL)
                                     showMenu = false
-                                },
-                                leadingIcon = {
-                                    RadioButton(
-                                        selected = threadSettings?.summarizationMode == SummarizationMode.INCREMENTAL,
-                                        onClick = null
-                                    )
                                 }
                             )
 
-                            DropdownMenuItem(
-                                text = {
-                                    Column {
-                                        Text(
-                                            text = "Full",
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
-                                        Text(
-                                            text = "All messages",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                        )
-                                    }
-                                },
+                            SummarizationModeItem(
+                                title = R.string.thread_detail_mode_full,
+                                description = R.string.thread_detail_mode_full_description,
+                                selected = threadSettings?.summarizationMode == SummarizationMode.FULL,
                                 onClick = {
                                     viewModel.updateSummarizationMode(SummarizationMode.FULL)
                                     showMenu = false
-                                },
-                                leadingIcon = {
-                                    RadioButton(
-                                        selected = threadSettings?.summarizationMode == SummarizationMode.FULL,
-                                        onClick = null
-                                    )
                                 }
                             )
                         }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                }
             )
         }
     ) { paddingValues ->
@@ -174,21 +140,14 @@ fun ThreadDetailScreen(
                     )
                 }
                 is ThreadDetailUiState.Success -> {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        if (state.messages.isEmpty()) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(32.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "No messages in this thread",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                )
-                            }
-                        } else {
+                    if (state.messages.isEmpty()) {
+                        EmptyState(
+                            icon = Icons.AutoMirrored.Outlined.Chat,
+                            title = stringResource(R.string.thread_detail_empty_title),
+                            body = stringResource(R.string.thread_detail_empty_body)
+                        )
+                    } else {
+                        Column(modifier = Modifier.fillMaxSize()) {
                             LazyColumn(
                                 modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(16.dp),
@@ -208,36 +167,21 @@ fun ThreadDetailScreen(
                                     onClick = { onSummarizeClick(threadId, threadName) },
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(16.dp),
-                                    enabled = state.messages.isNotEmpty()
+                                        .padding(16.dp)
                                 ) {
-                                    Text("Summarize Now")
+                                    Text(stringResource(R.string.thread_detail_summarize))
                                 }
                             }
                         }
                     }
                 }
                 is ThreadDetailUiState.Error -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "Error loading messages",
-                                style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = state.message,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                            )
-                        }
-                    }
+                    EmptyState(
+                        icon = Icons.Outlined.ErrorOutline,
+                        title = stringResource(R.string.thread_detail_error_title),
+                        body = state.message,
+                        iconTint = MaterialTheme.colorScheme.error
+                    )
                 }
             }
         }
@@ -245,17 +189,48 @@ fun ThreadDetailScreen(
 }
 
 @Composable
+private fun SummarizationModeItem(
+    @StringRes title: Int,
+    @StringRes description: Int,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    DropdownMenuItem(
+        text = {
+            Column {
+                Text(
+                    text = stringResource(title),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    text = stringResource(description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        onClick = onClick,
+        leadingIcon = {
+            RadioButton(
+                selected = selected,
+                onClick = null
+            )
+        }
+    )
+}
+
+@Composable
 fun MessageItem(message: Message) {
     val containerColor = when {
         message.isDeleted -> MaterialTheme.colorScheme.errorContainer
         message.messageType == MessageType.SYSTEM -> MaterialTheme.colorScheme.tertiaryContainer
-        else -> MaterialTheme.colorScheme.surfaceVariant
+        else -> MaterialTheme.colorScheme.surfaceContainerHigh
     }
 
     val contentColor = when {
         message.isDeleted -> MaterialTheme.colorScheme.onErrorContainer
         message.messageType == MessageType.SYSTEM -> MaterialTheme.colorScheme.onTertiaryContainer
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
+        else -> MaterialTheme.colorScheme.onSurface
     }
 
     Card(
@@ -268,7 +243,8 @@ fun MessageItem(message: Message) {
                 )
             ),
         colors = CardDefaults.cardColors(
-            containerColor = containerColor
+            containerColor = containerColor,
+            contentColor = contentColor
         )
     ) {
         Column(
@@ -278,18 +254,25 @@ fun MessageItem(message: Message) {
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text = message.sender,
                         style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
-                    if (message.messageType != MessageType.TEXT) {
-                        Spacer(modifier = Modifier.width(8.dp))
+                    messageTypeLabel(message.messageType)?.let { label ->
                         Text(
-                            text = getMessageTypeLabel(message.messageType),
+                            text = stringResource(label),
                             style = MaterialTheme.typography.labelSmall,
                             color = contentColor.copy(alpha = 0.7f)
                         )
@@ -298,36 +281,34 @@ fun MessageItem(message: Message) {
                 Text(
                     text = formatMessageTime(message.timestamp),
                     style = MaterialTheme.typography.bodySmall,
-                    color = contentColor.copy(alpha = 0.6f)
+                    color = contentColor.copy(alpha = 0.7f)
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = message.content,
                 style = if (message.isDeleted || message.messageType == MessageType.SYSTEM) {
-                    MaterialTheme.typography.bodyMedium.copy(fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+                    MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic)
                 } else {
                     MaterialTheme.typography.bodyMedium
-                },
-                color = contentColor
+                }
             )
         }
     }
 }
 
-private fun getMessageTypeLabel(type: MessageType): String {
-    return when (type) {
-        MessageType.IMAGE -> "📷 Image"
-        MessageType.VIDEO -> "📹 Video"
-        MessageType.AUDIO -> "🎵 Audio"
-        MessageType.DOCUMENT -> "📄 Document"
-        MessageType.LOCATION -> "📍 Location"
-        MessageType.CONTACT -> "👤 Contact"
-        MessageType.STICKER -> "Sticker"
-        MessageType.DELETED -> "🚫 Deleted"
-        MessageType.SYSTEM -> "System"
-        else -> ""
-    }
+@StringRes
+private fun messageTypeLabel(type: MessageType): Int? = when (type) {
+    MessageType.IMAGE -> R.string.message_type_image
+    MessageType.VIDEO -> R.string.message_type_video
+    MessageType.AUDIO -> R.string.message_type_audio
+    MessageType.DOCUMENT -> R.string.message_type_document
+    MessageType.LOCATION -> R.string.message_type_location
+    MessageType.CONTACT -> R.string.message_type_contact
+    MessageType.STICKER -> R.string.message_type_sticker
+    MessageType.DELETED -> R.string.message_type_deleted
+    MessageType.SYSTEM -> R.string.message_type_system
+    MessageType.TEXT, MessageType.UNKNOWN -> null
 }
 
 private fun formatMessageTime(timestamp: Long): String {

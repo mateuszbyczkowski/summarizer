@@ -2,19 +2,323 @@
 <resources>
     <string name="app_name">Summarizer</string>
 
-    <!-- Onboarding -->
-    <string name="welcome_title">Welcome to Summarizer</string>
-    <string name="welcome_subtitle">Never miss important school messages again</string>
-
-    <!-- Permissions -->
-    <string name="notification_permission_title">Notification Access Required</string>
-    <string name="notification_permission_message">Summarizer needs access to notifications to capture WhatsApp messages. Your messages stay private and are stored only on your device.</string>
-
     <!-- Common -->
-    <string name="next">Next</string>
     <string name="back">Back</string>
-    <string name="skip">Skip</string>
-    <string name="done">Done</string>
     <string name="cancel">Cancel</string>
     <string name="retry">Retry</string>
+    <string name="continue_button">Continue</string>
+    <string name="cd_expand">Expand</string>
+    <string name="cd_collapse">Collapse</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="cd_more_options">More options</string>
+    <string name="cd_search">Search</string>
+    <string name="cd_follow">Follow</string>
+    <string name="cd_unfollow">Unfollow</string>
+    <string name="badge_recommended">Recommended</string>
+    <string name="size_mb">%1$d MB</string>
+    <string name="size_gb">%1$.1f GB</string>
+
+    <plurals name="days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+
+    <!-- AI providers -->
+    <string name="provider_local_title">Local (On-device)</string>
+    <string name="provider_openai_title">OpenAI (Cloud)</string>
+
+    <!-- OpenAI API key (shared by onboarding and settings) -->
+    <string name="api_key_label">OpenAI API Key</string>
+    <string name="api_key_placeholder">sk-…</string>
+    <string name="cd_show_api_key">Show API key</string>
+    <string name="cd_hide_api_key">Hide API key</string>
+    <string name="api_key_how_to_title">How to get an API key:</string>
+    <string name="api_key_how_to_steps">1. Visit platform.openai.com\n2. Sign up or log in\n3. Go to API Keys section\n4. Create new secret key\n5. Copy and paste here</string>
+    <string name="openai_privacy_title">Privacy Notice</string>
+    <string name="openai_privacy_body">OpenAI provider sends your WhatsApp messages to OpenAI servers for processing. %1$s</string>
+    <string name="openai_privacy_suggestion_settings">Use the Local provider for complete privacy.</string>
+    <string name="openai_privacy_suggestion_onboarding">If you prefer complete privacy, go back and choose the Local provider instead.</string>
+
+    <!-- Onboarding: OpenAI setup -->
+    <string name="openai_setup_title">OpenAI Setup</string>
+    <string name="openai_setup_heading">Enter your OpenAI API Key</string>
+    <string name="openai_setup_subtitle">Your API key will be stored securely on your device and used only to generate summaries.</string>
+    <string name="openai_setup_cost_title">Estimated Cost</string>
+    <string name="openai_setup_cost_body">Using gpt-4o-mini model:\n• ~$0.0006 per summary\n• ~10,000 summaries per $1\n• Very affordable for personal use</string>
+    <string name="openai_setup_skip">Skip for now (can add later in Settings)</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+
+    <string name="settings_smart_notifications_title">Smart Notifications</string>
+    <string name="settings_smart_notifications_description">AI-powered filtering to only notify you of important messages</string>
+    <string name="settings_smart_notifications_enable">Enable smart notifications</string>
+    <string name="settings_smart_notifications_threshold">Importance threshold: %1$s</string>
+    <string name="settings_smart_notifications_info">Smart notifications use AI to analyze message content and only notify you when messages are likely important. Lower threshold = more notifications.</string>
+    <string name="threshold_low">Low (more notifications)</string>
+    <string name="threshold_medium">Medium</string>
+    <string name="threshold_high">High (fewer notifications)</string>
+    <string name="threshold_very_high">Very High (only critical)</string>
+    <string name="threshold_low_description">You\'ll receive notifications for most messages, including casual conversation.</string>
+    <string name="threshold_medium_description">You\'ll receive notifications for questions, requests, and important updates.</string>
+    <string name="threshold_high_description">You\'ll receive notifications only for urgent matters and direct questions.</string>
+    <string name="threshold_very_high_description">You\'ll receive notifications only for critical and time-sensitive messages.</string>
+
+    <string name="settings_auto_summary_title">Daily Auto-Summarization</string>
+    <string name="settings_auto_summary_description">Automatically summarize followed threads at a scheduled time</string>
+    <string name="settings_auto_summary_enable">Enable auto-summarization</string>
+    <string name="settings_auto_summary_time">Summary time</string>
+    <string name="settings_hour_format">%1$s (%2$s)</string>
+    <string name="settings_auto_summary_info">Only followed threads will be summarized. Use the star icon on threads to follow them.</string>
+
+    <string name="settings_retention_title">Data Retention</string>
+    <string name="settings_retention_description">Automatically delete old messages. Summaries are always kept.</string>
+    <string name="settings_retention_keep_for">Keep messages for</string>
+    <string name="settings_retention_info">Messages older than the retention period are deleted automatically once a day. Summaries are never deleted.</string>
+
+    <string name="settings_security_title">Security</string>
+    <string name="settings_security_description">Unlock the app using biometric authentication</string>
+    <string name="settings_security_enable_biometric">Enable biometric unlock</string>
+    <string name="settings_security_biometric_enabled_info">Biometric unlock is enabled. You can use fingerprint or face recognition to unlock the app.</string>
+
+    <string name="settings_permissions_title">Permissions</string>
+    <string name="settings_permissions_granted">All required permissions are granted</string>
+    <string name="settings_permissions_missing">Notification access is required for the app to work</string>
+    <string name="settings_permissions_manage_access">Manage Notification Access</string>
+    <string name="settings_permissions_grant_access">Grant Notification Access</string>
+    <string name="settings_permissions_manage_autostart">Manage %1$s AutoStart</string>
+    <string name="settings_permissions_autostart_info">%1$s requires AutoStart permission for background functionality</string>
+
+    <string name="settings_provider_title">AI Provider</string>
+    <string name="settings_provider_description">Choose how WhatsApp messages are summarized</string>
+    <string name="settings_provider_local_description">Privacy-first • Offline • Free • Requires storage</string>
+    <string name="settings_provider_openai_description">Fast • High-quality • Requires API key • ~$0.0006 per summary</string>
+
+    <string name="settings_local_model_title">Local Model Configuration</string>
+    <string name="settings_local_model_description">Download and manage AI models for on-device processing</string>
+    <string name="settings_local_model_manage">Manage Models</string>
+    <string name="settings_local_model_info">Local models provide complete privacy - all processing happens on your device. No internet connection required after download.</string>
+
+    <string name="settings_openai_title">OpenAI Configuration</string>
+    <string name="settings_openai_key_configured">API Key (configured)</string>
+    <string name="settings_openai_clear_key">Clear API key</string>
+    <string name="settings_openai_validate_key">Validate API Key</string>
+    <string name="settings_openai_save_key">Save API Key</string>
+    <string name="settings_openai_model_title">Model Selection</string>
+    <string name="settings_openai_model_description">Choose which OpenAI model to use for summaries</string>
+    <string name="settings_openai_model_recommendation">Recommended: GPT-4o Mini offers the best balance of quality and cost for most users.</string>
+    <string name="settings_openai_cost_title">Cost Estimation</string>
+    <string name="settings_openai_cost_body">Using %1$s:\n• %2$s\n• Input: $%3$.2f per 1M tokens\n• Output: $%4$.2f per 1M tokens</string>
+
+    <string name="settings_about_title">About</string>
+    <string name="settings_about_app_name">WhatsApp Thread Summarizer</string>
+    <string name="settings_about_version">Version %1$s</string>
+    <string name="settings_about_features_title">Features:</string>
+    <string name="settings_about_features">• On-device AI summarization\n• OpenAI integration\n• Thread following\n• Daily auto-summarization\n• Encrypted on-device storage</string>
+
+    <string name="settings_danger_zone_title">Danger Zone</string>
+    <string name="settings_danger_zone_description">Advanced reset options</string>
+    <string name="settings_reset_description">Reset application to factory defaults</string>
+    <string name="settings_reset_consequences_title">This will:</string>
+    <string name="settings_reset_consequences">• Delete all downloaded AI models\n• Remove all captured messages\n• Clear all generated summaries\n• Reset all settings to defaults\n• Restart the onboarding process</string>
+    <string name="settings_reset_button">Reset Application</string>
+    <string name="settings_reset_dialog_title">Reset Application?</string>
+    <string name="settings_reset_dialog_message">This action cannot be undone. All your data, including downloaded models, messages, and summaries will be permanently deleted.\n\nAre you sure you want to continue?</string>
+    <string name="settings_reset_dialog_confirm">Reset Everything</string>
+    <string name="settings_resetting_title">Resetting…</string>
+    <string name="settings_resetting_message">Deleting models, messages and settings. This may take a moment.</string>
+    <!-- Onboarding: welcome -->
+    <string name="welcome_title">Welcome to\nThreadSummarizer</string>
+    <string name="welcome_subtitle">Never miss important school updates.\nStay on top of what matters from your groups.</string>
+    <string name="welcome_feature_updates_title">Never Miss Updates</string>
+    <string name="welcome_feature_updates_body">Track important announcements, deadlines, and action items from your groups</string>
+    <string name="welcome_feature_summaries_title">Smart AI Summaries</string>
+    <string name="welcome_feature_summaries_body">Get key points from busy conversations without reading hundreds of messages</string>
+    <string name="welcome_feature_privacy_title">Private by Default</string>
+    <string name="welcome_feature_privacy_body">Messages are stored encrypted on your device. Zero tracking. Choose the on-device AI to keep everything offline.</string>
+    <string name="welcome_get_started">Get Started</string>
+
+    <!-- Onboarding: notification permission -->
+    <string name="permission_screen_title">Notification Access</string>
+    <string name="permission_screen_body">ThreadSummarizer helps you stay on top of school group chats by tracking important announcements, deadlines, and action items.</string>
+    <string name="permission_screen_capture_title">What We Capture</string>
+    <string name="permission_screen_capture_body">Only message notifications from WhatsApp and WhatsApp Business. Notifications from other apps are completely ignored.</string>
+    <string name="permission_screen_storage_title">Stored Only On Your Device</string>
+    <string name="permission_screen_storage_body">Messages are stored encrypted on your phone. Zero cloud storage, zero tracking. With the on-device AI, nothing ever leaves your phone.</string>
+    <string name="permission_screen_next_title">What happens next?</string>
+    <string name="permission_screen_next_body">You\'ll be taken to Android\'s notification settings where you need to enable notification access for ThreadSummarizer.</string>
+    <string name="permission_screen_rom_title">%1$s - Additional Steps Required</string>
+    <string name="permission_screen_rom_body">After enabling notification access, you MUST also enable AutoStart permission, or the app won\'t work.</string>
+    <string name="permission_screen_rom_steps_title">Steps to enable AutoStart:</string>
+    <string name="permission_screen_open_autostart">Open AutoStart Settings</string>
+    <string name="permission_screen_grant">Grant Permission</string>
+
+    <!-- Onboarding: AI provider choice -->
+    <string name="provider_choice_title">Choose AI Provider</string>
+    <string name="provider_choice_heading">How would you like to generate summaries?</string>
+    <string name="provider_choice_subtitle">You can change this later in Settings</string>
+    <string name="provider_choice_local_benefit_privacy">🔒 Complete Privacy - Everything stays on your device</string>
+    <string name="provider_choice_local_benefit_offline">🌐 Works Offline - No internet required</string>
+    <string name="provider_choice_local_benefit_free">💰 Completely Free - No API costs</string>
+    <string name="provider_choice_local_benefit_storage">📦 Requires %1$s - %2$s storage for AI model</string>
+    <string name="provider_choice_use_local">Use Local Model</string>
+    <string name="provider_choice_openai_benefit_fast">⚡ Faster Processing - Cloud-based</string>
+    <string name="provider_choice_openai_benefit_quality">🎯 High Quality - State-of-the-art model</string>
+    <string name="provider_choice_openai_benefit_cost">💵 Very Affordable - ~$0.0006 per summary</string>
+    <string name="provider_choice_openai_benefit_requirements">🌐 Requires Internet &amp; API Key</string>
+    <string name="provider_choice_openai_benefit_privacy">⚠️ Messages sent to OpenAI servers</string>
+    <string name="provider_choice_use_openai">Use OpenAI</string>
+
+    <!-- PIN -->
+    <string name="pin_label">PIN</string>
+    <string name="pin_setup_title">Set Your PIN</string>
+    <string name="pin_setup_subtitle">Create a 6-digit PIN to secure your app</string>
+    <string name="pin_setup_enter">Enter PIN</string>
+    <string name="pin_setup_confirm">Confirm PIN</string>
+    <string name="pin_setup_error_length">PIN must be 6 digits</string>
+    <string name="pin_setup_error_mismatch">PINs do not match</string>
+    <string name="pin_setup_button">Set PIN</string>
+    <string name="pin_lock_title">Enter PIN</string>
+    <string name="pin_lock_subtitle">Enter your PIN to unlock the app</string>
+    <string name="pin_lock_hint">Enter 6 digits</string>
+    <string name="pin_lock_incorrect">Incorrect PIN. Try again.</string>
+    <plurals name="pin_lock_locked_out">
+        <item quantity="one">Too many attempts. Try again in %1$d second.</item>
+        <item quantity="other">Too many attempts. Try again in %1$d seconds.</item>
+    </plurals>
+    <string name="pin_lock_biometric_title">Unlock App</string>
+    <string name="pin_lock_biometric_subtitle">Use biometric to unlock</string>
+    <string name="pin_lock_biometric_unavailable">Biometric unlock is unavailable</string>
+    <string name="pin_lock_use_biometric">Use Biometric</string>
+
+    <!-- Storage location -->
+    <string name="storage_title">Choose Storage Location</string>
+    <string name="storage_heading">Where would you like to store AI models?</string>
+    <string name="storage_subtitle">AI models are large files (%1$s - %2$s). Choose a storage location with sufficient space.</string>
+    <string name="storage_internal">Internal Storage</string>
+    <string name="storage_external">External Storage</string>
+    <string name="storage_external_unavailable">External Storage (Not Available)</string>
+    <string name="storage_available">Available: %1$s</string>
+    <string name="storage_used_percent">%1$d%% used</string>
+    <string name="storage_insufficient">Insufficient storage space (%1$d MB available, %2$d MB minimum required). Please free up space or choose another location.</string>
+    <string name="storage_low">Low storage space (%1$d MB available). You can continue, but consider freeing up space for larger models.</string>
+
+    <!-- Model download -->
+    <string name="models_title">Download AI Model</string>
+    <string name="models_storage_settings">Storage Settings</string>
+    <string name="models_heading">Choose Your AI Model</string>
+    <string name="models_wifi_only">WiFi Only</string>
+    <string name="models_any_network">Any Network</string>
+    <string name="models_subtitle">Select and download an AI model to power your summaries. All processing happens on your device.</string>
+    <string name="models_device_ram">This device: %1$d GB RAM</string>
+    <string name="models_ram_spec">%1$d GB RAM</string>
+    <string name="models_badge_needs_ram">Needs %1$d GB RAM</string>
+    <string name="models_speed_fast">Fast</string>
+    <string name="models_speed_medium">Medium</string>
+    <string name="models_speed_slow">Slow</string>
+    <string name="models_downloaded">Downloaded</string>
+    <string name="models_use">Use This Model</string>
+    <string name="models_delete">Delete Model</string>
+    <string name="models_download">Download (%1$s)</string>
+    <string name="models_downloading">Downloading… %1$s / %2$s</string>
+    <string name="models_percent">%1$d%%</string>
+    <string name="models_pause">Pause download</string>
+    <string name="models_download_failed">Download failed: %1$s</string>
+    <string name="models_retry_download">Retry Download</string>
+    <string name="models_paused">Paused at %1$d%%</string>
+    <string name="models_resume">Resume Download</string>
+    <string name="models_skip">Skip for Now</string>
+
+    <!-- Thread list -->
+    <string name="threads_title">Messages</string>
+    <string name="threads_filter_followed">Followed only</string>
+    <string name="threads_filter_all">All threads</string>
+    <string name="threads_empty_title">No messages yet</string>
+    <string name="threads_empty_followed_title">No followed threads</string>
+    <string name="threads_empty_no_permission_body">Grant notification access to start tracking important updates from your groups</string>
+    <string name="threads_empty_followed_body">You haven\'t followed any threads yet.\nTap the filter to see all threads and follow the ones you care about.</string>
+    <string name="threads_empty_body">Important updates from your groups will appear here.\nStay informed about announcements and deadlines.</string>
+    <string name="threads_item_meta">%1$s • %2$s</string>
+    <plurals name="message_count">
+        <item quantity="one">%1$d message</item>
+        <item quantity="other">%1$d messages</item>
+    </plurals>
+    <string name="time_just_now">Just now</string>
+    <plurals name="time_minutes_ago">
+        <item quantity="one">%1$dm ago</item>
+        <item quantity="other">%1$dm ago</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="one">%1$dh ago</item>
+        <item quantity="other">%1$dh ago</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="one">%1$dd ago</item>
+        <item quantity="other">%1$dd ago</item>
+    </plurals>
+
+    <string name="permission_card_title">Notification Access Required</string>
+    <string name="permission_card_body">To capture WhatsApp messages, Summarizer needs notification access. Your messages stay private and are stored only on your device.</string>
+    <string name="permission_card_open_settings">Open Settings</string>
+    <string name="permission_card_hint">In Settings, find \'Summarizer\' and enable notification access</string>
+
+    <!-- Thread detail -->
+    <string name="thread_detail_fallback_title">Thread</string>
+    <string name="thread_detail_mode_title">Summarization Mode</string>
+    <string name="thread_detail_mode_incremental">Incremental</string>
+    <string name="thread_detail_mode_incremental_description">New messages only</string>
+    <string name="thread_detail_mode_full">Full</string>
+    <string name="thread_detail_mode_full_description">All messages</string>
+    <string name="thread_detail_empty_title">No messages in this thread</string>
+    <string name="thread_detail_empty_body">New messages in this chat will appear here as they arrive.</string>
+    <string name="thread_detail_error_title">Error loading messages</string>
+    <string name="thread_detail_summarize">Summarize Now</string>
+    <string name="message_type_image">📷 Image</string>
+    <string name="message_type_video">📹 Video</string>
+    <string name="message_type_audio">🎵 Audio</string>
+    <string name="message_type_document">📄 Document</string>
+    <string name="message_type_location">📍 Location</string>
+    <string name="message_type_contact">👤 Contact</string>
+    <string name="message_type_sticker">Sticker</string>
+    <string name="message_type_deleted">🚫 Deleted</string>
+    <string name="message_type_system">System</string>
+
+    <!-- Search -->
+    <string name="search_placeholder">Search summaries and messages…</string>
+    <string name="search_clear">Clear search</string>
+    <string name="search_empty_title">Search your summaries and messages</string>
+    <string name="search_empty_body">Type in the search box to find specific information</string>
+    <string name="search_no_results_title">No results found</string>
+    <string name="search_no_results_body">No summaries or messages match \"%1$s\"</string>
+    <string name="search_error_title">Search failed</string>
+    <string name="search_section_summaries">Summaries (%1$d)</string>
+    <string name="search_section_messages">Messages (%1$d)</string>
+    <string name="search_result_topics">Topics: %1$s</string>
+    <string name="search_result_actions">Actions: %1$s</string>
+    <plurals name="search_result_actions_more">
+        <item quantity="one">Actions: %1$s (+%2$d more)</item>
+        <item quantity="other">Actions: %1$s (+%2$d more)</item>
+    </plurals>
+
+    <!-- Summary -->
+    <string name="summary_title">Summary: %1$s</string>
+    <string name="summary_title_fallback">Summary</string>
+    <string name="summary_regenerate">Regenerate summary</string>
+    <string name="summary_initial_title">Generate AI Summary</string>
+    <string name="summary_initial_body">Create a concise summary of this conversation using AI</string>
+    <string name="summary_generate">Generate Summary</string>
+    <string name="summary_generating">Generating summary…</string>
+    <string name="summary_generating_hint">This may take up to 60 seconds</string>
+    <string name="summary_error_title">Error</string>
+    <string name="summary_section_raw_output">Raw AI Output</string>
+    <string name="summary_section_overview">Overview</string>
+    <string name="summary_section_key_topics">Key Topics</string>
+    <string name="summary_section_action_items">Action Items</string>
+    <string name="summary_section_announcements">Announcements</string>
+    <string name="summary_section_participants">Participant Highlights</string>
+    <string name="summary_show_raw_output">Show Raw Output</string>
+    <string name="summary_hide_raw_output">Hide Raw Output</string>
+    <string name="summary_generated_at">Generated %1$s</string>
+    <string name="summary_assigned_to">Assigned: %1$s</string>
+    <string name="summary_priority">Priority: %1$s</string>
 </resources>

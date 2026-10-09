@@ -10,10 +10,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,15 +22,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.summarizer.app.R
 import com.summarizer.app.domain.model.Summary
+import com.summarizer.app.ui.components.AppTopBar
+import com.summarizer.app.ui.components.EmptyState
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SummaryDisplayScreen(
     onBackClick: () -> Unit,
@@ -41,30 +44,23 @@ fun SummaryDisplayScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Summary: $threadName") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
+            AppTopBar(
+                title = if (threadName.isBlank()) {
+                    stringResource(R.string.summary_title_fallback)
+                } else {
+                    stringResource(R.string.summary_title, threadName)
                 },
+                onBackClick = onBackClick,
                 actions = {
                     if (uiState is SummaryUiState.Success) {
                         IconButton(onClick = { viewModel.generateSummary() }) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
-                                contentDescription = "Regenerate summary"
+                                contentDescription = stringResource(R.string.summary_regenerate)
                             )
                         }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                }
             )
         }
     ) { paddingValues ->
@@ -109,40 +105,22 @@ fun SummaryDisplayScreen(
 
 @Composable
 private fun InitialPrompt(onGenerateClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Info,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = "Generate AI Summary",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "Create a concise summary of this conversation using AI",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            )
-            Button(
-                onClick = onGenerateClick,
-                modifier = Modifier.fillMaxWidth(0.7f)
-            ) {
-                Text("Generate Summary")
+    EmptyState(
+        icon = Icons.Default.AutoAwesome,
+        title = stringResource(R.string.summary_initial_title),
+        body = stringResource(R.string.summary_initial_body),
+        action = {
+            Button(onClick = onGenerateClick) {
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    modifier = Modifier.size(ButtonDefaults.IconSize)
+                )
+                Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                Text(stringResource(R.string.summary_generate))
             }
         }
-    }
+    )
 }
 
 @Composable
@@ -162,14 +140,14 @@ private fun GeneratingIndicator() {
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = "Generating summary...",
+                text = stringResource(R.string.summary_generating),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "This may take up to 60 seconds",
+                text = stringResource(R.string.summary_generating_hint),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -194,7 +172,7 @@ private fun SummaryContent(summary: Summary) {
             if (showRawOutput && !summary.rawAIResponse.isNullOrBlank()) {
                 item {
                     SectionCard(
-                        title = "Raw AI Output",
+                        title = stringResource(R.string.summary_section_raw_output),
                         icon = "🤖"
                     ) {
                         Text(
@@ -210,7 +188,7 @@ private fun SummaryContent(summary: Summary) {
             if (summary.overview.isNotBlank()) {
                 item {
                     SectionCard(
-                        title = "Overview",
+                        title = stringResource(R.string.summary_section_overview),
                         icon = "📝"
                     ) {
                         Text(
@@ -226,7 +204,7 @@ private fun SummaryContent(summary: Summary) {
             if (summary.keyTopics.isNotEmpty()) {
                 item {
                     SectionCard(
-                        title = "Key Topics",
+                        title = stringResource(R.string.summary_section_key_topics),
                         icon = "💡"
                     ) {
                         summary.keyTopics.forEach { topic ->
@@ -240,7 +218,7 @@ private fun SummaryContent(summary: Summary) {
             if (summary.actionItems.isNotEmpty()) {
                 item {
                     SectionCard(
-                        title = "Action Items",
+                        title = stringResource(R.string.summary_section_action_items),
                         icon = "✅"
                     ) {
                         summary.actionItems.forEach { item ->
@@ -258,7 +236,7 @@ private fun SummaryContent(summary: Summary) {
             if (summary.announcements.isNotEmpty()) {
                 item {
                     SectionCard(
-                        title = "Announcements",
+                        title = stringResource(R.string.summary_section_announcements),
                         icon = "📢"
                     ) {
                         summary.announcements.forEach { announcement ->
@@ -272,7 +250,7 @@ private fun SummaryContent(summary: Summary) {
             if (summary.participantHighlights.isNotEmpty()) {
                 item {
                     SectionCard(
-                        title = "Participant Highlights",
+                        title = stringResource(R.string.summary_section_participants),
                         icon = "👤"
                     ) {
                         summary.participantHighlights.forEach { highlight ->
@@ -300,9 +278,9 @@ private fun SummaryContent(summary: Summary) {
                         .padding(8.dp)
                 ) {
                     Text(
-                        text = if (showRawOutput) "Hide Raw Output" else "Show Raw Output",
+                        text = stringResource(if (showRawOutput) R.string.summary_hide_raw_output else R.string.summary_show_raw_output),
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -346,7 +324,7 @@ private fun SummaryMetadataCard(summary: Summary) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Generated ${formatDate(summary.generatedAt)}",
+                    text = stringResource(R.string.summary_generated_at, formatDate(summary.generatedAt)),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )
@@ -369,7 +347,7 @@ private fun SectionCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     ) {
         Column(
@@ -381,10 +359,9 @@ private fun SectionCard(
             Text(
                 text = "$icon $title",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                fontWeight = FontWeight.SemiBold
             )
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             content()
         }
     }
@@ -415,14 +392,17 @@ private fun ActionItemCard(
     assignedTo: String?,
     priority: String
 ) {
+    val colors = MaterialTheme.colorScheme
+    val (containerColor, contentColor) = when (priority.lowercase()) {
+        "high" -> colors.errorContainer to colors.onErrorContainer
+        "medium" -> colors.tertiaryContainer to colors.onTertiaryContainer
+        else -> colors.secondaryContainer to colors.onSecondaryContainer
+    }
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = when (priority.lowercase()) {
-                "high" -> MaterialTheme.colorScheme.errorContainer
-                "medium" -> MaterialTheme.colorScheme.tertiaryContainer
-                else -> MaterialTheme.colorScheme.secondaryContainer
-            }
+            containerColor = containerColor,
+            contentColor = contentColor
         )
     ) {
         Column(
@@ -434,8 +414,7 @@ private fun ActionItemCard(
             Text(
                 text = task,
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
+                fontWeight = FontWeight.Medium
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -443,15 +422,13 @@ private fun ActionItemCard(
             ) {
                 if (assignedTo != null) {
                     Text(
-                        text = "Assigned: $assignedTo",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        text = stringResource(R.string.summary_assigned_to, assignedTo),
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
                 Text(
-                    text = "Priority: ${priority.uppercase()}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                    text = stringResource(R.string.summary_priority, priority.uppercase()),
+                    style = MaterialTheme.typography.labelSmall
                 )
             }
         }
@@ -497,44 +474,28 @@ private fun ErrorContent(
     onRetryClick: () -> Unit,
     onDismissClick: () -> Unit
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text(
-                text = "Error",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.error
-            )
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            )
-            Button(
-                onClick = onRetryClick,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = null
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Retry")
-            }
-            TextButton(onClick = onDismissClick) {
-                Text("Dismiss")
+    EmptyState(
+        icon = Icons.Outlined.ErrorOutline,
+        title = stringResource(R.string.summary_error_title),
+        body = message,
+        iconTint = MaterialTheme.colorScheme.error,
+        action = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Button(onClick = onRetryClick) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.size(ButtonDefaults.IconSize)
+                    )
+                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                    Text(stringResource(R.string.retry))
+                }
+                TextButton(onClick = onDismissClick) {
+                    Text(stringResource(R.string.dismiss))
+                }
             }
         }
-    }
+    )
 }
 
 private fun formatDate(timestamp: Long): String {

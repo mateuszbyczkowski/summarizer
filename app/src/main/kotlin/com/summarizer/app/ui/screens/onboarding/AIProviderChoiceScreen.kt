@@ -6,21 +6,27 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.summarizer.app.R
 import com.summarizer.app.domain.model.AIProvider
+import com.summarizer.app.ui.components.StatusBadge
+import com.summarizer.app.ui.components.formatModelSize
+import com.summarizer.app.ui.screens.models.ModelDownloadViewModel
+import com.summarizer.app.ui.components.AppTopBar
 import com.summarizer.app.ui.screens.settings.SettingsViewModel
 
 /**
  * Onboarding screen for choosing between Local (on-device) or OpenAI (cloud) provider.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AIProviderChoiceScreen(
     onProviderSelected: (AIProvider) -> Unit,
@@ -28,12 +34,7 @@ fun AIProviderChoiceScreen(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Choose AI Provider") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            )
+            AppTopBar(title = stringResource(R.string.provider_choice_title))
         }
     ) { paddingValues ->
         Column(
@@ -49,32 +50,34 @@ fun AIProviderChoiceScreen(
 
             // Header
             Text(
-                text = "How would you like to generate summaries?",
+                text = stringResource(R.string.provider_choice_heading),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
 
             Text(
-                text = "You can change this later in Settings",
+                text = stringResource(R.string.provider_choice_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
-
             // Local Provider Card
             ProviderCard(
-                title = "Local (On-device)",
+                title = stringResource(R.string.provider_local_title),
                 icon = Icons.Default.PhoneAndroid,
                 benefits = listOf(
-                    "🔒 Complete Privacy - Everything stays on your device",
-                    "🌐 Works Offline - No internet required",
-                    "💰 Completely Free - No API costs",
-                    "📦 Requires 700MB-1.8GB storage for AI model"
+                    stringResource(R.string.provider_choice_local_benefit_privacy),
+                    stringResource(R.string.provider_choice_local_benefit_offline),
+                    stringResource(R.string.provider_choice_local_benefit_free),
+                    stringResource(
+                        R.string.provider_choice_local_benefit_storage,
+                        formatModelSize(ModelDownloadViewModel.DEFAULT_MODELS.minOf { it.sizeInMB }),
+                        formatModelSize(ModelDownloadViewModel.DEFAULT_MODELS.maxOf { it.sizeInMB })
+                    )
                 ),
-                buttonText = "Use Local Model",
+                buttonText = stringResource(R.string.provider_choice_use_local),
                 onClick = {
                     viewModel.setAIProvider(AIProvider.LOCAL)
                     onProviderSelected(AIProvider.LOCAL)
@@ -85,16 +88,16 @@ fun AIProviderChoiceScreen(
 
             // OpenAI Provider Card
             ProviderCard(
-                title = "OpenAI (Cloud)",
+                title = stringResource(R.string.provider_openai_title),
                 icon = Icons.Default.Cloud,
                 benefits = listOf(
-                    "⚡ Faster Processing - Cloud-based",
-                    "🎯 High Quality - State-of-the-art model",
-                    "💵 Very Affordable - ~$0.0006 per summary",
-                    "🌐 Requires Internet & API Key",
-                    "⚠️ Messages sent to OpenAI servers"
+                    stringResource(R.string.provider_choice_openai_benefit_fast),
+                    stringResource(R.string.provider_choice_openai_benefit_quality),
+                    stringResource(R.string.provider_choice_openai_benefit_cost),
+                    stringResource(R.string.provider_choice_openai_benefit_requirements),
+                    stringResource(R.string.provider_choice_openai_benefit_privacy)
                 ),
-                buttonText = "Use OpenAI",
+                buttonText = stringResource(R.string.provider_choice_use_openai),
                 onClick = {
                     viewModel.setAIProvider(AIProvider.OPENAI)
                     onProviderSelected(AIProvider.OPENAI)
@@ -103,7 +106,6 @@ fun AIProviderChoiceScreen(
                 recommended = false
             )
 
-            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }
@@ -133,17 +135,12 @@ private fun ProviderCard(
         ) {
             // Recommended badge (if applicable)
             if (recommended) {
-                Surface(
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = MaterialTheme.shapes.small
-                ) {
-                    Text(
-                        text = "RECOMMENDED",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
+                StatusBadge(
+                    text = stringResource(R.string.badge_recommended),
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    icon = Icons.Default.Star
+                )
             }
 
             // Header with icon and title

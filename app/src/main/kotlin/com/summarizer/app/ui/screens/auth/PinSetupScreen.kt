@@ -6,11 +6,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.summarizer.app.R
 
 @Composable
 fun PinSetupScreen(
@@ -20,6 +23,7 @@ fun PinSetupScreen(
     var pin by remember { mutableStateOf("") }
     var confirmPin by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    val resources = LocalResources.current
 
     Column(
         modifier = Modifier
@@ -30,7 +34,7 @@ fun PinSetupScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Set Your PIN",
+            text = stringResource(R.string.pin_setup_title),
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.primary
         )
@@ -38,9 +42,9 @@ fun PinSetupScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Create a 6-digit PIN to secure your app",
+            text = stringResource(R.string.pin_setup_subtitle),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
 
@@ -54,7 +58,7 @@ fun PinSetupScreen(
                     errorMessage = null
                 }
             },
-            label = { Text("Enter PIN") },
+            label = { Text(stringResource(R.string.pin_setup_enter)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
@@ -71,7 +75,7 @@ fun PinSetupScreen(
                     errorMessage = null
                 }
             },
-            label = { Text("Confirm PIN") },
+            label = { Text(stringResource(R.string.pin_setup_confirm)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
@@ -93,10 +97,10 @@ fun PinSetupScreen(
             onClick = {
                 when {
                     pin.length != 6 -> {
-                        errorMessage = "PIN must be 6 digits"
+                        errorMessage = resources.getString(R.string.pin_setup_error_length)
                     }
                     pin != confirmPin -> {
-                        errorMessage = "PINs do not match"
+                        errorMessage = resources.getString(R.string.pin_setup_error_mismatch)
                     }
                     else -> viewModel.setPin(
                         pin = pin,
@@ -108,7 +112,7 @@ fun PinSetupScreen(
             modifier = Modifier.fillMaxWidth(),
             enabled = pin.length == 6 && confirmPin.length == 6
         ) {
-            Text("Set PIN")
+            Text(stringResource(R.string.pin_setup_button))
         }
     }
 }

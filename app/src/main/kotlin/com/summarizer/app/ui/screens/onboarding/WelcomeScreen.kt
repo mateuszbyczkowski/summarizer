@@ -1,20 +1,20 @@
 package com.summarizer.app.ui.screens.onboarding
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.TaskAlt
-import androidx.compose.material.icons.filled.Message
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.summarizer.app.R
 
 @Composable
 fun WelcomeScreen(
@@ -43,17 +43,17 @@ fun WelcomeScreen(
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "Welcome to\nThreadSummarizer",
+                    text = stringResource(R.string.welcome_title),
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Never miss important school updates.\nStay on top of what matters from your groups.",
+                    text = stringResource(R.string.welcome_subtitle),
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -64,18 +64,18 @@ fun WelcomeScreen(
             ) {
                 FeatureItem(
                     icon = Icons.Default.Notifications,
-                    title = "Never Miss Updates",
-                    description = "Track important announcements, deadlines, and action items from your groups"
+                    title = stringResource(R.string.welcome_feature_updates_title),
+                    description = stringResource(R.string.welcome_feature_updates_body)
                 )
                 FeatureItem(
                     icon = Icons.Default.AutoAwesome,
-                    title = "Smart AI Summaries",
-                    description = "Get key points from busy conversations without reading hundreds of messages"
+                    title = stringResource(R.string.welcome_feature_summaries_title),
+                    description = stringResource(R.string.welcome_feature_summaries_body)
                 )
                 FeatureItem(
                     icon = Icons.Default.Lock,
-                    title = "100% Private & Offline",
-                    description = "Everything stays on your device. Zero cloud, zero tracking, zero data sharing."
+                    title = stringResource(R.string.welcome_feature_privacy_title),
+                    description = stringResource(R.string.welcome_feature_privacy_body)
                 )
             }
 
@@ -84,13 +84,10 @@ fun WelcomeScreen(
                 onClick = onContinueClick,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
+                    .height(56.dp)
             ) {
                 Text(
-                    text = "Get Started",
+                    text = stringResource(R.string.welcome_get_started),
                     style = MaterialTheme.typography.titleMedium
                 )
             }
@@ -125,7 +122,7 @@ private fun FeatureItem(
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

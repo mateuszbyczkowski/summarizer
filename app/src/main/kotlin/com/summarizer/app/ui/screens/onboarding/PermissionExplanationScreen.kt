@@ -12,10 +12,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.summarizer.app.R
 import com.summarizer.app.util.PermissionHelper
 
 @Composable
@@ -60,17 +62,17 @@ fun PermissionExplanationScreen(
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                     Text(
-                        text = "Notification Access",
+                        text = stringResource(R.string.permission_screen_title),
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "ThreadSummarizer helps you stay on top of school group chats by tracking important announcements, deadlines, and action items.",
+                        text = stringResource(R.string.permission_screen_body),
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -82,13 +84,13 @@ fun PermissionExplanationScreen(
                 ) {
                 PrivacyAssuranceItem(
                     icon = Icons.Default.Security,
-                    title = "What We Capture",
-                    description = "Only messages from WhatsApp groups. Direct messages and other apps are completely ignored."
+                    title = stringResource(R.string.permission_screen_capture_title),
+                    description = stringResource(R.string.permission_screen_capture_body)
                 )
                 PrivacyAssuranceItem(
                     icon = Icons.Default.Visibility,
-                    title = "100% On-Device Processing",
-                    description = "All messages stay on your phone. Zero cloud storage, zero tracking, zero data sharing. Completely offline."
+                    title = stringResource(R.string.permission_screen_storage_title),
+                    description = stringResource(R.string.permission_screen_storage_body)
                 )
 
                 Card(
@@ -101,14 +103,14 @@ fun PermissionExplanationScreen(
                         modifier = Modifier.padding(16.dp)
                     ) {
                         Text(
-                            text = "What happens next?",
+                            text = stringResource(R.string.permission_screen_next_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "You'll be taken to Android's notification settings where you need to enable notification access for ThreadSummarizer.",
+                            text = stringResource(R.string.permission_screen_next_body),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                         )
@@ -128,14 +130,14 @@ fun PermissionExplanationScreen(
                             modifier = Modifier.padding(16.dp)
                         ) {
                             Text(
-                                text = "${PermissionHelper.getROMType()} - Additional Steps Required",
+                                text = stringResource(R.string.permission_screen_rom_title, PermissionHelper.getROMType()),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "After enabling notification access, you MUST also enable AutoStart permission, or the app won't work.",
+                                text = stringResource(R.string.permission_screen_rom_body),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.9f),
                                 fontWeight = FontWeight.Medium
@@ -146,23 +148,22 @@ fun PermissionExplanationScreen(
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                                    contentColor = MaterialTheme.colorScheme.onSurface
                                 )
                             ) {
                                 Column(
                                     modifier = Modifier.padding(12.dp)
                                 ) {
                                     Text(
-                                        text = "Steps to enable AutoStart:",
+                                        text = stringResource(R.string.permission_screen_rom_steps_title),
                                         style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
                                         text = PermissionHelper.getAutoStartInstructions(),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.9f)
+                                        style = MaterialTheme.typography.bodySmall
                                     )
                                 }
                             }
@@ -177,7 +178,7 @@ fun PermissionExplanationScreen(
                                     contentColor = MaterialTheme.colorScheme.onErrorContainer
                                 )
                             ) {
-                                Text("Open AutoStart Settings")
+                                Text(stringResource(R.string.permission_screen_open_autostart))
                             }
                         }
                     }
@@ -196,13 +197,10 @@ fun PermissionExplanationScreen(
                         onClick = onContinueClick,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        )
+                            .height(56.dp)
                     ) {
                         Text(
-                            text = "Continue",
+                            text = stringResource(R.string.continue_button),
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
@@ -213,13 +211,10 @@ fun PermissionExplanationScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        )
+                            .height(56.dp)
                     ) {
                         Text(
-                            text = "Grant Permission",
+                            text = stringResource(R.string.permission_screen_grant),
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
@@ -256,7 +251,7 @@ private fun PrivacyAssuranceItem(
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

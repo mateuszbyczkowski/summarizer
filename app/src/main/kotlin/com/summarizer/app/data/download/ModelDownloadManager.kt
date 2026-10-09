@@ -67,7 +67,12 @@ class ModelDownloadManager @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 Timber.e(e, "Download failed for model ${model.id}")
-                updateState(model.id, DownloadStatus.FAILED, error = e.message ?: "Download failed")
+                val message = when (e) {
+                    is DownloadException -> e.message
+                    is java.io.IOException -> "Network error: could not reach the download server. Check your connection and try again."
+                    else -> e.message
+                }
+                updateState(model.id, DownloadStatus.FAILED, error = message ?: "Download failed")
             } finally {
                 activeDownloads.remove(model.id)
             }

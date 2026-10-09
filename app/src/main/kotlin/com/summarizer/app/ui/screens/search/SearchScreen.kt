@@ -9,16 +9,23 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SearchOff
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.summarizer.app.R
 import com.summarizer.app.domain.model.Message
 import com.summarizer.app.domain.model.Summary
+import com.summarizer.app.ui.components.EmptyState
+import com.summarizer.app.ui.components.appTopBarColors
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -48,12 +55,10 @@ fun SearchScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
+                colors = appTopBarColors()
             )
         }
     ) { paddingValues ->
@@ -108,14 +113,14 @@ private fun SearchBar(
         value = query,
         onValueChange = onQueryChange,
         modifier = modifier,
-        placeholder = { Text("Search summaries and messages...") },
+        placeholder = { Text(stringResource(R.string.search_placeholder)) },
         leadingIcon = {
             Icon(Icons.Default.Search, contentDescription = null)
         },
         trailingIcon = {
             if (query.isNotEmpty()) {
                 IconButton(onClick = onClearClick) {
-                    Icon(Icons.Default.Clear, contentDescription = "Clear")
+                    Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.search_clear))
                 }
             }
         },
@@ -129,72 +134,30 @@ private fun SearchBar(
 
 @Composable
 private fun EmptySearchState() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.padding(32.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = "Search your summaries and messages",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = "Type in the search box to find specific information",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
+    EmptyState(
+        icon = Icons.Default.Search,
+        title = stringResource(R.string.search_empty_title),
+        body = stringResource(R.string.search_empty_body)
+    )
 }
 
 @Composable
 private fun NoResultsState(query: String) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.padding(32.dp)
-        ) {
-            Text(
-                text = "No results found",
-                style = MaterialTheme.typography.titleLarge
-            )
-            Text(
-                text = "No summaries or messages match \"$query\"",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
+    EmptyState(
+        icon = Icons.Default.SearchOff,
+        title = stringResource(R.string.search_no_results_title),
+        body = stringResource(R.string.search_no_results_body, query)
+    )
 }
 
 @Composable
 private fun ErrorState(message: String) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.padding(32.dp)
-        )
-    }
+    EmptyState(
+        icon = Icons.Outlined.ErrorOutline,
+        title = stringResource(R.string.search_error_title),
+        body = message,
+        iconTint = MaterialTheme.colorScheme.error
+    )
 }
 
 @Composable
@@ -213,7 +176,7 @@ private fun SearchResults(
         if (summaries.isNotEmpty()) {
             item {
                 Text(
-                    text = "Summaries (${summaries.size})",
+                    text = stringResource(R.string.search_section_summaries, summaries.size),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -236,7 +199,7 @@ private fun SearchResults(
         if (messages.isNotEmpty()) {
             item {
                 Text(
-                    text = "Messages (${messages.size})",
+                    text = stringResource(R.string.search_section_messages, messages.size),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -263,7 +226,7 @@ private fun SummaryResultCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     ) {
         Column(
@@ -280,6 +243,8 @@ private fun SummaryResultCard(
                     text = summary.threadName,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
@@ -292,7 +257,10 @@ private fun SummaryResultCard(
             // Summary content preview
             if (summary.keyTopics.isNotEmpty()) {
                 Text(
-                    text = "Topics: ${summary.keyTopics.take(2).joinToString(", ")}${if (summary.keyTopics.size > 2) "..." else ""}",
+                    text = stringResource(
+                        R.string.search_result_topics,
+                        summary.keyTopics.take(2).joinToString(", ") + if (summary.keyTopics.size > 2) "…" else ""
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -301,7 +269,14 @@ private fun SummaryResultCard(
 
             if (summary.actionItems.isNotEmpty()) {
                 Text(
-                    text = "Actions: ${summary.actionItems.first().task}${if (summary.actionItems.size > 1) " (+${summary.actionItems.size - 1} more)" else ""}",
+                    text = summary.actionItems.size.let { count ->
+                        val first = summary.actionItems.first().task
+                        if (count > 1) {
+                            pluralStringResource(R.plurals.search_result_actions_more, count - 1, first, count - 1)
+                        } else {
+                            stringResource(R.string.search_result_actions, first)
+                        }
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -322,7 +297,7 @@ private fun MessageResultCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
     ) {
         Column(
@@ -339,7 +314,9 @@ private fun MessageResultCard(
                     Text(
                         text = message.threadName,
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = message.sender,

@@ -7,34 +7,38 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.summarizer.app.R
 import com.summarizer.app.domain.model.Thread
+import com.summarizer.app.ui.components.AppTopBar
+import com.summarizer.app.ui.components.EmptyState
 import com.summarizer.app.util.PermissionHelper
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThreadListScreen(
     viewModel: ThreadListViewModel = hiltViewModel(),
@@ -55,25 +59,19 @@ fun ThreadListScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Messages") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
+            AppTopBar(
+                title = stringResource(R.string.threads_title),
                 actions = {
                     IconButton(onClick = onSearchClick) {
                         Icon(
                             imageVector = Icons.Default.Search,
-                            contentDescription = "Search",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            contentDescription = stringResource(R.string.cd_search)
                         )
                     }
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = "Settings",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            contentDescription = stringResource(R.string.settings_title)
                         )
                     }
                 }
@@ -105,13 +103,17 @@ fun ThreadListScreen(
                     selected = !showOnlyFollowed,
                     onClick = { viewModel.toggleFilter() },
                     label = {
-                        Text(if (showOnlyFollowed) "Followed only" else "All threads")
+                        Text(
+                            stringResource(
+                                if (showOnlyFollowed) R.string.threads_filter_followed else R.string.threads_filter_all
+                            )
+                        )
                     },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.FilterList,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(FilterChipDefaults.IconSize)
                         )
                     }
                 )
@@ -124,8 +126,7 @@ fun ThreadListScreen(
                     }
                     is ThreadListUiState.Success -> {
                         if (state.threads.isEmpty()) {
-                            EmptyState(
-                                modifier = Modifier.fillMaxSize(),
+                            ThreadListEmptyState(
                                 hasPermission = hasPermission,
                                 showOnlyFollowed = showOnlyFollowed
                             )
@@ -167,51 +168,29 @@ fun ThreadListScreen(
 }
 
 @Composable
-fun EmptyState(
-    modifier: Modifier = Modifier,
-    hasPermission: Boolean = true,
-    showOnlyFollowed: Boolean = true
+private fun ThreadListEmptyState(
+    hasPermission: Boolean,
+    showOnlyFollowed: Boolean
 ) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(32.dp)
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.Message,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = when {
-                    !hasPermission -> "No messages yet"
-                    showOnlyFollowed -> "No followed threads"
-                    else -> "No messages yet"
-                },
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = when {
-                    !hasPermission -> "Grant notification access to start tracking important updates from your groups"
-                    showOnlyFollowed -> "You haven't followed any threads yet.\nTap the filter to see all threads and follow the ones you care about."
-                    else -> "Important updates from your groups will appear here.\nStay informed about announcements and deadlines."
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-            )
-        }
+    when {
+        !hasPermission -> EmptyState(
+            icon = Icons.Outlined.NotificationsOff,
+            title = stringResource(R.string.threads_empty_title),
+            body = stringResource(R.string.threads_empty_no_permission_body)
+        )
+        showOnlyFollowed -> EmptyState(
+            icon = Icons.Outlined.StarOutline,
+            title = stringResource(R.string.threads_empty_followed_title),
+            body = stringResource(R.string.threads_empty_followed_body)
+        )
+        else -> EmptyState(
+            icon = Icons.AutoMirrored.Outlined.Chat,
+            title = stringResource(R.string.threads_empty_title),
+            body = stringResource(R.string.threads_empty_body)
+        )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThreadItem(
     thread: Thread,
@@ -231,7 +210,7 @@ fun ThreadItem(
         ),
         colors = if (!thread.isFollowed && !showOnlyFollowed) {
             CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             )
         } else {
             CardDefaults.cardColors()
@@ -240,7 +219,7 @@ fun ThreadItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Thread icon/avatar
@@ -260,7 +239,7 @@ fun ThreadItem(
                         color = if (thread.isFollowed) {
                             MaterialTheme.colorScheme.onPrimaryContainer
                         } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            MaterialTheme.colorScheme.onSurfaceVariant
                         }
                     )
                 }
@@ -278,30 +257,21 @@ fun ThreadItem(
                     color = if (thread.isFollowed) {
                         MaterialTheme.colorScheme.onSurface
                     } else {
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        MaterialTheme.colorScheme.onSurfaceVariant
                     }
                 )
                 Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "${thread.messageCount} messages",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    )
-                    Text(
-                        text = "•",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                    )
-                    Text(
-                        text = formatTimestamp(thread.lastMessageTimestamp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    )
-                }
+                Text(
+                    text = stringResource(
+                        R.string.threads_item_meta,
+                        pluralStringResource(R.plurals.message_count, thread.messageCount, thread.messageCount),
+                        formatTimestamp(thread.lastMessageTimestamp)
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
 
             // Follow/unfollow star icon
@@ -314,11 +284,13 @@ fun ThreadItem(
                     } else {
                         Icons.Outlined.StarOutline
                     },
-                    contentDescription = if (thread.isFollowed) "Unfollow" else "Follow",
+                    contentDescription = stringResource(
+                        if (thread.isFollowed) R.string.cd_unfollow else R.string.cd_follow
+                    ),
                     tint = if (thread.isFollowed) {
                         MaterialTheme.colorScheme.primary
                     } else {
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        MaterialTheme.colorScheme.onSurfaceVariant
                     }
                 )
             }
@@ -338,15 +310,16 @@ fun LoadingState(modifier: Modifier = Modifier) {
         )
     }
 }
+
+@Composable
 private fun formatTimestamp(timestamp: Long): String {
-    val now = System.currentTimeMillis()
-    val diff = now - timestamp
+    val diff = System.currentTimeMillis() - timestamp
 
     return when {
-        diff < 60_000 -> "Just now"
-        diff < 3600_000 -> "${diff / 60_000}m ago"
-        diff < 86400_000 -> "${diff / 3600_000}h ago"
-        diff < 604800_000 -> "${diff / 86400_000}d ago"
-        else -> SimpleDateFormat("MMM dd", Locale.getDefault()).format(Date(timestamp))
+        diff < 60_000 -> stringResource(R.string.time_just_now)
+        diff < 3600_000 -> (diff / 60_000).toInt().let { pluralStringResource(R.plurals.time_minutes_ago, it, it) }
+        diff < 86400_000 -> (diff / 3600_000).toInt().let { pluralStringResource(R.plurals.time_hours_ago, it, it) }
+        diff < 604800_000 -> (diff / 86400_000).toInt().let { pluralStringResource(R.plurals.time_days_ago, it, it) }
+        else -> SimpleDateFormat("MMM dd", LocalConfiguration.current.locales[0]).format(Date(timestamp))
     }
 }

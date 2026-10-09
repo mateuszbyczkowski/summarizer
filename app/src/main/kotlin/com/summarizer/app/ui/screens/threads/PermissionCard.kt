@@ -8,8 +8,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.summarizer.app.R
 import com.summarizer.app.util.PermissionHelper
 
 @Composable
@@ -40,7 +42,7 @@ fun PermissionCard(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Notification Access Required",
+                text = stringResource(R.string.permission_card_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
@@ -48,7 +50,7 @@ fun PermissionCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "To capture WhatsApp messages, Summarizer needs notification access. Your messages stay private and are stored only on your device.",
+                text = stringResource(R.string.permission_card_body),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                 textAlign = TextAlign.Center
@@ -65,16 +67,16 @@ fun PermissionCard(
                 Icon(
                     imageVector = Icons.Default.Settings,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(ButtonDefaults.IconSize)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Open Settings")
+                Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                Text(stringResource(R.string.permission_card_open_settings))
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "In Settings, find 'Summarizer' and enable notification access",
+                text = stringResource(R.string.permission_card_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center

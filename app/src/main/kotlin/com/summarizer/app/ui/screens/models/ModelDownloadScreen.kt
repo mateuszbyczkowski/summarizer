@@ -1,6 +1,6 @@
 package com.summarizer.app.ui.screens.models
 
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.app.ActivityManager
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
@@ -20,21 +19,30 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.summarizer.app.R
 import com.summarizer.app.domain.model.AIModel
 import com.summarizer.app.domain.model.DownloadStatus
 import com.summarizer.app.domain.model.ModelDownloadState
+import com.summarizer.app.ui.components.AppTopBar
+import com.summarizer.app.ui.components.StatusBadge
+import com.summarizer.app.ui.components.formatModelSize
 import com.summarizer.app.util.StorageHelper
+import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModelDownloadScreen(
     viewModel: ModelDownloadViewModel = hiltViewModel(),
@@ -46,33 +54,19 @@ fun ModelDownloadScreen(
     val models by viewModel.models.collectAsStateWithLifecycle()
     val downloadStates by viewModel.downloadStates.collectAsStateWithLifecycle()
     val isWiFiOnly by viewModel.isWiFiOnly.collectAsStateWithLifecycle()
+    val deviceRamGb = rememberDeviceRamGb()
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Download AI Model") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
-                navigationIcon = {
-                    if (onBackClick != null) {
-                        IconButton(onClick = onBackClick) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
-                },
+            AppTopBar(
+                title = stringResource(R.string.models_title),
+                onBackClick = onBackClick,
                 actions = {
                     if (onStorageClick != null) {
                         IconButton(onClick = onStorageClick) {
                             Icon(
                                 imageVector = Icons.Default.FolderOpen,
-                                contentDescription = "Storage Settings",
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                contentDescription = stringResource(R.string.models_storage_settings)
                             )
                         }
                     }
@@ -87,41 +81,47 @@ fun ModelDownloadScreen(
         ) {
             // Header with WiFi toggle
             Column(
-                modifier = Modifier.padding(24.dp)
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Choose Your AI Model",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    // WiFi-only toggle
+                    Text(
+                        text = stringResource(R.string.models_heading),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
                     FilterChip(
                         selected = isWiFiOnly,
                         onClick = { viewModel.toggleWiFiOnly() },
                         label = {
-                            Text(if (isWiFiOnly) "WiFi Only" else "Any Network")
+                            Text(
+                                stringResource(
+                                    if (isWiFiOnly) R.string.models_wifi_only else R.string.models_any_network
+                                )
+                            )
                         },
                         leadingIcon = {
                             Icon(
                                 imageVector = if (isWiFiOnly) Icons.Default.Wifi else Icons.Default.WifiOff,
                                 contentDescription = null,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(FilterChipDefaults.IconSize)
                             )
                         }
                     )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Select and download an AI model to power your summaries. All processing happens on your device.",
+                    text = stringResource(R.string.models_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                ModelSpec(
+                    icon = Icons.Default.Memory,
+                    label = stringResource(R.string.models_device_ram, deviceRamGb)
                 )
             }
 
@@ -134,6 +134,7 @@ fun ModelDownloadScreen(
                 items(models, key = { it.id }) { model ->
                     ModelCard(
                         model = model,
+                        deviceRamGb = deviceRamGb,
                         downloadState = downloadStates[model.id] ?: ModelDownloadState(model.id),
                         onDownloadClick = { viewModel.downloadModel(model) },
                         onPauseClick = { viewModel.pauseDownload(model.id) },
@@ -154,16 +155,31 @@ fun ModelDownloadScreen(
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-                Text("Skip for Now")
+                Text(stringResource(R.string.models_skip))
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Total device RAM rounded to whole GB. [ActivityManager.MemoryInfo.totalMem] excludes memory
+ * reserved by the kernel, so rounding the decimal value lands on the advertised size
+ * (e.g. ~7.9e9 bytes on an "8 GB" phone).
+ */
+@Composable
+private fun rememberDeviceRamGb(): Int {
+    val context = LocalContext.current
+    return remember(context) {
+        val memoryInfo = ActivityManager.MemoryInfo()
+        context.getSystemService(ActivityManager::class.java).getMemoryInfo(memoryInfo)
+        (memoryInfo.totalMem / 1_000_000_000.0).roundToInt()
+    }
+}
+
 @Composable
 fun ModelCard(
     model: AIModel,
+    deviceRamGb: Int,
     downloadState: ModelDownloadState,
     onDownloadClick: () -> Unit,
     onPauseClick: () -> Unit,
@@ -172,6 +188,7 @@ fun ModelCard(
     onDeleteClick: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val exceedsDeviceRam = model.minimumRAM > deviceRamGb
 
     // Animate progress changes smoothly
     val animatedProgress by animateFloatAsState(
@@ -185,58 +202,50 @@ fun ModelCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (model.isRecommended) {
                 MaterialTheme.colorScheme.primaryContainer
             } else {
-                MaterialTheme.colorScheme.surfaceVariant
+                MaterialTheme.colorScheme.surfaceContainerHigh
             }
         )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Header with name and recommended badge
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = model.name,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                if (model.isRecommended) {
-                    AssistChip(
-                        onClick = { },
-                        label = { Text("Recommended") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        },
-                        colors = AssistChipDefaults.assistChipColors(
+            Text(
+                text = model.name,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+
+            if (model.isRecommended || exceedsDeviceRam) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (model.isRecommended) {
+                        StatusBadge(
+                            text = stringResource(R.string.badge_recommended),
                             containerColor = MaterialTheme.colorScheme.primary,
-                            labelColor = MaterialTheme.colorScheme.onPrimary
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            icon = Icons.Default.Star
                         )
-                    )
+                    }
+                    if (exceedsDeviceRam) {
+                        StatusBadge(
+                            text = stringResource(R.string.models_badge_needs_ram, model.minimumRAM),
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                            icon = Icons.Default.Warning
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Description
             Text(
                 text = model.description,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                color = LocalContentColor.current.copy(alpha = 0.8f)
             )
-
-            Spacer(modifier = Modifier.height(12.dp))
 
             // Specifications
             Row(
@@ -245,19 +254,19 @@ fun ModelCard(
             ) {
                 ModelSpec(
                     icon = Icons.Default.Storage,
-                    label = "${model.sizeInMB} MB"
+                    label = formatModelSize(model.sizeInMB)
                 )
                 ModelSpec(
                     icon = Icons.Default.Memory,
-                    label = "${model.minimumRAM} GB RAM"
+                    label = stringResource(R.string.models_ram_spec, model.minimumRAM)
                 )
                 ModelSpec(
                     icon = Icons.Default.Speed,
-                    label = model.estimatedSpeed
+                    label = speedLabel(model.estimatedSpeed)
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Download button or progress
             when (downloadState.status) {
@@ -277,7 +286,7 @@ fun ModelCard(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Downloaded",
+                                    text = stringResource(R.string.models_downloaded),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -287,13 +296,13 @@ fun ModelCard(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Button(onClick = onSelectClick) {
-                                    Text("Use This Model")
+                                    Text(stringResource(R.string.models_use))
                                 }
                                 Box {
                                     IconButton(onClick = { showMenu = true }) {
                                         Icon(
                                             imageVector = Icons.Default.MoreVert,
-                                            contentDescription = "More options"
+                                            contentDescription = stringResource(R.string.cd_more_options)
                                         )
                                     }
                                     DropdownMenu(
@@ -301,7 +310,7 @@ fun ModelCard(
                                         onDismissRequest = { showMenu = false }
                                     ) {
                                         DropdownMenuItem(
-                                            text = { Text("Delete Model") },
+                                            text = { Text(stringResource(R.string.models_delete)) },
                                             onClick = {
                                                 showMenu = false
                                                 onDeleteClick()
@@ -326,10 +335,10 @@ fun ModelCard(
                             Icon(
                                 imageVector = Icons.Default.CloudDownload,
                                 contentDescription = null,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(ButtonDefaults.IconSize)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Download (${model.sizeInMB} MB)")
+                            Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                            Text(stringResource(R.string.models_download, formatModelSize(model.sizeInMB)))
                         }
                     }
                 }
@@ -337,31 +346,30 @@ fun ModelCard(
                     Column {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Downloading... ${StorageHelper.formatStorageSize(downloadState.downloadedBytes / (1024 * 1024))} / ${StorageHelper.formatStorageSize(downloadState.totalBytes / (1024 * 1024))}",
-                                    style = MaterialTheme.typography.bodySmall
+                            Text(
+                                text = stringResource(
+                                    R.string.models_downloading,
+                                    StorageHelper.formatStorageSize(downloadState.downloadedBytes / (1024 * 1024)),
+                                    StorageHelper.formatStorageSize(downloadState.totalBytes / (1024 * 1024))
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                text = stringResource(R.string.models_percent, (downloadState.progress * 100).toInt()),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            IconButton(onClick = onPauseClick) {
+                                Icon(
+                                    imageVector = Icons.Default.Pause,
+                                    contentDescription = stringResource(R.string.models_pause)
                                 )
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(
-                                    text = "${(downloadState.progress * 100).toInt()}%",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                IconButton(onClick = onPauseClick) {
-                                    Icon(
-                                        imageVector = Icons.Default.Pause,
-                                        contentDescription = "Pause",
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
                             }
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
                         LinearProgressIndicator(
                             progress = { animatedProgress },
                             modifier = Modifier.fillMaxWidth()
@@ -376,41 +384,38 @@ fun ModelCard(
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = null,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(ButtonDefaults.IconSize)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Use This Model")
+                        Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                        Text(stringResource(R.string.models_use))
                     }
                 }
                 DownloadStatus.FAILED -> {
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            text = "Download failed: ${downloadState.error}",
+                            text = stringResource(R.string.models_download_failed, downloadState.error.orEmpty()),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
                         Button(
                             onClick = onDownloadClick,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Retry Download")
+                            Text(stringResource(R.string.models_retry_download))
                         }
                     }
                 }
                 DownloadStatus.PAUSED -> {
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "Paused at ${(downloadState.progress * 100).toInt()}%",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.tertiary
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = stringResource(R.string.models_paused, (downloadState.progress * 100).toInt()),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                        LinearProgressIndicator(
+                            progress = { animatedProgress },
+                            modifier = Modifier.fillMaxWidth()
+                        )
                         Button(
                             onClick = onResumeClick,
                             modifier = Modifier.fillMaxWidth()
@@ -418,10 +423,10 @@ fun ModelCard(
                             Icon(
                                 imageVector = Icons.Default.PlayArrow,
                                 contentDescription = null,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(ButtonDefaults.IconSize)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Resume Download")
+                            Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                            Text(stringResource(R.string.models_resume))
                         }
                     }
                 }
@@ -430,11 +435,21 @@ fun ModelCard(
     }
 }
 
+/** Localized label for the catalog's speed values ("Fast", "Medium", "Slow"). */
+@Composable
+private fun speedLabel(speed: String): String = when (speed) {
+    "Fast" -> stringResource(R.string.models_speed_fast)
+    "Medium" -> stringResource(R.string.models_speed_medium)
+    "Slow" -> stringResource(R.string.models_speed_slow)
+    else -> speed
+}
+
 @Composable
 fun ModelSpec(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     label: String
 ) {
+    val color = LocalContentColor.current.copy(alpha = 0.7f)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -443,12 +458,12 @@ fun ModelSpec(
             imageVector = icon,
             contentDescription = null,
             modifier = Modifier.size(16.dp),
-            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            tint = color
         )
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            color = color
         )
     }
 }

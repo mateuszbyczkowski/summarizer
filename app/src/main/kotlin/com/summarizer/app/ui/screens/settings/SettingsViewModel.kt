@@ -45,6 +45,27 @@ class SettingsViewModel @Inject constructor(
         loadSettings()
     }
 
+    /**
+     * Single entry point for Settings UI actions. Navigation events ([SettingsEvent.ManageModels],
+     * [SettingsEvent.ResetApp]) need the nav controller and are handled by the screen instead.
+     */
+    fun onEvent(event: SettingsEvent) {
+        when (event) {
+            is SettingsEvent.SelectProvider -> setAIProvider(event.provider)
+            is SettingsEvent.SaveApiKey -> saveApiKey(event.apiKey)
+            SettingsEvent.ValidateApiKey -> validateApiKey()
+            SettingsEvent.ClearApiKey -> clearApiKey()
+            is SettingsEvent.SelectOpenAIModel -> setSelectedModel(event.model)
+            is SettingsEvent.SetAutoSummarizationEnabled -> setAutoSummarizationEnabled(event.enabled)
+            is SettingsEvent.SetAutoSummarizationHour -> setAutoSummarizationHour(event.hour)
+            is SettingsEvent.SetDataRetentionDays -> setDataRetentionDays(event.days)
+            is SettingsEvent.SetBiometricEnabled -> setBiometricEnabled(event.enabled)
+            is SettingsEvent.SetSmartNotificationsEnabled -> setSmartNotificationsEnabled(event.enabled)
+            is SettingsEvent.SetSmartNotificationThreshold -> setSmartNotificationThreshold(event.threshold)
+            SettingsEvent.ManageModels, SettingsEvent.ResetApp -> Unit
+        }
+    }
+
     private fun loadSettings() {
         viewModelScope.launch {
             try {

@@ -1,64 +1,79 @@
 package com.summarizer.app.ui.screens.onboarding
 
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.outlined.Payments
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.summarizer.app.ui.screens.settings.SettingsViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.summarizer.app.R
+import com.summarizer.app.ui.components.ApiKeyHowToCard
+import com.summarizer.app.ui.components.ApiKeyTextField
+import com.summarizer.app.ui.components.AppTopBar
+import com.summarizer.app.ui.components.InfoCard
+import com.summarizer.app.ui.components.InfoCardTone
+import com.summarizer.app.ui.components.OpenAIPrivacyNoticeCard
 import com.summarizer.app.ui.screens.settings.SettingsUiState
+import com.summarizer.app.ui.screens.settings.SettingsViewModel
 
 /**
  * Onboarding screen for setting up OpenAI API key.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OpenAISetupScreen(
     onSetupComplete: () -> Unit,
     onBackClick: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
+    // Deliberately not saveable: the key must not end up in the saved instance state
     var apiKeyInput by remember { mutableStateOf("") }
-    var showApiKey by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val errorMessage = (uiState as? SettingsUiState.Error)?.message
+    val canSave = apiKeyInput.isNotBlank() && errorMessage == null
+    val saveKey = { if (canSave) viewModel.saveApiKey(apiKeyInput.trim()) }
 
     // Auto-navigate when API key is saved
     LaunchedEffect(uiState) {
-        if (uiState is SettingsUiState.Success && (uiState as SettingsUiState.Success).hasApiKey) {
+        if ((uiState as? SettingsUiState.Success)?.hasApiKey == true) {
             onSetupComplete()
         }
     }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("OpenAI Setup") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
+            AppTopBar(
+                title = stringResource(R.string.openai_setup_title),
+                onBackClick = onBackClick
             )
         }
     ) { paddingValues ->
@@ -66,6 +81,8 @@ fun OpenAISetupScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .consumeWindowInsets(paddingValues)
+                .imePadding()
         ) {
             Column(
                 modifier = Modifier
@@ -74,9 +91,8 @@ fun OpenAISetupScreen(
                     .padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                // Header
                 Text(
-                    text = "Enter your OpenAI API Key",
+                    text = stringResource(R.string.openai_setup_heading),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
@@ -84,158 +100,78 @@ fun OpenAISetupScreen(
                 )
 
                 Text(
-                    text = "Your API key will be stored securely on your device and used only to generate summaries.",
+                    text = stringResource(R.string.openai_setup_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ApiKeyTextField(
+                        value = apiKeyInput,
+                        onValueChange = {
+                            apiKeyInput = it
+                            // Editing the key clears a previous save error so it can be retried
+                            if (errorMessage != null) viewModel.dismissError()
+                        },
+                        isError = errorMessage != null,
+                        onDone = saveKey,
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
-                // API Key Input
-                OutlinedTextField(
-                    value = apiKeyInput,
-                    onValueChange = { apiKeyInput = it },
-                    label = { Text("OpenAI API Key") },
-                    placeholder = { Text("sk-...") },
-                    modifier = Modifier.fillMaxWidth(),
-                    leadingIcon = {
-                        Icon(Icons.Default.Lock, contentDescription = null)
-                    },
-                    trailingIcon = {
-                        IconButton(onClick = { showApiKey = !showApiKey }) {
-                            Icon(
-                                if (showApiKey) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                contentDescription = if (showApiKey) "Hide" else "Show"
-                            )
-                        }
-                    },
-                    visualTransformation = if (showApiKey) {
-                        VisualTransformation.None
-                    } else {
-                        PasswordVisualTransformation()
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    singleLine = true,
-                    isError = uiState is SettingsUiState.Error
+                    if (errorMessage != null) {
+                        Text(
+                            text = errorMessage,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+
+                ApiKeyHowToCard()
+
+                OpenAIPrivacyNoticeCard(
+                    suggestion = stringResource(R.string.openai_privacy_suggestion_onboarding)
                 )
 
-                // Error message
-                if (uiState is SettingsUiState.Error) {
-                    Text(
-                        text = (uiState as SettingsUiState.Error).message,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-
-                // How to get API key instructions
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "How to get an API key:",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                        Text(
-                            text = "1. Visit platform.openai.com\n" +
-                                    "2. Sign up or log in\n" +
-                                    "3. Go to API Keys section\n" +
-                                    "4. Create new secret key\n" +
-                                    "5. Copy and paste here",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                    }
-                }
-
-                // Privacy notice
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "⚠️ Privacy Notice",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                        Text(
-                            text = "OpenAI provider sends your WhatsApp messages to OpenAI servers for processing. " +
-                                    "If you prefer complete privacy, go back and choose the Local provider instead.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                }
-
-                // Cost information
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "💰 Estimated Cost",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                        Text(
-                            text = "Using gpt-4o-mini model:\n" +
-                                    "• ~$0.0006 per summary\n" +
-                                    "• ~10,000 summaries per $1\n" +
-                                    "• Very affordable for personal use",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                    }
-                }
+                InfoCard(
+                    title = stringResource(R.string.openai_setup_cost_title),
+                    text = stringResource(R.string.openai_setup_cost_body),
+                    tone = InfoCardTone.Neutral,
+                    icon = Icons.Outlined.Payments
+                )
             }
 
-            // Continue button - Fixed at bottom
+            // Continue button - fixed at the bottom
             Column(
-                modifier = Modifier.padding(24.dp)
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
-                    onClick = {
-                        viewModel.saveApiKey(apiKeyInput.trim())
-                    },
-                    enabled = apiKeyInput.isNotBlank() && uiState !is SettingsUiState.Error,
+                    onClick = saveKey,
+                    enabled = canSave,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
                 ) {
-                    Icon(Icons.Default.Check, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Continue", style = MaterialTheme.typography.titleMedium)
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(ButtonDefaults.IconSize)
+                    )
+                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                    Text(
+                        text = stringResource(R.string.continue_button),
+                        style = MaterialTheme.typography.titleMedium
+                    )
                 }
-
-                Spacer(modifier = Modifier.height(8.dp))
 
                 TextButton(
                     onClick = onSetupComplete,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Skip for now (can add later in Settings)")
+                    Text(stringResource(R.string.openai_setup_skip))
                 }
             }
         }
