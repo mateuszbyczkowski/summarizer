@@ -23,6 +23,19 @@ interface MessageDao {
     @Query("SELECT * FROM messages WHERE threadId = :threadId AND timestamp >= :sinceTimestamp ORDER BY timestamp ASC")
     suspend fun getMessagesForThreadSince(threadId: String, sinceTimestamp: Long): List<MessageEntity>
 
+    /**
+     * Whether a message stored before the SHA-256 dedup hash (legacy hashes are shorter) has the
+     * same content around the same time. Lets re-posted notifications match pre-upgrade rows.
+     */
+    @Query("""
+        SELECT EXISTS(
+            SELECT 1 FROM messages
+            WHERE threadId = :threadId AND content = :content AND LENGTH(messageHash) < 64
+            AND timestamp BETWEEN :fromTimestamp AND :toTimestamp
+        )
+    """)
+    suspend fun hasLegacyDuplicate(threadId: String, content: String, fromTimestamp: Long, toTimestamp: Long): Boolean
+
     /** Returns the new row ID, or -1 when the message was already stored. */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(message: MessageEntity): Long

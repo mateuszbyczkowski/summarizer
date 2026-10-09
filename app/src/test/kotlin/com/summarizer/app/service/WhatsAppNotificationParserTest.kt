@@ -73,6 +73,15 @@ class WhatsAppNotificationParserTest {
     }
 
     @Test
+    fun `legacy group titles are split into group and sender`() {
+        val parsed = WhatsAppNotificationParser.parse(snapshot(title = "Family: Anna", text = "See you at 10:30"))
+
+        assertEquals("Family", parsed.single().threadName)
+        assertEquals("Anna", parsed.single().sender)
+        assertEquals("See you at 10:30", parsed.single().content)
+    }
+
+    @Test
     fun `summary, ongoing and non-message notifications are skipped`() {
         assertTrue(WhatsAppNotificationParser.parse(snapshot(text = "5 new messages")).isEmpty())
         assertTrue(WhatsAppNotificationParser.parse(snapshot(text = "5 messages from 3 chats")).isEmpty())

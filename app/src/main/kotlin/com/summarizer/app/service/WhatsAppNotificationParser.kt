@@ -125,13 +125,14 @@ object WhatsAppNotificationParser {
         val content = (notification.bigText ?: notification.text)?.trim().orEmpty()
         if (title.isEmpty() || content.isEmpty() || SUMMARY_TEXT.matches(content)) return null
 
-        // Older WhatsApp versions title group messages "Group: Sender"; 1:1 chats are titled
-        // with the contact name. The message text is never split, since it may contain colons.
+        // Older WhatsApp versions title group messages "Group: Sender" (often without marking
+        // the conversation as a group); 1:1 chats are titled with the contact name. The message
+        // text is never split, since it may contain colons.
         val separator = title.indexOf(": ")
         val (rawThreadName, sender) = when {
-            !notification.isGroupConversation -> title to title
             separator > 0 -> title.substring(0, separator) to title.substring(separator + 2)
-            else -> title to UNKNOWN_SENDER
+            notification.isGroupConversation -> title to UNKNOWN_SENDER
+            else -> title to title
         }
         val threadName = ThreadNaming.displayName(rawThreadName)
         if (threadName.isBlank()) return null

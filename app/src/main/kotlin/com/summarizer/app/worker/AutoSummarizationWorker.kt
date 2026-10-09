@@ -8,6 +8,7 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
+import androidx.work.ExistingWorkPolicy
 import androidx.work.WorkerParameters
 import com.summarizer.app.MainActivity
 import com.summarizer.app.R
@@ -85,7 +86,9 @@ class AutoSummarizationWorker @AssistedInject constructor(
             Timber.e(e, "Auto-summarization worker failed")
             return Result.success()
         } finally {
-            withContext(NonCancellable) { workScheduler.refreshAutoSummarization() }
+            withContext(NonCancellable) {
+                workScheduler.refreshAutoSummarization(ExistingWorkPolicy.APPEND_OR_REPLACE)
+            }
         }
     }
 
@@ -101,11 +104,11 @@ class AutoSummarizationWorker @AssistedInject constructor(
             val hour = settings?.summaryScheduleHour ?: globalHour
             if (!enabled || hour == DISABLED_HOUR) return@filter false
 
-            // Most recent scheduled time at or before now
-            var scheduled = now.truncatedTo(ChronoUnit.DAYS).withHour(hour)
-            if (scheduled.isAfter(now)) scheduled = scheduled.minusDays(1)
+            // Due once today's scheduled hour has passed and the thread was not summarized since.
+            // Later checks the same day catch up on delayed or interrupted runs.
+            val scheduled = now.truncatedTo(ChronoUnit.DAYS).withHour(hour)
             val lastSummarizedAt = settings?.lastSummarizedAt ?: 0L
-            lastSummarizedAt < scheduled.toInstant().toEpochMilli()
+            !now.isBefore(scheduled) && lastSummarizedAt < scheduled.toInstant().toEpochMilli()
         }
     }
 

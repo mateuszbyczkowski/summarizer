@@ -191,6 +191,8 @@ class SettingsViewModel @Inject constructor(
 
                 // Switch back to local provider
                 preferencesRepository.setAIProvider(AIProvider.LOCAL)
+                // Network is no longer required for scheduled runs
+                workScheduler.refreshAutoSummarization()
 
                 // Reload settings to update UI
                 loadSettings()

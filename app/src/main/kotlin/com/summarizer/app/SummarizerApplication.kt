@@ -3,6 +3,7 @@ package com.summarizer.app
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import androidx.work.ExistingWorkPolicy
 import com.summarizer.app.di.ApplicationScope
 import com.summarizer.app.ui.lock.AppLockManager
 import com.summarizer.app.worker.WorkScheduler
@@ -41,7 +42,8 @@ class SummarizerApplication : Application(), Configuration.Provider {
         appLockManager.start()
 
         workScheduler.scheduleDailyDataRetention()
-        applicationScope.launch { workScheduler.refreshAutoSummarization() }
+        // KEEP: when WorkManager starts the process to run a due check, do not cancel it
+        applicationScope.launch { workScheduler.refreshAutoSummarization(ExistingWorkPolicy.KEEP) }
     }
 
     override val workManagerConfiguration: Configuration

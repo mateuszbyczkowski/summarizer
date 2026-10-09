@@ -40,7 +40,13 @@ class MessageRepositoryImpl @Inject constructor(
                 lastMessageTimestamp = message.timestamp
             )
         )
-        val inserted = messageDao.insert(message.toEntity()) != -1L
+        val legacyDuplicate = messageDao.hasLegacyDuplicate(
+            threadId = message.threadId,
+            content = message.content,
+            fromTimestamp = message.timestamp - LEGACY_DUPLICATE_WINDOW_MS,
+            toTimestamp = message.timestamp + LEGACY_DUPLICATE_WINDOW_MS
+        )
+        val inserted = !legacyDuplicate && messageDao.insert(message.toEntity()) != -1L
         if (inserted) {
             threadDao.recordNewMessage(message.threadId, message.threadName, message.timestamp)
         }
@@ -53,6 +59,11 @@ class MessageRepositoryImpl @Inject constructor(
 
     override suspend fun searchMessages(query: String): List<Message> {
         return messageDao.searchMessages(query).map { it.toDomainModel() }
+    }
+
+    private companion object {
+        // Pre-upgrade rows used the notification post time, which can lag the message time
+        const val LEGACY_DUPLICATE_WINDOW_MS = 60 * 60_000L
     }
 
     private fun MessageEntity.toDomainModel() = Message(

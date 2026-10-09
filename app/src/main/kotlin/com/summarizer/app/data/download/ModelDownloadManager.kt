@@ -12,10 +12,12 @@ import com.summarizer.app.util.StorageHelper
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,8 +58,11 @@ class ModelDownloadManager @Inject constructor(
 
     /** Start or resume downloading [model]; a running download for the same model is left alone. */
     fun startDownload(model: AIModel) {
-        if (activeDownloads[model.id]?.isActive == true) return
-        val job = applicationScope.launch(Dispatchers.IO) {
+        val previous = activeDownloads[model.id]
+        if (previous != null && previous.isActive && !previous.isCancelled) return
+        val job = applicationScope.launch(Dispatchers.IO, start = CoroutineStart.LAZY) {
+            // A paused transfer may still be finishing a write; never let two jobs share the file
+            previous?.join()
             try {
                 val file = download(model)
                 modelRepository.markAsDownloaded(model.id, file.absolutePath, System.currentTimeMillis())
@@ -74,10 +79,11 @@ class ModelDownloadManager @Inject constructor(
                 }
                 updateState(model.id, DownloadStatus.FAILED, error = message ?: "Download failed")
             } finally {
-                activeDownloads.remove(model.id)
+                activeDownloads.remove(model.id, coroutineContext.job)
             }
         }
         activeDownloads[model.id] = job
+        job.start()
     }
 
     /** Stop the transfer but keep the partial file so [startDownload] can resume it. */

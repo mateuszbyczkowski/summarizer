@@ -35,9 +35,13 @@ interface ThreadDao {
 
     /**
      * Delete threads left without messages after retention cleanup. Threads that still have
-     * summaries are kept so the summaries stay reachable.
+     * summaries or per-thread settings are kept, so summaries stay reachable and choices survive.
      */
-    @Query("DELETE FROM threads WHERE messageCount = 0 AND threadId NOT IN (SELECT DISTINCT threadId FROM summaries)")
+    @Query("""
+        DELETE FROM threads WHERE messageCount = 0
+        AND threadId NOT IN (SELECT DISTINCT threadId FROM summaries)
+        AND threadId NOT IN (SELECT threadId FROM thread_settings)
+    """)
     suspend fun deleteEmptyThreads(): Int
 
     @Query("""
@@ -53,7 +57,7 @@ interface ThreadDao {
     @Query("""
         UPDATE threads SET
             messageCount = (SELECT COUNT(*) FROM messages WHERE messages.threadId = threads.threadId),
-            lastMessageTimestamp = COALESCE((SELECT MAX(timestamp) FROM messages WHERE messages.threadId = threads.threadId), 0)
+            lastMessageTimestamp = COALESCE((SELECT MAX(timestamp) FROM messages WHERE messages.threadId = threads.threadId), lastMessageTimestamp)
     """)
     suspend fun refreshAllThreadStats()
 

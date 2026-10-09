@@ -9,8 +9,7 @@ import com.summarizer.app.domain.ai.ModelInfo
 import com.summarizer.app.domain.repository.PreferencesRepository
 import com.summarizer.app.util.RetryHelper
 import com.summarizer.app.util.suspendRunCatching
-import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import retrofit2.HttpException
 import timber.log.Timber
 import java.io.IOException
@@ -37,7 +36,7 @@ class OpenAIEngine @Inject constructor(
         private fun isTransient(error: Throwable): Boolean = when (error) {
             is HttpException -> error.code() == 429 || error.code() >= 500
             is IOException -> true
-            is TimeoutCancellationException -> true
+            is RequestTimeoutException -> true
             else -> false
         }
     }
@@ -82,7 +81,8 @@ class OpenAIEngine @Inject constructor(
             shouldRetry = ::isTransient
         ) {
             suspendRunCatching {
-                withTimeout(TIMEOUT_MS) {
+                // withTimeoutOrNull: a TimeoutCancellationException would look like caller cancellation
+                withTimeoutOrNull(TIMEOUT_MS) {
                     val response = openAIService.createChatCompletion(
                         authorization = "Bearer $apiKey",
                         request = request
@@ -92,13 +92,15 @@ class OpenAIEngine @Inject constructor(
 
                     Timber.i("OpenAI: Generation complete (${generatedText.length} chars, ${response.usage.totalTokens} tokens)")
                     generatedText
-                }
+                } ?: throw RequestTimeoutException()
             }
         }.getOrElse { error ->
             Timber.e(error, "OpenAI: Generation failed")
             throw toEngineError(error)
         }
     }
+
+    private class RequestTimeoutException : Exception("OpenAI request timed out")
 
     private suspend fun requireApiKey(): String {
         val key = preferencesRepository.getOpenAIApiKey()
@@ -110,7 +112,7 @@ class OpenAIEngine @Inject constructor(
 
     private fun toEngineError(error: Throwable): Throwable = when {
         error is AIEngineError -> error
-        error is TimeoutCancellationException -> AIEngineError.GenerationTimeout
+        error is RequestTimeoutException -> AIEngineError.GenerationTimeout
         error is HttpException && error.code() == 401 ->
             AIEngineError.GenerationFailed("Invalid API key. Please check your OpenAI API key in Settings.", error)
         error is HttpException && error.code() == 429 ->

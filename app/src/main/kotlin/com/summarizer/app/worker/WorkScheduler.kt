@@ -38,8 +38,12 @@ class WorkScheduler @Inject constructor(
     /**
      * Keep the hourly auto-summarization check scheduled while any thread may need it (global
      * setting on, or a thread enabled explicitly); cancel it otherwise.
+     *
+     * @param policy REPLACE after settings changes (new constraints apply immediately), KEEP at
+     *   app start (never cancel a due or running check), APPEND_OR_REPLACE from the worker itself
+     *   (the next check is chained after the running one)
      */
-    suspend fun refreshAutoSummarization() {
+    suspend fun refreshAutoSummarization(policy: ExistingWorkPolicy = ExistingWorkPolicy.REPLACE) {
         val needed = preferencesRepository.isAutoSummarizationEnabled() ||
             threadSettingsRepository.getAllSettings().any { it.autoSummarizationEnabled == true }
         if (!needed) {
@@ -64,7 +68,7 @@ class WorkScheduler @Inject constructor(
 
         WorkManager.getInstance(context).enqueueUniqueWork(
             AutoSummarizationWorker.WORK_NAME,
-            ExistingWorkPolicy.REPLACE,
+            policy,
             workRequest
         )
         Timber.d("Next auto-summarization check at $nextHour")

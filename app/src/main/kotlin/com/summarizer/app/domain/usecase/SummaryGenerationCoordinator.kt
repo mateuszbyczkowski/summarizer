@@ -41,12 +41,17 @@ class SummaryGenerationCoordinator @Inject constructor(
         if (alreadyRunning) return
 
         scope.launch {
-            generateSummaryUseCase.execute(threadId)
-                .onSuccess { states.update { it - threadId } }
-                .onFailure { error ->
-                    Timber.e(error, "Failed to generate summary")
-                    states.update { it + (threadId to State.Failed(error)) }
-                }
+            try {
+                generateSummaryUseCase.execute(threadId)
+                    .onSuccess { states.update { it - threadId } }
+                    .onFailure { error ->
+                        Timber.e(error, "Failed to generate summary")
+                        states.update { it + (threadId to State.Failed(error)) }
+                    }
+            } finally {
+                // Never leave a thread stuck in Running, even if the job is cancelled
+                states.update { current -> if (current[threadId] == State.Running) current - threadId else current }
+            }
         }
     }
 

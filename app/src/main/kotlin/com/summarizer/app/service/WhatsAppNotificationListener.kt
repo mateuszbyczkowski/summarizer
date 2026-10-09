@@ -43,6 +43,9 @@ class WhatsAppNotificationListener : NotificationListenerService() {
     // Single-threaded so messages are stored in order and thread stats never race
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
 
+    // Importance analysis may wait for the AI engine; it must never hold up storing messages
+    private val analysisScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     override fun onCreate() {
         super.onCreate()
         Timber.tag(TAG).i("NotificationListenerService created")
@@ -50,6 +53,8 @@ class WhatsAppNotificationListener : NotificationListenerService() {
 
     companion object {
         private const val TAG = "WhatsAppListener"
+        // Older messages (e.g. history re-sent in a notification) never trigger a smart notification
+        private const val SMART_NOTIFICATION_MAX_AGE_MS = 15 * 60_000L
         private const val NOTIFICATION_CHANNEL_ID = "smart_whatsapp_notifications"
         private const val NOTIFICATION_CHANNEL_NAME = "WhatsApp Important Messages"
     }
@@ -136,8 +141,11 @@ class WhatsAppNotificationListener : NotificationListenerService() {
             if (!messageRepository.saveIncomingMessage(message)) return
             Timber.tag(TAG).d("Stored new ${parsed.messageType} message in thread $threadId")
 
-            if (parsed.messageType == MessageType.TEXT && parsed.sender != "You") {
-                handleSmartNotification(threadId, parsed.threadName, parsed.sender, parsed.content)
+            val isRecent = System.currentTimeMillis() - parsed.timestamp < SMART_NOTIFICATION_MAX_AGE_MS
+            if (parsed.messageType == MessageType.TEXT && parsed.sender != "You" && isRecent) {
+                analysisScope.launch {
+                    handleSmartNotification(threadId, parsed.threadName, parsed.sender, parsed.content)
+                }
             }
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Error saving message")
@@ -258,5 +266,6 @@ class WhatsAppNotificationListener : NotificationListenerService() {
     override fun onDestroy() {
         super.onDestroy()
         serviceScope.cancel()
+        analysisScope.cancel()
     }
 }

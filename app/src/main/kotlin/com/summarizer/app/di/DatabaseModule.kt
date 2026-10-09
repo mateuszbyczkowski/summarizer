@@ -6,6 +6,7 @@ import com.summarizer.app.data.local.dao.AIModelDao
 import com.summarizer.app.data.local.database.ALL_MIGRATIONS
 import com.summarizer.app.data.local.database.AppDatabase
 import com.summarizer.app.data.local.database.DatabaseKeyProvider
+import com.summarizer.app.data.local.database.DeferredKeyOpenHelperFactory
 import com.summarizer.app.data.local.database.dao.MessageDao
 import com.summarizer.app.data.local.database.dao.SummaryDao
 import com.summarizer.app.data.local.database.dao.ThreadDao
@@ -16,7 +17,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import net.sqlcipher.database.SupportFactory
 import javax.inject.Singleton
 
 @Module
@@ -28,8 +28,8 @@ object DatabaseModule {
     fun provideAppDatabase(
         @ApplicationContext context: Context
     ): AppDatabase {
-        val passphrase = DatabaseKeyProvider(context, Constants.DATABASE_NAME).getPassphrase()
-        val factory = SupportFactory(passphrase)
+        val keyProvider = DatabaseKeyProvider(context, Constants.DATABASE_NAME)
+        val factory = DeferredKeyOpenHelperFactory(keyProvider::getPassphrase)
 
         return Room.databaseBuilder(
             context,

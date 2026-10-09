@@ -1,9 +1,7 @@
 package com.summarizer.app.domain.usecase
 
 import com.summarizer.app.domain.ai.AIEngine
-import com.summarizer.app.domain.ai.ensureModelLoaded
 import com.summarizer.app.domain.model.AIProvider
-import com.summarizer.app.domain.repository.ModelRepository
 import com.summarizer.app.domain.repository.PreferencesRepository
 import kotlinx.coroutines.sync.Mutex
 import timber.log.Timber
@@ -19,7 +17,6 @@ import javax.inject.Singleton
 @Singleton
 class AnalyzeMessageImportanceUseCase @Inject constructor(
     private val aiEngine: AIEngine,
-    private val modelRepository: ModelRepository,
     private val preferencesRepository: PreferencesRepository
 ) {
 
@@ -110,7 +107,8 @@ class AnalyzeMessageImportanceUseCase @Inject constructor(
      * AI-based importance analysis (more sophisticated).
      */
     private suspend fun analyzeWithAI(content: String, senderName: String): Float {
-        if (aiEngine.ensureModelLoaded(modelRepository).isFailure) return FALLBACK_SCORE
+        // Never load a multi-GB model just to score one notification
+        if (!aiEngine.isModelLoaded()) return FALLBACK_SCORE
 
         val prompt = """
             Analyze this WhatsApp message for importance. Score from 0-10:
