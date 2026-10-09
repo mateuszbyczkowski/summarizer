@@ -1,6 +1,10 @@
 package com.summarizer.app.data.repository
 
+import androidx.room.withTransaction
+import com.summarizer.app.data.local.database.AppDatabase
 import com.summarizer.app.data.local.database.dao.MessageDao
+import com.summarizer.app.data.local.database.dao.ThreadDao
+import com.summarizer.app.data.local.entity.ThreadEntity
 import com.summarizer.app.data.local.entity.MessageEntity
 import com.summarizer.app.domain.model.Message
 import com.summarizer.app.domain.repository.MessageRepository
@@ -9,7 +13,9 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class MessageRepositoryImpl @Inject constructor(
-    private val messageDao: MessageDao
+    private val database: AppDatabase,
+    private val messageDao: MessageDao,
+    private val threadDao: ThreadDao
 ) : MessageRepository {
 
     override fun getMessagesForThread(threadId: String): Flow<List<Message>> {
@@ -26,12 +32,19 @@ class MessageRepositoryImpl @Inject constructor(
         return messageDao.getMessagesForThreadSince(threadId, sinceTimestamp).map { it.toDomainModel() }
     }
 
-    override suspend fun saveMessage(message: Message) {
-        messageDao.insert(message.toEntity())
-    }
-
-    override suspend fun getMessageCount(threadId: String): Int {
-        return messageDao.getMessageCount(threadId)
+    override suspend fun saveIncomingMessage(message: Message): Boolean = database.withTransaction {
+        threadDao.insertIfAbsent(
+            ThreadEntity(
+                threadId = message.threadId,
+                threadName = message.threadName,
+                lastMessageTimestamp = message.timestamp
+            )
+        )
+        val inserted = messageDao.insert(message.toEntity()) != -1L
+        if (inserted) {
+            threadDao.recordNewMessage(message.threadId, message.threadName, message.timestamp)
+        }
+        inserted
     }
 
     override suspend fun deleteMessagesForThread(threadId: String) {

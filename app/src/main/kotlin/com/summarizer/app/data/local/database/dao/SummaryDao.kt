@@ -27,9 +27,7 @@ interface SummaryDao {
     /**
      * Delete old summaries generated before the cutoff timestamp.
      */
-    @Query("DELETE FROM summaries WHERE generatedAt < :cutoffTimestamp")
-    suspend fun deleteSummariesBefore(cutoffTimestamp: Long)
 
-    @Query("SELECT * FROM summaries WHERE key_topics LIKE '%' || :query || '%' OR action_items LIKE '%' || :query || '%' OR announcements LIKE '%' || :query || '%' OR threadName LIKE '%' || :query || '%' ORDER BY generatedAt DESC LIMIT 50")
+    @Query("SELECT * FROM summaries WHERE overview LIKE '%' || :query || '%' OR key_topics LIKE '%' || :query || '%' OR action_items LIKE '%' || :query || '%' OR announcements LIKE '%' || :query || '%' OR threadName LIKE '%' || :query || '%' ORDER BY generatedAt DESC LIMIT 50")
     suspend fun searchSummaries(query: String): List<SummaryEntity>
 }

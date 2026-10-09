@@ -32,7 +32,8 @@ class Converters {
 
     @TypeConverter
     fun toStringList(value: String): List<String> {
-        return json.decodeFromString<List<String>>(value)
+        // A malformed row must not break every query that reads it
+        return runCatching { json.decodeFromString<List<String>>(value) }.getOrDefault(emptyList())
     }
 
     @TypeConverter
@@ -42,7 +43,8 @@ class Converters {
 
     @TypeConverter
     fun toActionItemList(value: String): List<ActionItem> {
-        return json.decodeFromString<List<ActionItem>>(value)
+        // A malformed row must not break every query that reads it
+        return runCatching { json.decodeFromString<List<ActionItem>>(value) }.getOrDefault(emptyList())
     }
 
     @TypeConverter
@@ -52,6 +54,7 @@ class Converters {
 
     @TypeConverter
     fun toParticipantHighlightList(value: String): List<ParticipantHighlight> {
-        return json.decodeFromString<List<ParticipantHighlight>>(value)
+        // A malformed row must not break every query that reads it
+        return runCatching { json.decodeFromString<List<ParticipantHighlight>>(value) }.getOrDefault(emptyList())
     }
 }

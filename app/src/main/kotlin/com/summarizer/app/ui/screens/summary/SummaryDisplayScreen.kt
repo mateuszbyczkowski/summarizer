@@ -206,6 +206,22 @@ private fun SummaryContent(summary: Summary) {
                 }
             }
 
+            // Overview section
+            if (summary.overview.isNotBlank()) {
+                item {
+                    SectionCard(
+                        title = "Overview",
+                        icon = "📝"
+                    ) {
+                        Text(
+                            text = summary.overview,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+
             // Key Topics section
             if (summary.keyTopics.isNotEmpty()) {
                 item {

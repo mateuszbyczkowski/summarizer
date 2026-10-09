@@ -18,7 +18,7 @@ interface ThreadSettingsDao {
     fun getSettingsFlow(threadId: String): Flow<ThreadSettingsEntity?>
 
     @Query("SELECT * FROM thread_settings")
-    fun getAllSettings(): Flow<List<ThreadSettingsEntity>>
+    suspend fun getAllSettings(): List<ThreadSettingsEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(settings: ThreadSettingsEntity)
@@ -34,11 +34,4 @@ interface ThreadSettingsDao {
 
     @Query("UPDATE thread_settings SET summarizationMode = :mode, updatedAt = :updatedAt WHERE threadId = :threadId")
     suspend fun updateSummarizationMode(threadId: String, mode: String, updatedAt: Long = System.currentTimeMillis())
-
-    /**
-     * Get all threads that have auto-summarization enabled at a specific hour.
-     * Includes threads with explicit hour setting and threads using global settings.
-     */
-    @Query("SELECT * FROM thread_settings WHERE summaryScheduleHour = :hour OR (summaryScheduleHour IS NULL AND autoSummarizationEnabled IS NULL) OR (summaryScheduleHour IS NULL AND autoSummarizationEnabled = 1)")
-    suspend fun getThreadsForSchedule(hour: Int): List<ThreadSettingsEntity>
 }

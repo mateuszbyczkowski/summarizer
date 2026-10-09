@@ -18,7 +18,7 @@ interface ThreadSettingsRepository {
     /**
      * Get all thread settings.
      */
-    fun getAllSettings(): Flow<List<ThreadSettings>>
+    suspend fun getAllSettings(): List<ThreadSettings>
 
     /**
      * Save or update settings for a thread.
@@ -46,9 +46,4 @@ interface ThreadSettingsRepository {
      * Creates new settings with defaults if they don't exist.
      */
     suspend fun getOrCreateSettings(threadId: String): ThreadSettings
-
-    /**
-     * Get all threads that should be auto-summarized at a specific hour.
-     */
-    suspend fun getThreadsForSchedule(hour: Int): List<ThreadSettings>
 }

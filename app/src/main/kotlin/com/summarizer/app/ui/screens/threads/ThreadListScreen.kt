@@ -23,15 +23,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import com.google.accompanist.swiperefresh.SwipeRefresh
-import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.summarizer.app.domain.model.Thread
 import com.summarizer.app.util.PermissionHelper
 import java.text.SimpleDateFormat
@@ -45,24 +42,15 @@ fun ThreadListScreen(
     onSettingsClick: () -> Unit = {},
     onSearchClick: () -> Unit = {}
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val isRefreshing by viewModel.isRefreshing.collectAsState()
-    val showOnlyFollowed by viewModel.showOnlyFollowed.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val showOnlyFollowed by viewModel.showOnlyFollowed.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var hasPermission by remember { mutableStateOf(PermissionHelper.hasNotificationListenerPermission(context)) }
-    val lifecycleOwner = LocalLifecycleOwner.current
 
     // Check permission when screen resumes (user might grant it in Settings)
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                hasPermission = PermissionHelper.hasNotificationListenerPermission(context)
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
+    LifecycleResumeEffect(Unit) {
+        hasPermission = PermissionHelper.hasNotificationListenerPermission(context)
+        onPauseOrDispose { }
     }
 
     Scaffold(
@@ -122,28 +110,17 @@ fun ThreadListScreen(
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.FilterList,
-                            contentDescription = "Filter",
+                            contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )
                     }
                 )
             }
 
-            // SwipeRefresh wraps the entire content
-            SwipeRefresh(
-                state = rememberSwipeRefreshState(isRefreshing),
-                onRefresh = { viewModel.refresh() },
-                modifier = Modifier.weight(1f)
-            ) {
-                // Show content based on UI state
+            Box(modifier = Modifier.weight(1f)) {
                 when (val state = uiState) {
                     is ThreadListUiState.Loading -> {
-                        // Don't show loading spinner when SwipeRefresh is active
-                        if (!isRefreshing) {
-                            LoadingState(modifier = Modifier.fillMaxSize())
-                        } else {
-                            Box(modifier = Modifier.fillMaxSize())
-                        }
+                        LoadingState(modifier = Modifier.fillMaxSize())
                     }
                     is ThreadListUiState.Success -> {
                         if (state.threads.isEmpty()) {
@@ -182,12 +159,6 @@ fun ThreadListScreen(
                                 }
                             }
                         }
-                    }
-                    is ThreadListUiState.Error -> {
-                        ErrorState(
-                            message = state.message,
-                            modifier = Modifier.fillMaxSize()
-                        )
                     }
                 }
             }
@@ -367,35 +338,6 @@ fun LoadingState(modifier: Modifier = Modifier) {
         )
     }
 }
-
-@Composable
-fun ErrorState(
-    message: String,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(32.dp)
-        ) {
-            Text(
-                text = "Error",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.error
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
-        }
-    }
-}
-
 private fun formatTimestamp(timestamp: Long): String {
     val now = System.currentTimeMillis()
     val diff = now - timestamp

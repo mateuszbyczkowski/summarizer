@@ -2,10 +2,10 @@ package com.summarizer.app.di
 
 import android.content.Context
 import androidx.room.Room
-import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
 import com.summarizer.app.data.local.dao.AIModelDao
+import com.summarizer.app.data.local.database.ALL_MIGRATIONS
 import com.summarizer.app.data.local.database.AppDatabase
+import com.summarizer.app.data.local.database.DatabaseKeyProvider
 import com.summarizer.app.data.local.database.dao.MessageDao
 import com.summarizer.app.data.local.database.dao.SummaryDao
 import com.summarizer.app.data.local.database.dao.ThreadDao
@@ -16,7 +16,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import net.sqlcipher.database.SQLiteDatabase
 import net.sqlcipher.database.SupportFactory
 import javax.inject.Singleton
 
@@ -24,47 +23,12 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
-    private val MIGRATION_6_7 = object : Migration(6, 7) {
-        override fun migrate(database: SupportSQLiteDatabase) {
-            // Add isFollowed column to threads table with default value true (1)
-            database.execSQL("ALTER TABLE threads ADD COLUMN isFollowed INTEGER NOT NULL DEFAULT 1")
-        }
-    }
-
-    private val MIGRATION_7_8 = object : Migration(7, 8) {
-        override fun migrate(database: SupportSQLiteDatabase) {
-            // Create thread_settings table for per-thread summarization configuration
-            database.execSQL("""
-                CREATE TABLE IF NOT EXISTS thread_settings (
-                    threadId TEXT PRIMARY KEY NOT NULL,
-                    summarizationMode TEXT NOT NULL DEFAULT 'INCREMENTAL',
-                    autoSummarizationEnabled INTEGER DEFAULT NULL,
-                    summaryScheduleHour INTEGER DEFAULT NULL,
-                    lastSummarizedMessageTimestamp INTEGER DEFAULT NULL,
-                    lastSummarizedAt INTEGER DEFAULT NULL,
-                    createdAt INTEGER NOT NULL,
-                    updatedAt INTEGER NOT NULL,
-                    FOREIGN KEY (threadId) REFERENCES threads(threadId) ON DELETE CASCADE
-                )
-            """.trimIndent())
-
-            // Create index on threadId for faster lookups
-            database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_thread_settings_threadId ON thread_settings(threadId)")
-        }
-    }
-
     @Provides
     @Singleton
     fun provideAppDatabase(
         @ApplicationContext context: Context
     ): AppDatabase {
-        // Generate passphrase from Android ID (unique per device)
-        val passphrase = SQLiteDatabase.getBytes(
-            android.provider.Settings.Secure.getString(
-                context.contentResolver,
-                android.provider.Settings.Secure.ANDROID_ID
-            ).toCharArray()
-        )
+        val passphrase = DatabaseKeyProvider(context, Constants.DATABASE_NAME).getPassphrase()
         val factory = SupportFactory(passphrase)
 
         return Room.databaseBuilder(
@@ -73,8 +37,9 @@ object DatabaseModule {
             Constants.DATABASE_NAME
         )
             .openHelperFactory(factory)
-            .addMigrations(MIGRATION_6_7, MIGRATION_7_8)
-            .fallbackToDestructiveMigration() // Only if migration fails
+            .addMigrations(*ALL_MIGRATIONS)
+            // Only pre-release schemas without migrations may be dropped; never current user data
+            .fallbackToDestructiveMigrationFrom(dropAllTables = true, 1, 2, 3)
             .build()
     }
 

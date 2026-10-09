@@ -13,8 +13,11 @@ interface MessageRepository {
      */
     suspend fun getMessagesForThreadSince(threadId: String, sinceTimestamp: Long): List<Message>
 
-    suspend fun saveMessage(message: Message)
-    suspend fun getMessageCount(threadId: String): Int
+    /**
+     * Store an incoming message, creating its thread if needed and updating thread stats.
+     * @return false if the message was a duplicate and nothing changed
+     */
+    suspend fun saveIncomingMessage(message: Message): Boolean
     suspend fun deleteMessagesForThread(threadId: String)
     suspend fun searchMessages(query: String): List<Message>
 }

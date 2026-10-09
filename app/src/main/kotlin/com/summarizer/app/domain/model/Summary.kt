@@ -4,6 +4,7 @@ data class Summary(
     val id: Long = 0,
     val threadId: String,
     val threadName: String,
+    val overview: String = "",
     val keyTopics: List<String>,
     val actionItems: List<ActionItem>,
     val announcements: List<String>,

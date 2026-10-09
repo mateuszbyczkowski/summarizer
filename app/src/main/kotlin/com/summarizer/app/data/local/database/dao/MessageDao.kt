@@ -23,46 +23,15 @@ interface MessageDao {
     @Query("SELECT * FROM messages WHERE threadId = :threadId AND timestamp >= :sinceTimestamp ORDER BY timestamp ASC")
     suspend fun getMessagesForThreadSince(threadId: String, sinceTimestamp: Long): List<MessageEntity>
 
+    /** Returns the new row ID, or -1 when the message was already stored. */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(message: MessageEntity): Long
-
-    @Query("SELECT * FROM messages WHERE messageHash = :messageHash LIMIT 1")
-    suspend fun getMessageByHash(messageHash: String): MessageEntity?
-
-    @Query("SELECT COUNT(*) FROM messages WHERE threadId = :threadId")
-    suspend fun getMessageCount(threadId: String): Int
 
     @Query("DELETE FROM messages WHERE threadId = :threadId")
     suspend fun deleteMessagesForThread(threadId: String)
 
     @Query("DELETE FROM messages WHERE timestamp < :cutoffTimestamp")
-    suspend fun deleteMessagesBefore(cutoffTimestamp: Long)
-
-    /**
-     * Delete old messages for a thread, keeping at least the most recent N messages.
-     * This ensures we never delete all messages from a thread even if they're old.
-     */
-    @Query("""
-        DELETE FROM messages
-        WHERE threadId = :threadId
-        AND timestamp < :cutoffTimestamp
-        AND messageHash NOT IN (
-            SELECT messageHash FROM messages
-            WHERE threadId = :threadId
-            ORDER BY timestamp DESC
-            LIMIT :keepCount
-        )
-    """)
-    suspend fun deleteOldMessagesForThread(threadId: String, cutoffTimestamp: Long, keepCount: Int)
-
-    /**
-     * Get all unique thread IDs that have messages.
-     */
-    @Query("SELECT DISTINCT threadId FROM messages")
-    suspend fun getAllThreadIds(): List<String>
-
-    @Query("UPDATE messages SET threadId = :newThreadId WHERE threadId = :oldThreadId")
-    suspend fun updateThreadId(oldThreadId: String, newThreadId: String)
+    suspend fun deleteMessagesBefore(cutoffTimestamp: Long): Int
 
     @Query("SELECT * FROM messages WHERE content LIKE '%' || :query || '%' OR sender LIKE '%' || :query || '%' OR threadName LIKE '%' || :query || '%' ORDER BY timestamp DESC LIMIT 100")
     suspend fun searchMessages(query: String): List<MessageEntity>

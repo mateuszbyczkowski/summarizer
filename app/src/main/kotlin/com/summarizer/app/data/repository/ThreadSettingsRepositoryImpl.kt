@@ -23,10 +23,8 @@ class ThreadSettingsRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getAllSettings(): Flow<List<ThreadSettings>> {
-        return threadSettingsDao.getAllSettings().map { entities ->
-            entities.map { it.toDomainModel() }
-        }
+    override suspend fun getAllSettings(): List<ThreadSettings> {
+        return threadSettingsDao.getAllSettings().map { it.toDomainModel() }
     }
 
     override suspend fun saveSettings(settings: ThreadSettings) {
@@ -51,13 +49,10 @@ class ThreadSettingsRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getThreadsForSchedule(hour: Int): List<ThreadSettings> {
-        return threadSettingsDao.getThreadsForSchedule(hour).map { it.toDomainModel() }
-    }
-
     private fun ThreadSettingsEntity.toDomainModel() = ThreadSettings(
         threadId = threadId,
-        summarizationMode = SummarizationMode.valueOf(summarizationMode),
+        summarizationMode = SummarizationMode.entries.firstOrNull { it.name == summarizationMode }
+            ?: SummarizationMode.INCREMENTAL,
         autoSummarizationEnabled = autoSummarizationEnabled,
         summaryScheduleHour = summaryScheduleHour,
         lastSummarizedMessageTimestamp = lastSummarizedMessageTimestamp,

@@ -97,6 +97,7 @@ class GenerateSummaryUseCase @Inject constructor(
             val summary = Summary(
                 threadId = threadId,
                 threadName = thread.threadName,
+                overview = parsedSummary.overview,
                 keyTopics = parsedSummary.keyTopics,
                 actionItems = parsedSummary.actionItems.map {
                     ActionItem(

@@ -135,7 +135,6 @@ dependencies {
     implementation("com.jakewharton.timber:timber:5.0.1")
 
     // Accompanist (SwipeRefresh)
-    implementation("com.google.accompanist:accompanist-swiperefresh:0.32.0")
 
     // LLM Library - Week 7 Real Integration
     // Using Llamatik 1.10.1

@@ -13,6 +13,9 @@ data class SummaryEntity(
     val threadId: String,
     val threadName: String,
 
+    @ColumnInfo(defaultValue = "")
+    val overview: String = "",
+
     @ColumnInfo(name = "key_topics")
     val keyTopics: List<String>,
 

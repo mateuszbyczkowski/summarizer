@@ -3,6 +3,7 @@ package com.summarizer.app.data.local.entity
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import java.security.MessageDigest
 
 @Entity(
     tableName = "messages",
@@ -25,11 +26,14 @@ data class MessageEntity(
     val createdAt: Long = System.currentTimeMillis()
 ) {
     companion object {
+        /**
+         * Identity of a message for deduplication. WhatsApp re-posts notifications with the same
+         * messages and their original timestamps, so these fields identify a message exactly.
+         */
         fun generateHash(threadId: String, sender: String, content: String, timestamp: Long): String {
-            // Round timestamp to nearest 0.5 seconds to deduplicate repeated notifications
-            // while still allowing rapid successive messages with the same content
-            val roundedTimestamp = (timestamp / 500) * 500
-            return "${threadId}_${sender}_${content}_$roundedTimestamp".hashCode().toString()
+            val digest = MessageDigest.getInstance("SHA-256")
+                .digest(listOf(threadId, sender, content, timestamp.toString()).joinToString("\u0000").toByteArray())
+            return digest.joinToString("") { "%02x".format(it) }
         }
     }
 }
