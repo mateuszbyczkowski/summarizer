@@ -6,8 +6,6 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.summarizer.app.util.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.security.MessageDigest
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -43,24 +41,27 @@ class SecurePreferences @Inject constructor(
         sharedPreferences.edit().putBoolean(key, value).apply()
     }
 
+    fun getInt(key: String, defaultValue: Int = 0): Int {
+        return sharedPreferences.getInt(key, defaultValue)
+    }
+
+    fun putInt(key: String, value: Int) {
+        sharedPreferences.edit().putInt(key, value).apply()
+    }
+
+    fun getLong(key: String, defaultValue: Long = 0L): Long {
+        return sharedPreferences.getLong(key, defaultValue)
+    }
+
+    fun putLong(key: String, value: Long) {
+        sharedPreferences.edit().putLong(key, value).apply()
+    }
+
     fun remove(key: String) {
         sharedPreferences.edit().remove(key).apply()
     }
 
     fun clear() {
         sharedPreferences.edit().clear().apply()
-    }
-
-    // PIN-specific helpers
-    fun hashPin(pin: String): String {
-        val salt = getString(Constants.KEY_PIN_SALT) ?: run {
-            val newSalt = UUID.randomUUID().toString()
-            putString(Constants.KEY_PIN_SALT, newSalt)
-            newSalt
-        }
-
-        val digest = MessageDigest.getInstance("SHA-256")
-        val hash = digest.digest((pin + salt).toByteArray())
-        return hash.joinToString("") { "%02x".format(it) }
     }
 }

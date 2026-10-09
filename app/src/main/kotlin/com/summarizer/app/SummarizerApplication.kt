@@ -3,6 +3,7 @@ package com.summarizer.app
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.summarizer.app.ui.lock.AppLockManager
 import com.summarizer.app.worker.WorkScheduler
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
@@ -17,6 +18,9 @@ class SummarizerApplication : Application(), Configuration.Provider {
     @Inject
     lateinit var workScheduler: WorkScheduler
 
+    @Inject
+    lateinit var appLockManager: AppLockManager
+
     override fun onCreate() {
         super.onCreate()
 
@@ -26,6 +30,8 @@ class SummarizerApplication : Application(), Configuration.Provider {
         }
 
         Timber.d("Application started")
+
+        appLockManager.start()
 
         // Schedule daily data retention cleanup
         // This runs automatically to clean old messages/summaries based on user preferences

@@ -13,15 +13,11 @@ object Constants {
     // Preferences
     const val PREFS_NAME = "summarizer_prefs"
     const val KEY_PIN_HASH = "pin_hash"
-    const val KEY_PIN_SALT = "pin_salt"
-    const val KEY_ONBOARDING_COMPLETE = "onboarding_complete"
-    const val KEY_MODEL_DOWNLOADED = "model_downloaded"
-    const val KEY_MODEL_PATH = "model_path"
+    const val KEY_PIN_SALT = "pin_salt" // Legacy SHA-256 scheme only
+    const val KEY_PIN_FAILED_ATTEMPTS = "pin_failed_attempts"
+    const val KEY_PIN_LOCKED_UNTIL = "pin_locked_until"
+    const val KEY_LAST_ACTIVE_AT = "last_active_at"
 
     // PIN
     const val PIN_LENGTH = 6
-
-    // Summarization
-    const val MAX_MESSAGES_FOR_SUMMARY = 100
-    const val SUMMARY_TIMEOUT_SECONDS = 45L
 }

@@ -16,7 +16,6 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,7 +24,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.summarizer.app.domain.model.Summary
 import java.text.SimpleDateFormat
 import java.util.*
@@ -33,12 +33,11 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SummaryDisplayScreen(
-    threadId: String,
-    threadName: String,
     onBackClick: () -> Unit,
     viewModel: SummaryDisplayViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val threadName by viewModel.threadName.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -83,6 +82,7 @@ fun SummaryDisplayScreen(
                 label = "summaryStateTransition"
             ) { state ->
                 when (state) {
+                    is SummaryUiState.Loading -> Unit
                     is SummaryUiState.Initial -> {
                         InitialPrompt(
                             onGenerateClick = { viewModel.generateSummary() }
@@ -97,7 +97,8 @@ fun SummaryDisplayScreen(
                     is SummaryUiState.Error -> {
                         ErrorContent(
                             message = state.message,
-                            onRetryClick = { viewModel.retry() }
+                            onRetryClick = { viewModel.retry() },
+                            onDismissClick = { viewModel.dismissError() }
                         )
                     }
                 }
@@ -477,7 +478,8 @@ private fun ParticipantHighlightCard(
 @Composable
 private fun ErrorContent(
     message: String,
-    onRetryClick: () -> Unit
+    onRetryClick: () -> Unit,
+    onDismissClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -511,6 +513,9 @@ private fun ErrorContent(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Retry")
+            }
+            TextButton(onClick = onDismissClick) {
+                Text("Dismiss")
             }
         }
     }

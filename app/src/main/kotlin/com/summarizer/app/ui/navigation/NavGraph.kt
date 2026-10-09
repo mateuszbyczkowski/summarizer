@@ -10,17 +10,20 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntOffset
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.summarizer.app.domain.model.AIProvider
 import com.summarizer.app.domain.repository.AuthRepository
 import com.summarizer.app.domain.repository.PreferencesRepository
-import com.summarizer.app.domain.model.AIProvider
-import com.summarizer.app.ui.screens.auth.PinLockScreen
 import com.summarizer.app.ui.screens.auth.PinSetupScreen
 import com.summarizer.app.ui.screens.models.ModelDownloadScreen
 import com.summarizer.app.ui.screens.models.StorageLocationScreen
@@ -34,6 +37,10 @@ import com.summarizer.app.ui.screens.summary.SummaryDisplayScreen
 import com.summarizer.app.ui.screens.threads.ThreadDetailScreen
 import com.summarizer.app.ui.screens.threads.ThreadListScreen
 import dagger.hilt.android.EntryPointAccessors
+import kotlinx.coroutines.launch
+
+private const val ONBOARDING_GRAPH = "onboarding"
+private const val ARG_ONBOARDING = "onboarding"
 
 sealed class Screen(val route: String) {
     object Welcome : Screen("welcome")
@@ -41,29 +48,43 @@ sealed class Screen(val route: String) {
     object PinSetup : Screen("pin_setup")
     object AIProviderChoice : Screen("ai_provider_choice")
     object OpenAISetup : Screen("openai_setup")
-    object StorageLocation : Screen("storage_location")
-    object ModelDownload : Screen("model_download")
-    object PinLock : Screen("pin_lock")
+    object StorageLocation : Screen("storage_location?$ARG_ONBOARDING={$ARG_ONBOARDING}") {
+        fun createRoute(onboarding: Boolean = false) = "storage_location?$ARG_ONBOARDING=$onboarding"
+    }
+    object ModelDownload : Screen("model_download?$ARG_ONBOARDING={$ARG_ONBOARDING}") {
+        fun createRoute(onboarding: Boolean = false) = "model_download?$ARG_ONBOARDING=$onboarding"
+    }
     object ThreadList : Screen("thread_list")
     object Settings : Screen("settings")
     object Search : Screen("search")
     object ThreadDetail : Screen("thread_detail/{threadId}") {
         fun createRoute(threadId: String) = "thread_detail/$threadId"
     }
-    object SummaryDisplay : Screen("summary/{threadId}/{threadName}") {
-        fun createRoute(threadId: String, threadName: String) = "summary/$threadId/${java.net.URLEncoder.encode(threadName, "UTF-8")}"
+    object SummaryDisplay : Screen("summary/{threadId}") {
+        fun createRoute(threadId: String) = "summary/$threadId"
     }
+}
+
+/** Navigation requested from outside the app, e.g. by tapping a notification. */
+sealed interface PendingNavigation {
+    data class Thread(val threadId: String) : PendingNavigation
+    data object Threads : PendingNavigation
+}
+
+private val onboardingArgument = navArgument(ARG_ONBOARDING) {
+    type = NavType.BoolType
+    defaultValue = false
 }
 
 @Composable
 fun NavGraph(
-    initialThreadId: String? = null,
-    navigateToThreadsOnStart: Boolean = false
+    pendingNavigation: PendingNavigation?,
+    onPendingNavigationHandled: () -> Unit
 ) {
     val navController = rememberNavController()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
-    // Get repositories from Hilt
     val entryPoint = remember {
         EntryPointAccessors.fromApplication(
             context.applicationContext,
@@ -74,358 +95,198 @@ fun NavGraph(
     val preferencesRepository = entryPoint.preferencesRepository()
 
     var startDestination by remember { mutableStateOf<String?>(null) }
-    var pendingThreadNavigation by remember { mutableStateOf(initialThreadId) }
-    var shouldNavigateToThreads by remember { mutableStateOf(navigateToThreadsOnStart) }
 
     LaunchedEffect(Unit) {
-        val isFirstLaunch = preferencesRepository.isFirstLaunch()
-        startDestination = when {
-            isFirstLaunch -> Screen.Welcome.route
-            !authRepository.hasPin() -> Screen.PinSetup.route
-            else -> Screen.PinLock.route
+        val onboardingComplete = preferencesRepository.hasCompletedOnboarding()
+        startDestination = if (onboardingComplete && authRepository.hasPin()) {
+            Screen.ThreadList.route
+        } else {
+            ONBOARDING_GRAPH
         }
     }
 
-    // Handle navigation after authentication
-    LaunchedEffect(pendingThreadNavigation, shouldNavigateToThreads) {
-        // Wait for navigation to be ready (not on PinLock screen)
-        if (startDestination == Screen.PinLock.route) {
-            // Will be handled in PinLock screen's onSuccess callback
+    // Handle navigation requests from notifications once the graph is ready
+    LaunchedEffect(pendingNavigation, startDestination) {
+        if (startDestination != Screen.ThreadList.route || pendingNavigation == null) return@LaunchedEffect
+        when (pendingNavigation) {
+            is PendingNavigation.Thread -> navController.navigate(Screen.ThreadDetail.createRoute(pendingNavigation.threadId)) {
+                popUpTo(Screen.ThreadList.route)
+                launchSingleTop = true
+            }
+            PendingNavigation.Threads -> navController.popBackStack(Screen.ThreadList.route, inclusive = false)
+        }
+        onPendingNavigationHandled()
+    }
+
+    fun finishOnboarding() {
+        scope.launch {
+            preferencesRepository.setOnboardingComplete()
+            navController.navigate(Screen.ThreadList.route) {
+                popUpTo(ONBOARDING_GRAPH) { inclusive = true }
+            }
         }
     }
 
-    // Define common animation specs following Material Design 3 guidelines
-    val slideAnimationSpec = tween<androidx.compose.ui.unit.IntOffset>(300, easing = EaseInOutCubic)
-    val fadeAnimationSpec = tween<Float>(300)
+    val slideSpec = tween<IntOffset>(300, easing = EaseInOutCubic)
+    val fadeSpec = tween<Float>(300)
 
-    if (startDestination != null) {
-        NavHost(
-            navController = navController,
-            startDestination = startDestination!!
-        ) {
-            composable(
-                route = Screen.Welcome.route,
-                enterTransition = {
-                    slideIntoContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                        animationSpec = slideAnimationSpec
-                    ) + fadeIn(animationSpec = fadeAnimationSpec)
-                },
-                exitTransition = {
-                    slideOutOfContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                        animationSpec = slideAnimationSpec
-                    ) + fadeOut(animationSpec = fadeAnimationSpec)
-                },
-                popEnterTransition = {
-                    slideIntoContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.End,
-                        animationSpec = slideAnimationSpec
-                    ) + fadeIn(animationSpec = fadeAnimationSpec)
-                },
-                popExitTransition = {
-                    slideOutOfContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.End,
-                        animationSpec = slideAnimationSpec
-                    ) + fadeOut(animationSpec = fadeAnimationSpec)
-                }
-            ) {
+    val start = startDestination ?: return
+    NavHost(
+        navController = navController,
+        startDestination = start,
+        enterTransition = {
+            slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, slideSpec) + fadeIn(fadeSpec)
+        },
+        exitTransition = {
+            slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, slideSpec) + fadeOut(fadeSpec)
+        },
+        popEnterTransition = {
+            slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, slideSpec) + fadeIn(fadeSpec)
+        },
+        popExitTransition = {
+            slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, slideSpec) + fadeOut(fadeSpec)
+        }
+    ) {
+        navigation(startDestination = Screen.Welcome.route, route = ONBOARDING_GRAPH) {
+            composable(Screen.Welcome.route) {
                 WelcomeScreen(
-                    onContinueClick = {
-                        navController.navigate(Screen.PermissionExplanation.route) {
-                            popUpTo(Screen.Welcome.route) { inclusive = true }
-                        }
-                    }
+                    onContinueClick = { navController.navigate(Screen.PermissionExplanation.route) }
                 )
             }
 
-            composable(
-                route = Screen.PermissionExplanation.route,
-                enterTransition = {
-                    slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, slideAnimationSpec) +
-                    fadeIn(fadeAnimationSpec)
-                },
-                exitTransition = {
-                    slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, slideAnimationSpec) +
-                    fadeOut(fadeAnimationSpec)
-                },
-                popEnterTransition = {
-                    slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, slideAnimationSpec) +
-                    fadeIn(fadeAnimationSpec)
-                },
-                popExitTransition = {
-                    slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, slideAnimationSpec) +
-                    fadeOut(fadeAnimationSpec)
-                }
-            ) {
+            composable(Screen.PermissionExplanation.route) {
                 PermissionExplanationScreen(
-                    onContinueClick = {
-                        navController.navigate(Screen.PinSetup.route) {
-                            popUpTo(Screen.PermissionExplanation.route) { inclusive = true }
-                        }
-                    }
+                    onContinueClick = { navController.navigate(Screen.PinSetup.route) }
                 )
             }
 
-            composable(
-                route = Screen.PinSetup.route,
-                enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300, easing = EaseInOutCubic)) + fadeIn(tween(300)) },
-                exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300, easing = EaseInOutCubic)) + fadeOut(tween(300)) },
-                popEnterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300, easing = EaseInOutCubic)) + fadeIn(tween(300)) },
-                popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300, easing = EaseInOutCubic)) + fadeOut(tween(300)) }
-            ) {
+            composable(Screen.PinSetup.route) {
                 PinSetupScreen(
                     onPinSet = {
-                        navController.navigate(Screen.AIProviderChoice.route)
+                        // The PIN cannot be changed by navigating back to this screen
+                        navController.navigate(Screen.AIProviderChoice.route) {
+                            popUpTo(ONBOARDING_GRAPH) { inclusive = false }
+                        }
                     }
                 )
             }
 
-            composable(
-                route = Screen.AIProviderChoice.route,
-                enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300, easing = EaseInOutCubic)) + fadeIn(tween(300)) },
-                exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300, easing = EaseInOutCubic)) + fadeOut(tween(300)) },
-                popEnterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300, easing = EaseInOutCubic)) + fadeIn(tween(300)) },
-                popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300, easing = EaseInOutCubic)) + fadeOut(tween(300)) }
-            ) {
+            composable(Screen.AIProviderChoice.route) {
                 AIProviderChoiceScreen(
                     onProviderSelected = { provider ->
                         when (provider) {
-                            AIProvider.LOCAL -> {
-                                navController.navigate(Screen.StorageLocation.route) {
-                                    popUpTo(Screen.AIProviderChoice.route) { inclusive = true }
-                                }
-                            }
-                            AIProvider.OPENAI -> {
-                                navController.navigate(Screen.OpenAISetup.route) {
-                                    popUpTo(Screen.AIProviderChoice.route) { inclusive = true }
-                                }
-                            }
+                            AIProvider.LOCAL -> navController.navigate(Screen.StorageLocation.createRoute(onboarding = true))
+                            AIProvider.OPENAI -> navController.navigate(Screen.OpenAISetup.route)
                         }
                     }
                 )
             }
 
-            composable(
-                route = Screen.OpenAISetup.route,
-                enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300, easing = EaseInOutCubic)) + fadeIn(tween(300)) },
-                exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300, easing = EaseInOutCubic)) + fadeOut(tween(300)) },
-                popEnterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300, easing = EaseInOutCubic)) + fadeIn(tween(300)) },
-                popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300, easing = EaseInOutCubic)) + fadeOut(tween(300)) }
-            ) {
+            composable(Screen.OpenAISetup.route) {
                 OpenAISetupScreen(
-                    onSetupComplete = {
-                        navController.navigate(Screen.ThreadList.route) {
-                            popUpTo(Screen.Welcome.route) { inclusive = true }
-                        }
-                    },
-                    onBackClick = {
-                        navController.navigate(Screen.AIProviderChoice.route) {
-                            popUpTo(Screen.OpenAISetup.route) { inclusive = true }
-                        }
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.StorageLocation.route,
-                enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300, easing = EaseInOutCubic)) + fadeIn(tween(300)) },
-                exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300, easing = EaseInOutCubic)) + fadeOut(tween(300)) },
-                popEnterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300, easing = EaseInOutCubic)) + fadeIn(tween(300)) },
-                popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300, easing = EaseInOutCubic)) + fadeOut(tween(300)) }
-            ) {
-                val previousRoute = navController.previousBackStackEntry?.destination?.route
-                val isFromOnboarding = previousRoute == Screen.AIProviderChoice.route ||
-                                       previousRoute == Screen.PinSetup.route ||
-                                       previousRoute == Screen.PermissionExplanation.route ||
-                                       previousRoute == Screen.Welcome.route
-                StorageLocationScreen(
-                    onLocationSelected = { location ->
-                        if (isFromOnboarding) {
-                            navController.navigate(Screen.ModelDownload.route) {
-                                popUpTo(Screen.Welcome.route) { inclusive = true }
-                            }
-                        } else {
-                            navController.popBackStack()
-                        }
-                    },
-                    onBackClick = if (!isFromOnboarding) {
-                        { navController.popBackStack() }
-                    } else {
-                        {
-                            navController.navigate(Screen.AIProviderChoice.route) {
-                                popUpTo(Screen.StorageLocation.route) { inclusive = true }
-                            }
-                        }
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.ModelDownload.route,
-                enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300, easing = EaseInOutCubic)) + fadeIn(tween(300)) },
-                exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300, easing = EaseInOutCubic)) + fadeOut(tween(300)) },
-                popEnterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300, easing = EaseInOutCubic)) + fadeIn(tween(300)) },
-                popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300, easing = EaseInOutCubic)) + fadeOut(tween(300)) }
-            ) {
-                val isFromOnboarding = navController.previousBackStackEntry?.destination?.route == Screen.StorageLocation.route
-                ModelDownloadScreen(
-                    onModelSelected = { model ->
-                        if (isFromOnboarding) {
-                            navController.navigate(Screen.ThreadList.route) {
-                                popUpTo(Screen.ModelDownload.route) { inclusive = true }
-                            }
-                        } else {
-                            navController.popBackStack()
-                        }
-                    },
-                    onSkip = {
-                        if (isFromOnboarding) {
-                            navController.navigate(Screen.ThreadList.route) {
-                                popUpTo(Screen.ModelDownload.route) { inclusive = true }
-                            }
-                        } else {
-                            navController.popBackStack()
-                        }
-                    },
-                    onBackClick = if (!isFromOnboarding) {
-                        { navController.popBackStack() }
-                    } else null,
-                    onStorageClick = {
-                        navController.navigate(Screen.StorageLocation.route)
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.PinLock.route,
-                enterTransition = { fadeIn(animationSpec = tween(300)) },
-                exitTransition = { fadeOut(animationSpec = tween(300)) }
-            ) {
-                PinLockScreen(
-                    onUnlocked = {
-                        // Handle deep link navigation from notifications
-                        when {
-                            pendingThreadNavigation != null -> {
-                                navController.navigate(Screen.ThreadDetail.createRoute(pendingThreadNavigation!!)) {
-                                    popUpTo(Screen.PinLock.route) { inclusive = true }
-                                }
-                                pendingThreadNavigation = null
-                            }
-                            shouldNavigateToThreads -> {
-                                navController.navigate(Screen.ThreadList.route) {
-                                    popUpTo(Screen.PinLock.route) { inclusive = true }
-                                }
-                                shouldNavigateToThreads = false
-                            }
-                            else -> {
-                                navController.navigate(Screen.ThreadList.route) {
-                                    popUpTo(Screen.PinLock.route) { inclusive = true }
-                                }
-                            }
-                        }
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.ThreadList.route,
-                enterTransition = { fadeIn(animationSpec = tween(300)) },
-                exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300, easing = EaseInOutCubic)) + fadeOut(tween(300)) },
-                popEnterTransition = { fadeIn(animationSpec = tween(300)) },
-                popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300, easing = EaseInOutCubic)) + fadeOut(tween(300)) }
-            ) {
-                ThreadListScreen(
-                    onThreadClick = { threadId ->
-                        navController.navigate(Screen.ThreadDetail.createRoute(threadId))
-                    },
-                    onSettingsClick = {
-                        navController.navigate(Screen.Settings.route)
-                    },
-                    onSearchClick = {
-                        navController.navigate(Screen.Search.route)
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.Settings.route,
-                enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300, easing = EaseInOutCubic)) + fadeIn(tween(300)) },
-                exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300, easing = EaseInOutCubic)) + fadeOut(tween(300)) },
-                popEnterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300, easing = EaseInOutCubic)) + fadeIn(tween(300)) },
-                popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300, easing = EaseInOutCubic)) + fadeOut(tween(300)) }
-            ) {
-                SettingsScreen(
-                    onBackPressed = { navController.popBackStack() },
-                    onModelConfigClick = {
-                        navController.navigate(Screen.ModelDownload.route)
-                    },
-                    onResetComplete = {
-                        navController.navigate(Screen.Welcome.route) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.Search.route,
-                enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300, easing = EaseInOutCubic)) + fadeIn(tween(300)) },
-                exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300, easing = EaseInOutCubic)) + fadeOut(tween(300)) },
-                popEnterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300, easing = EaseInOutCubic)) + fadeIn(tween(300)) },
-                popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300, easing = EaseInOutCubic)) + fadeOut(tween(300)) }
-            ) {
-                SearchScreen(
-                    onBackPressed = { navController.popBackStack() },
-                    onThreadClick = { threadId ->
-                        navController.navigate(Screen.ThreadDetail.createRoute(threadId))
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.ThreadDetail.route,
-                arguments = listOf(
-                    navArgument("threadId") { type = NavType.StringType }
-                ),
-                enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300, easing = EaseInOutCubic)) + fadeIn(tween(300)) },
-                exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300, easing = EaseInOutCubic)) + fadeOut(tween(300)) },
-                popEnterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300, easing = EaseInOutCubic)) + fadeIn(tween(300)) },
-                popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300, easing = EaseInOutCubic)) + fadeOut(tween(300)) }
-            ) { backStackEntry ->
-                val threadId = backStackEntry.arguments?.getString("threadId") ?: ""
-                ThreadDetailScreen(
-                    threadId = threadId,
-                    onBackClick = { navController.popBackStack() },
-                    onSummarizeClick = { threadId, threadName ->
-                        navController.navigate(Screen.SummaryDisplay.createRoute(threadId, threadName))
-                    }
-                )
-            }
-
-            composable(
-                route = Screen.SummaryDisplay.route,
-                arguments = listOf(
-                    navArgument("threadId") { type = NavType.StringType },
-                    navArgument("threadName") { type = NavType.StringType }
-                ),
-                enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300, easing = EaseInOutCubic)) + fadeIn(tween(300)) },
-                exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300, easing = EaseInOutCubic)) + fadeOut(tween(300)) },
-                popEnterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300, easing = EaseInOutCubic)) + fadeIn(tween(300)) },
-                popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300, easing = EaseInOutCubic)) + fadeOut(tween(300)) }
-            ) { backStackEntry ->
-                val threadId = backStackEntry.arguments?.getString("threadId") ?: ""
-                val threadName = java.net.URLDecoder.decode(
-                    backStackEntry.arguments?.getString("threadName") ?: "",
-                    "UTF-8"
-                )
-                SummaryDisplayScreen(
-                    threadId = threadId,
-                    threadName = threadName,
+                    onSetupComplete = ::finishOnboarding,
                     onBackClick = { navController.popBackStack() }
                 )
             }
         }
+
+        composable(Screen.StorageLocation.route, arguments = listOf(onboardingArgument)) { entry ->
+            val isOnboarding = entry.arguments?.getBoolean(ARG_ONBOARDING) == true
+            StorageLocationScreen(
+                onLocationSelected = {
+                    if (isOnboarding) {
+                        navController.navigate(Screen.ModelDownload.createRoute(onboarding = true))
+                    } else {
+                        navController.popBackStack()
+                    }
+                },
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.ModelDownload.route, arguments = listOf(onboardingArgument)) { entry ->
+            val isOnboarding = entry.arguments?.getBoolean(ARG_ONBOARDING) == true
+            ModelDownloadScreen(
+                onModelSelected = {
+                    if (isOnboarding) finishOnboarding() else navController.popBackStack()
+                },
+                onSkip = {
+                    if (isOnboarding) finishOnboarding() else navController.popBackStack()
+                },
+                onBackClick = if (isOnboarding) null else {
+                    { navController.popBackStack() }
+                },
+                onStorageClick = {
+                    navController.navigate(Screen.StorageLocation.createRoute())
+                }
+            )
+        }
+
+        composable(
+            route = Screen.ThreadList.route,
+            enterTransition = { fadeIn(fadeSpec) },
+            popEnterTransition = { fadeIn(fadeSpec) }
+        ) {
+            ThreadListScreen(
+                onThreadClick = { threadId ->
+                    navController.navigate(Screen.ThreadDetail.createRoute(threadId))
+                },
+                onSettingsClick = {
+                    navController.navigate(Screen.Settings.route)
+                },
+                onSearchClick = {
+                    navController.navigate(Screen.Search.route)
+                }
+            )
+        }
+
+        composable(Screen.Settings.route) {
+            SettingsScreen(
+                onBackPressed = { navController.popBackStack() },
+                onModelConfigClick = {
+                    navController.navigate(Screen.ModelDownload.createRoute())
+                },
+                onResetComplete = { navController.restartAtOnboarding() }
+            )
+        }
+
+        composable(Screen.Search.route) {
+            SearchScreen(
+                onBackPressed = { navController.popBackStack() },
+                onThreadClick = { threadId ->
+                    navController.navigate(Screen.ThreadDetail.createRoute(threadId))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.ThreadDetail.route,
+            arguments = listOf(navArgument("threadId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val threadId = backStackEntry.arguments?.getString("threadId") ?: ""
+            ThreadDetailScreen(
+                threadId = threadId,
+                onBackClick = { navController.popBackStack() },
+                onSummarizeClick = { id, _ ->
+                    navController.navigate(Screen.SummaryDisplay.createRoute(id))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.SummaryDisplay.route,
+            arguments = listOf(navArgument("threadId") { type = NavType.StringType })
+        ) {
+            SummaryDisplayScreen(
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+    }
+}
+
+private fun NavHostController.restartAtOnboarding() {
+    navigate(ONBOARDING_GRAPH) {
+        popUpTo(graph.id) { inclusive = true }
     }
 }
 

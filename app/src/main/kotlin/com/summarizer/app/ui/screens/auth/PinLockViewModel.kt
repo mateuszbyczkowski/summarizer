@@ -2,6 +2,7 @@ package com.summarizer.app.ui.screens.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.summarizer.app.domain.model.PinVerification
 import com.summarizer.app.domain.repository.AuthRepository
 import com.summarizer.app.domain.repository.PreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,17 +21,24 @@ class PinLockViewModel @Inject constructor(
     private val _isBiometricEnabled = MutableStateFlow(false)
     val isBiometricEnabled: StateFlow<Boolean> = _isBiometricEnabled.asStateFlow()
 
-    init {
-        loadBiometricPreference()
-    }
+    private val _isVerifying = MutableStateFlow(false)
+    val isVerifying: StateFlow<Boolean> = _isVerifying.asStateFlow()
 
-    private fun loadBiometricPreference() {
+    init {
         viewModelScope.launch {
             _isBiometricEnabled.value = preferencesRepository.isBiometricEnabled()
         }
     }
 
-    fun verifyPin(pin: String): Boolean {
-        return authRepository.verifyPin(pin)
+    fun verifyPin(pin: String, onResult: (PinVerification) -> Unit) {
+        if (_isVerifying.value) return
+        _isVerifying.value = true
+        viewModelScope.launch {
+            try {
+                onResult(authRepository.verifyPin(pin))
+            } finally {
+                _isVerifying.value = false
+            }
+        }
     }
 }

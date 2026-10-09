@@ -1,5 +1,7 @@
 package com.summarizer.app.ui.screens.auth
 
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -18,7 +20,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.summarizer.app.domain.model.PinVerification
 import com.summarizer.app.util.BiometricHelper
 import kotlinx.coroutines.launch
 
@@ -28,21 +32,23 @@ fun PinLockScreen(
     viewModel: PinLockViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsState()
+    val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsStateWithLifecycle()
     val canUseBiometric = remember(context) { BiometricHelper.canUseBiometric(context) }
     val showBiometricButton = isBiometricEnabled && canUseBiometric
 
     var pin by remember { mutableStateOf("") }
-    var showError by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val isVerifying by viewModel.isVerifying.collectAsStateWithLifecycle()
     var biometricError by remember { mutableStateOf<String?>(null) }
     val shakeOffset = remember { Animatable(0f) }
     val coroutineScope = rememberCoroutineScope()
 
     // Auto-trigger biometric on screen load if enabled
     LaunchedEffect(showBiometricButton) {
-        if (showBiometricButton && context is FragmentActivity) {
+        val activity = context.findFragmentActivity()
+        if (showBiometricButton && activity != null) {
             BiometricHelper.showBiometricPrompt(
-                activity = context,
+                activity = activity,
                 title = "Unlock App",
                 subtitle = "Use biometric to unlock",
                 onSuccess = { onUnlocked() },
@@ -94,47 +100,40 @@ fun PinLockScreen(
             onValueChange = {
                 if (it.length <= 6 && it.all { char -> char.isDigit() }) {
                     pin = it
-                    showError = false
+                    errorMessage = null
 
                     // Auto-verify when 6 digits entered
                     if (it.length == 6) {
-                        if (viewModel.verifyPin(it)) {
-                            onUnlocked()
-                        } else {
-                            showError = true
-                            pin = ""
-                            // Trigger shake animation
-                            coroutineScope.launch {
-                                repeat(3) {
-                                    shakeOffset.animateTo(15f, spring(
-                                        dampingRatio = Spring.DampingRatioHighBouncy,
-                                        stiffness = Spring.StiffnessHigh
-                                    ))
-                                    shakeOffset.animateTo(-15f, spring(
-                                        dampingRatio = Spring.DampingRatioHighBouncy,
-                                        stiffness = Spring.StiffnessHigh
-                                    ))
+                        viewModel.verifyPin(it) { result ->
+                            when (result) {
+                                PinVerification.Success -> onUnlocked()
+                                is PinVerification.Incorrect -> {
+                                    errorMessage = "Incorrect PIN. Try again."
+                                    pin = ""
+                                    coroutineScope.launch { shake(shakeOffset) }
                                 }
-                                shakeOffset.animateTo(0f, spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = Spring.StiffnessMedium
-                                ))
+                                is PinVerification.LockedOut -> {
+                                    val seconds = (result.remainingMillis + 999) / 1000
+                                    errorMessage = "Too many attempts. Try again in ${seconds}s."
+                                    pin = ""
+                                }
                             }
                         }
                     }
                 }
             },
+            enabled = !isVerifying,
             label = { Text("PIN") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
-            isError = showError
+            isError = errorMessage != null
         )
 
-        if (showError) {
+        errorMessage?.let { message ->
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Incorrect PIN. Try again.",
+                text = message,
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall
             )
@@ -164,9 +163,12 @@ fun PinLockScreen(
 
             OutlinedButton(
                 onClick = {
-                    if (context is FragmentActivity) {
+                    val activity = context.findFragmentActivity()
+                    if (activity == null) {
+                        biometricError = "Biometric unlock is unavailable"
+                    } else {
                         BiometricHelper.showBiometricPrompt(
-                            activity = context,
+                            activity = activity,
                             title = "Unlock App",
                             subtitle = "Use biometric to unlock",
                             onSuccess = { onUnlocked() },
@@ -180,11 +182,25 @@ fun PinLockScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Fingerprint,
-                    contentDescription = "Use biometric"
+                    contentDescription = null
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Use Biometric")
             }
         }
     }
+}
+
+private tailrec fun Context.findFragmentActivity(): FragmentActivity? = when (this) {
+    is FragmentActivity -> this
+    is ContextWrapper -> baseContext.findFragmentActivity()
+    else -> null
+}
+
+private suspend fun shake(offset: Animatable<Float, *>) {
+    repeat(3) {
+        offset.animateTo(15f, spring(Spring.DampingRatioHighBouncy, Spring.StiffnessHigh))
+        offset.animateTo(-15f, spring(Spring.DampingRatioHighBouncy, Spring.StiffnessHigh))
+    }
+    offset.animateTo(0f, spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium))
 }

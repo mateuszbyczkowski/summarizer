@@ -3,21 +3,22 @@ package com.summarizer.app.ui.screens.summary
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.summarizer.app.di.ApplicationScope
 import com.summarizer.app.domain.model.Summary
-import com.summarizer.app.domain.usecase.GenerateSummaryUseCase
 import com.summarizer.app.domain.repository.SummaryRepository
+import com.summarizer.app.domain.repository.ThreadRepository
+import com.summarizer.app.domain.usecase.NothingToSummarizeException
+import com.summarizer.app.domain.usecase.SummaryGenerationCoordinator
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import timber.log.Timber
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 sealed interface SummaryUiState {
+    data object Loading : SummaryUiState
     data object Initial : SummaryUiState
     data object Generating : SummaryUiState
     data class Success(val summary: Summary) : SummaryUiState
@@ -27,84 +28,44 @@ sealed interface SummaryUiState {
 @HiltViewModel
 class SummaryDisplayViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val generateSummaryUseCase: GenerateSummaryUseCase,
-    private val summaryRepository: SummaryRepository,
-    @ApplicationScope private val applicationScope: CoroutineScope
+    summaryRepository: SummaryRepository,
+    threadRepository: ThreadRepository,
+    private val coordinator: SummaryGenerationCoordinator
 ) : ViewModel() {
 
     private val threadId: String = savedStateHandle.get<String>("threadId") ?: ""
 
-    private val _uiState = MutableStateFlow<SummaryUiState>(SummaryUiState.Initial)
-    val uiState: StateFlow<SummaryUiState> = _uiState.asStateFlow()
+    val threadName: StateFlow<String> = flow {
+        emit(threadRepository.getThread(threadId)?.threadName.orEmpty())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
 
-    init {
-        loadExistingSummary()
-    }
-
-    /**
-     * Load the most recent summary for this thread if it exists.
-     */
-    private fun loadExistingSummary() {
-        viewModelScope.launch {
-            try {
-                val existingSummary = summaryRepository.getLatestSummaryForThread(threadId)
-                if (existingSummary != null) {
-                    _uiState.update { SummaryUiState.Success(existingSummary) }
-                }
-            } catch (e: Exception) {
-                Timber.w(e, "Failed to load existing summary")
-                // Don't show error for missing summary, just stay in Initial state
-            }
+    val uiState: StateFlow<SummaryUiState> = combine(
+        summaryRepository.getSummariesForThread(threadId).map { it.firstOrNull() },
+        coordinator.stateFor(threadId)
+    ) { latest, generation ->
+        when (generation) {
+            SummaryGenerationCoordinator.State.Running -> SummaryUiState.Generating
+            is SummaryGenerationCoordinator.State.Failed -> SummaryUiState.Error(errorMessage(generation.error))
+            null -> latest?.let { SummaryUiState.Success(it) } ?: SummaryUiState.Initial
         }
-    }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SummaryUiState.Loading)
 
-    /**
-     * Generate a new summary for the thread.
-     * Uses application scope so generation continues even if user navigates away.
-     */
     fun generateSummary() {
-        // Update UI state immediately
-        _uiState.update { SummaryUiState.Generating }
-
-        // Launch in application scope so it survives navigation
-        applicationScope.launch {
-            try {
-                Timber.i("Starting summary generation for thread: $threadId")
-
-                val result = generateSummaryUseCase.execute(threadId)
-
-                result.onSuccess { summary ->
-                    Timber.i("Summary generated successfully")
-                    _uiState.update { SummaryUiState.Success(summary) }
-                }.onFailure { error ->
-                    Timber.e(error, "Failed to generate summary")
-                    val errorMessage = when (error) {
-                        is IllegalArgumentException -> "Thread not found"
-                        is IllegalStateException -> error.message ?: "Invalid state"
-                        else -> "Failed to generate summary: ${error.message}"
-                    }
-                    _uiState.update { SummaryUiState.Error(errorMessage) }
-                }
-            } catch (e: Exception) {
-                Timber.e(e, "Unexpected error during summary generation")
-                _uiState.update {
-                    SummaryUiState.Error("Unexpected error: ${e.message}")
-                }
-            }
-        }
+        coordinator.generate(threadId)
     }
 
-    /**
-     * Retry summary generation after an error.
-     */
     fun retry() {
-        generateSummary()
+        coordinator.dismissError(threadId)
+        coordinator.generate(threadId)
     }
 
-    /**
-     * Reset to initial state.
-     */
-    fun reset() {
-        _uiState.update { SummaryUiState.Initial }
+    fun dismissError() {
+        coordinator.dismissError(threadId)
+    }
+
+    private fun errorMessage(error: Throwable): String = when (error) {
+        is NothingToSummarizeException -> error.message ?: "Nothing new to summarize"
+        is IllegalArgumentException -> "Thread not found"
+        else -> error.message ?: "Failed to generate summary"
     }
 }

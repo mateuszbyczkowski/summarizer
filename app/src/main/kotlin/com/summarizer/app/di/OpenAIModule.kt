@@ -31,10 +31,11 @@ object OpenAIModule {
     fun provideOpenAIOkHttpClient(): OkHttpClient {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = if (BuildConfig.DEBUG) {
-                HttpLoggingInterceptor.Level.HEADERS // Log headers only (don't leak API key in body)
+                HttpLoggingInterceptor.Level.HEADERS // Headers only; bodies contain message content
             } else {
                 HttpLoggingInterceptor.Level.NONE
             }
+            redactHeader("Authorization")
         }
 
         return OkHttpClient.Builder()
