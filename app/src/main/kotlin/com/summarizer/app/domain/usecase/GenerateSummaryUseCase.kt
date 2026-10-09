@@ -50,17 +50,12 @@ class GenerateSummaryUseCase @Inject constructor(
             val startTime = System.currentTimeMillis()
             Timber.d("Starting summary generation for thread: $threadId")
 
-            // Step 1: Ensure the active engine is ready
-            aiEngine.ensureModelLoaded(modelRepository).getOrElse { error ->
-                throw IllegalStateException("Failed to load AI model: ${error.message}", error)
-            }
-
-            // Step 2: Fetch thread and its settings
+            // Step 1: Fetch thread and its settings
             val thread = threadRepository.getThread(threadId)
                 ?: throw IllegalArgumentException("Thread not found: $threadId")
             val settings = threadSettingsRepository.getOrCreateSettings(threadId)
 
-            // Step 3: Fetch messages based on summarization mode
+            // Step 2: Fetch messages based on summarization mode
             val lastTimestamp = settings.lastSummarizedMessageTimestamp
             val messages = if (settings.summarizationMode == SummarizationMode.INCREMENTAL && lastTimestamp != null) {
                 messageRepository.getMessagesForThreadSince(threadId, lastTimestamp + 1)
@@ -68,7 +63,7 @@ class GenerateSummaryUseCase @Inject constructor(
                 messageRepository.getMessagesForThread(threadId).first()
             }
 
-            // Step 4: Build prompt
+            // Step 3: Build prompt (before loading the model, so idle threads stay cheap)
             val prompt = PromptTemplate.buildSummarizationPrompt(
                 messages = messages,
                 threadName = thread.threadName
@@ -81,6 +76,11 @@ class GenerateSummaryUseCase @Inject constructor(
             )
 
             Timber.d("Summarizing ${messages.size} messages (mode: ${settings.summarizationMode}, prompt: ${prompt.length} chars)")
+
+            // Step 4: Ensure the active engine is ready
+            aiEngine.ensureModelLoaded(modelRepository).getOrElse { error ->
+                throw IllegalStateException("Failed to load AI model: ${error.message}", error)
+            }
 
             // Step 5: Generate summary. Transient failures are retried by the engine itself.
             val rawResponse = aiEngine.generate(

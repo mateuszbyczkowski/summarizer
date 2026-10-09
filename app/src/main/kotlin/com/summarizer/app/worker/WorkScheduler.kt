@@ -1,143 +1,92 @@
 package com.summarizer.app.worker
 
 import android.content.Context
-import androidx.work.*
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import com.summarizer.app.domain.model.AIProvider
+import com.summarizer.app.domain.repository.PreferencesRepository
+import com.summarizer.app.domain.repository.ThreadSettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import timber.log.Timber
-import java.util.Calendar
+import java.time.Duration
+import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Manages scheduling of WorkManager tasks for auto-summarization.
+ * Manages scheduling of WorkManager tasks.
+ *
+ * Auto-summarization runs as a one-time job at the top of every hour that re-schedules itself.
+ * Each run summarizes the threads whose scheduled hour has passed since their last summary, so
+ * runs delayed by Doze or cut short by the system catch up later, and DST changes do not shift
+ * the schedule.
  */
 @Singleton
 class WorkScheduler @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val preferencesRepository: PreferencesRepository,
+    private val threadSettingsRepository: ThreadSettingsRepository
 ) {
 
     /**
-     * Schedules daily auto-summarization at the specified hour (0-23).
-     * If already scheduled, it will be rescheduled with the new time.
+     * Keep the hourly auto-summarization check scheduled while any thread may need it (global
+     * setting on, or a thread enabled explicitly); cancel it otherwise.
      */
-    fun scheduleDailySummarization(hour: Int) {
-        Timber.i("Scheduling daily auto-summarization at $hour:00")
-
-        // Calculate initial delay until the target hour
-        val currentTime = Calendar.getInstance()
-        val targetTime = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, hour)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-
-            // If target time is in the past today, schedule for tomorrow
-            if (before(currentTime)) {
-                add(Calendar.DAY_OF_MONTH, 1)
-            }
+    suspend fun refreshAutoSummarization() {
+        val needed = preferencesRepository.isAutoSummarizationEnabled() ||
+            threadSettingsRepository.getAllSettings().any { it.autoSummarizationEnabled == true }
+        if (!needed) {
+            cancelAutoSummarization()
+            return
         }
 
-        val initialDelay = targetTime.timeInMillis - currentTime.timeInMillis
+        val now = ZonedDateTime.now()
+        val nextHour = now.truncatedTo(ChronoUnit.HOURS).plusHours(1)
+        val requiresNetwork = preferencesRepository.getAIProvider() == AIProvider.OPENAI
 
-        Timber.d("Initial delay: ${initialDelay / 1000 / 60} minutes")
-
-        // Create constraints
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED) // Need network for OpenAI or model download
-            .setRequiresBatteryNotLow(true) // Don't run when battery is critically low
-            .build()
-
-        // Create periodic work request (runs once per day)
-        val workRequest = PeriodicWorkRequestBuilder<AutoSummarizationWorker>(
-            repeatInterval = 1,
-            repeatIntervalTimeUnit = TimeUnit.DAYS
-        )
-            .setConstraints(constraints)
-            .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
+        val workRequest = OneTimeWorkRequestBuilder<AutoSummarizationWorker>()
+            .setInitialDelay(Duration.between(now, nextHour).toMillis(), TimeUnit.MILLISECONDS)
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(if (requiresNetwork) NetworkType.CONNECTED else NetworkType.NOT_REQUIRED)
+                    .setRequiresBatteryNotLow(true)
+                    .build()
+            )
             .addTag("auto_summarization")
             .build()
 
-        // Schedule work (replace existing work with same name)
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+        WorkManager.getInstance(context).enqueueUniqueWork(
             AutoSummarizationWorker.WORK_NAME,
-            ExistingPeriodicWorkPolicy.UPDATE, // Replace existing schedule
+            ExistingWorkPolicy.REPLACE,
             workRequest
         )
-
-        Timber.i("Daily auto-summarization scheduled successfully")
+        Timber.d("Next auto-summarization check at $nextHour")
     }
 
-    /**
-     * Cancels the daily auto-summarization.
-     */
-    fun cancelDailySummarization() {
-        Timber.i("Canceling daily auto-summarization")
+    fun cancelAutoSummarization() {
         WorkManager.getInstance(context).cancelUniqueWork(AutoSummarizationWorker.WORK_NAME)
     }
 
     /**
-     * Triggers an immediate one-time summarization (for testing).
-     */
-    fun triggerImmediateSummarization() {
-        Timber.i("Triggering immediate auto-summarization")
-
-        val workRequest = OneTimeWorkRequestBuilder<AutoSummarizationWorker>()
-            .addTag("auto_summarization_manual")
-            .build()
-
-        WorkManager.getInstance(context).enqueue(workRequest)
-    }
-
-    /**
      * Schedules daily data retention cleanup.
-     * Runs every day to delete old messages and summaries based on retention settings.
      */
     fun scheduleDailyDataRetention() {
-        Timber.i("Scheduling daily data retention cleanup")
-
-        // Create constraints (don't need network or battery for database cleanup)
-        val constraints = Constraints.Builder()
-            .setRequiresBatteryNotLow(true)
-            .build()
-
-        // Create periodic work request (runs once per day)
-        val workRequest = PeriodicWorkRequestBuilder<DataRetentionWorker>(
-            repeatInterval = 1,
-            repeatIntervalTimeUnit = TimeUnit.DAYS
-        )
-            .setConstraints(constraints)
+        val workRequest = PeriodicWorkRequestBuilder<DataRetentionWorker>(1, TimeUnit.DAYS)
+            .setConstraints(Constraints.Builder().setRequiresBatteryNotLow(true).build())
             .addTag("data_retention")
             .build()
 
-        // Schedule work (replace existing work with same name)
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             DataRetentionWorker.WORK_NAME,
             ExistingPeriodicWorkPolicy.UPDATE,
             workRequest
         )
-
-        Timber.i("Daily data retention cleanup scheduled successfully")
-    }
-
-    /**
-     * Cancels the daily data retention cleanup.
-     */
-    fun cancelDailyDataRetention() {
-        Timber.i("Canceling daily data retention cleanup")
-        WorkManager.getInstance(context).cancelUniqueWork(DataRetentionWorker.WORK_NAME)
-    }
-
-    /**
-     * Triggers an immediate one-time data retention cleanup (for testing).
-     */
-    fun triggerImmediateDataRetention() {
-        Timber.i("Triggering immediate data retention cleanup")
-
-        val workRequest = OneTimeWorkRequestBuilder<DataRetentionWorker>()
-            .addTag("data_retention_manual")
-            .build()
-
-        WorkManager.getInstance(context).enqueue(workRequest)
     }
 }

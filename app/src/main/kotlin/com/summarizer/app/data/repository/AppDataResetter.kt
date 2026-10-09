@@ -27,7 +27,7 @@ class AppDataResetter @Inject constructor(
 ) {
 
     suspend fun resetAll() = withContext(Dispatchers.IO) {
-        workScheduler.cancelDailySummarization()
+        workScheduler.cancelAutoSummarization()
         aiEngine.unloadModel()
         database.clearAllTables()
         StorageHelper.StorageLocation.entries.forEach { location ->

@@ -11,92 +11,101 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.summarizer.app.MainActivity
 import com.summarizer.app.R
+import com.summarizer.app.domain.model.Thread
+import com.summarizer.app.domain.repository.PreferencesRepository
 import com.summarizer.app.domain.repository.ThreadRepository
+import com.summarizer.app.domain.repository.ThreadSettingsRepository
 import com.summarizer.app.domain.usecase.GenerateSummaryUseCase
+import com.summarizer.app.domain.usecase.NothingToSummarizeException
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
 
 /**
- * Background worker for daily auto-summarization of followed threads.
+ * Hourly auto-summarization check (see [WorkScheduler]).
  *
- * This worker:
- * 1. Fetches all followed threads
- * 2. Generates summaries for each thread
- * 3. Shows a notification when complete
+ * Summarizes every followed thread whose effective schedule (per-thread settings, falling back
+ * to the global ones) has passed since its last summary, then schedules the next check.
  */
 @HiltWorker
 class AutoSummarizationWorker @AssistedInject constructor(
     @Assisted private val context: Context,
     @Assisted workerParams: WorkerParameters,
     private val threadRepository: ThreadRepository,
-    private val generateSummaryUseCase: GenerateSummaryUseCase
+    private val threadSettingsRepository: ThreadSettingsRepository,
+    private val preferencesRepository: PreferencesRepository,
+    private val generateSummaryUseCase: GenerateSummaryUseCase,
+    private val workScheduler: WorkScheduler
 ) : CoroutineWorker(context, workerParams) {
 
     companion object {
         const val WORK_NAME = "auto_summarization_work"
         private const val NOTIFICATION_CHANNEL_ID = "auto_summary_channel"
         private const val NOTIFICATION_ID = 1001
+        private const val DISABLED_HOUR = -1
     }
 
     override suspend fun doWork(): Result {
-        return try {
-            Timber.i("Starting auto-summarization for followed threads")
+        try {
+            val dueThreads = findDueThreads()
+            if (dueThreads.isEmpty()) return Result.success()
 
-            // Create notification channel (safe to call repeatedly)
-            createNotificationChannel()
-
-            // Get all followed threads
-            val allThreads = threadRepository.getAllThreads().first()
-            val followedThreads = allThreads.filter { it.isFollowed }
-
-            Timber.d("Found ${followedThreads.size} followed threads")
-
-            if (followedThreads.isEmpty()) {
-                Timber.i("No followed threads to summarize")
-                showNotification("No followed threads", "No threads are currently being followed.")
-                return Result.success()
-            }
-
-            // Summarize each followed thread
             var successCount = 0
             var failureCount = 0
-
-            followedThreads.forEach { thread ->
-                try {
-                    Timber.d("Generating summary for thread: ${thread.threadId}")
-                    val result = generateSummaryUseCase.execute(thread.threadId)
-
-                    if (result.isSuccess) {
-                        successCount++
-                        Timber.d("Successfully generated summary for thread: ${thread.threadId}")
-                    } else {
-                        failureCount++
-                        Timber.w("Failed to generate summary for thread: ${thread.threadId}", result.exceptionOrNull())
+            for (thread in dueThreads) {
+                generateSummaryUseCase.execute(thread.threadId)
+                    .onSuccess { successCount++ }
+                    .onFailure { error ->
+                        if (error !is NothingToSummarizeException) {
+                            failureCount++
+                            Timber.w(error, "Auto-summary failed for thread ${thread.threadId}")
+                        }
                     }
-                } catch (e: Exception) {
-                    failureCount++
-                    Timber.e(e, "Error generating summary for thread: ${thread.threadId}")
-                }
             }
 
-            // Show completion notification
-            val title = "Auto-summarization complete"
-            val message = when {
-                failureCount == 0 -> "Successfully summarized $successCount thread(s)"
-                successCount == 0 -> "Failed to summarize $failureCount thread(s)"
-                else -> "Summarized $successCount thread(s), $failureCount failed"
+            if (successCount > 0 || failureCount > 0) {
+                createNotificationChannel()
+                showNotification(
+                    "Auto-summarization complete",
+                    when {
+                        failureCount == 0 -> "Summarized $successCount thread(s)"
+                        successCount == 0 -> "Failed to summarize $failureCount thread(s)"
+                        else -> "Summarized $successCount thread(s), $failureCount failed"
+                    }
+                )
             }
-
-            showNotification(title, message)
-
-            Timber.i("Auto-summarization completed: $successCount success, $failureCount failures")
-            Result.success()
+            Timber.i("Auto-summarization run: $successCount summarized, $failureCount failed")
+            return Result.success()
         } catch (e: Exception) {
             Timber.e(e, "Auto-summarization worker failed")
-            showNotification("Auto-summarization failed", "An error occurred during summarization")
-            Result.failure()
+            return Result.success()
+        } finally {
+            withContext(NonCancellable) { workScheduler.refreshAutoSummarization() }
+        }
+    }
+
+    private suspend fun findDueThreads(): List<Thread> {
+        val now = ZonedDateTime.now()
+        val globalEnabled = preferencesRepository.isAutoSummarizationEnabled()
+        val globalHour = preferencesRepository.getAutoSummarizationHour()
+        val settingsByThread = threadSettingsRepository.getAllSettings().associateBy { it.threadId }
+
+        return threadRepository.getFollowedThreads().first().filter { thread ->
+            val settings = settingsByThread[thread.threadId]
+            val enabled = settings?.autoSummarizationEnabled ?: globalEnabled
+            val hour = settings?.summaryScheduleHour ?: globalHour
+            if (!enabled || hour == DISABLED_HOUR) return@filter false
+
+            // Most recent scheduled time at or before now
+            var scheduled = now.truncatedTo(ChronoUnit.DAYS).withHour(hour)
+            if (scheduled.isAfter(now)) scheduled = scheduled.minusDays(1)
+            val lastSummarizedAt = settings?.lastSummarizedAt ?: 0L
+            lastSummarizedAt < scheduled.toInstant().toEpochMilli()
         }
     }
 

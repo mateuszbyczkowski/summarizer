@@ -82,14 +82,7 @@ object ServiceHealthMonitor {
             return true
         }
 
-        // If we haven't received a notification in 30 minutes AND service has been connected,
-        // it might be broken
-        val timeSinceLastNotification = currentTime - lastNotificationTime
-        if (lastNotificationTime > 0 && timeSinceLastNotification > 30 * 60 * 1000) {
-            Timber.w("ServiceHealthMonitor: Last notification was ${timeSinceLastNotification / 1000}s ago")
-            // Don't mark as broken if we received notifications before - might just be no WhatsApp activity
-            return false
-        }
+        // Silence after earlier notifications usually just means no WhatsApp activity
 
         Timber.d("ServiceHealthMonitor: Service appears healthy")
         return false

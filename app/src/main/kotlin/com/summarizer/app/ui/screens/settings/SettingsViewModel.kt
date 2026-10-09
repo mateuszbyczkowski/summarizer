@@ -85,6 +85,8 @@ class SettingsViewModel @Inject constructor(
             try {
                 Timber.d("Changing AI provider to: $provider")
                 preferencesRepository.setAIProvider(provider)
+                // Network is only required for OpenAI runs
+                workScheduler.refreshAutoSummarization()
 
                 // Reload settings to update UI
                 loadSettings()
@@ -189,15 +191,7 @@ class SettingsViewModel @Inject constructor(
             try {
                 Timber.d("Setting auto-summarization enabled: $enabled")
                 preferencesRepository.setAutoSummarizationEnabled(enabled)
-
-                if (enabled) {
-                    // Schedule work with current hour setting
-                    val hour = preferencesRepository.getAutoSummarizationHour()
-                    workScheduler.scheduleDailySummarization(hour)
-                } else {
-                    // Cancel scheduled work
-                    workScheduler.cancelDailySummarization()
-                }
+                workScheduler.refreshAutoSummarization()
 
                 // Reload settings to update UI
                 loadSettings()
@@ -213,12 +207,6 @@ class SettingsViewModel @Inject constructor(
             try {
                 Timber.d("Setting auto-summarization hour: $hour")
                 preferencesRepository.setAutoSummarizationHour(hour)
-
-                // If auto-summarization is enabled, reschedule with new time
-                val enabled = preferencesRepository.isAutoSummarizationEnabled()
-                if (enabled) {
-                    workScheduler.scheduleDailySummarization(hour)
-                }
 
                 // Reload settings to update UI
                 loadSettings()
