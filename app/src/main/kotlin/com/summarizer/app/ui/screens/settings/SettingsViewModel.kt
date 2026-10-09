@@ -5,17 +5,17 @@ import androidx.lifecycle.viewModelScope
 import com.summarizer.app.data.ai.OpenAIEngine
 import com.summarizer.app.domain.model.AIProvider
 import com.summarizer.app.domain.model.OpenAIModel
-import com.summarizer.app.domain.repository.MessageRepository
-import com.summarizer.app.domain.repository.ModelRepository
+import com.summarizer.app.data.repository.AppDataResetter
+import com.summarizer.app.di.ApplicationScope
 import com.summarizer.app.domain.repository.PreferencesRepository
-import com.summarizer.app.domain.repository.SummaryRepository
-import com.summarizer.app.domain.repository.ThreadRepository
+import com.summarizer.app.ui.lock.AppLockManager
 import com.summarizer.app.worker.WorkScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -29,15 +29,17 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val preferencesRepository: PreferencesRepository,
     private val openAIEngine: OpenAIEngine,
-    private val modelRepository: ModelRepository,
-    private val messageRepository: MessageRepository,
-    private val summaryRepository: SummaryRepository,
-    private val threadRepository: ThreadRepository,
-    private val workScheduler: WorkScheduler
+    private val workScheduler: WorkScheduler,
+    private val appDataResetter: AppDataResetter,
+    private val appLockManager: AppLockManager,
+    @ApplicationScope private val applicationScope: CoroutineScope
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<SettingsUiState>(SettingsUiState.Loading)
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+
+    private val _isResetting = MutableStateFlow(false)
+    val isResetting: StateFlow<Boolean> = _isResetting.asStateFlow()
 
     init {
         loadSettings()
@@ -302,38 +304,25 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun resetApplication() {
+    /**
+     * Wipe all app data. Runs in the application scope so leaving the screen cannot interrupt
+     * it; [onComplete] is called only after everything was deleted.
+     */
+    fun resetApplication(onComplete: () -> Unit) {
+        if (_isResetting.value) return
+        _isResetting.value = true
+        val reset = applicationScope.async { appDataResetter.resetAll() }
         viewModelScope.launch {
             try {
-                Timber.i("Starting application reset...")
-
-                // 1. Delete all downloaded models and their files
-                val downloadedModel = modelRepository.getDownloadedModel()
-                if (downloadedModel != null) {
-                    Timber.d("Deleting downloaded model: ${downloadedModel.name}")
-                    modelRepository.deleteModelFile(downloadedModel.id)
-                    modelRepository.deleteModel(downloadedModel.id)
-                }
-
-                // 2. Clear all threads and their associated data
-                val allThreads = threadRepository.getAllThreads().first()
-                allThreads.forEach { thread ->
-                    Timber.d("Deleting thread: ${thread.threadId}")
-                    // Delete messages for this thread
-                    messageRepository.deleteMessagesForThread(thread.threadId)
-                    // Delete summaries for this thread
-                    summaryRepository.deleteSummariesForThread(thread.threadId)
-                    // Delete the thread itself
-                    threadRepository.deleteThread(thread.threadId)
-                }
-
-                // 3. Clear all preferences (this resets first launch flag)
-                preferencesRepository.clearAll()
-
+                reset.await()
+                appLockManager.onPinChanged()
                 Timber.i("Application reset completed successfully")
+                onComplete()
             } catch (e: Exception) {
                 Timber.e(e, "Failed to reset application")
                 _uiState.value = SettingsUiState.Error("Failed to reset application: ${e.message}")
+            } finally {
+                _isResetting.value = false
             }
         }
     }

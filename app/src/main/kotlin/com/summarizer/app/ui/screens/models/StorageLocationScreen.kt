@@ -14,21 +14,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.summarizer.app.util.StorageHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StorageLocationScreen(
     onLocationSelected: (StorageHelper.StorageLocation) -> Unit,
-    onBackClick: (() -> Unit)? = null
+    onBackClick: (() -> Unit)? = null,
+    viewModel: StorageLocationViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val internalStorage = remember { StorageHelper.getInternalStorageInfo(context) }
     val externalStorage = remember { StorageHelper.getExternalStorageInfo(context) }
+    val savedLocation by viewModel.savedLocation.collectAsStateWithLifecycle()
 
-    var selectedLocation by remember {
-        mutableStateOf<StorageHelper.StorageLocation>(
-            if (externalStorage != null && externalStorage.availableSpaceMB > internalStorage.availableSpaceMB) {
+    var selectedLocation by rememberSaveable(savedLocation) {
+        mutableStateOf(
+            savedLocation ?: if (externalStorage != null && externalStorage.availableSpaceMB > internalStorage.availableSpaceMB) {
                 StorageHelper.StorageLocation.EXTERNAL
             } else {
                 StorageHelper.StorageLocation.INTERNAL
@@ -173,7 +178,7 @@ fun StorageLocationScreen(
             }
 
             Button(
-                onClick = { onLocationSelected(selectedLocation) },
+                onClick = { viewModel.saveLocation(selectedLocation) { onLocationSelected(selectedLocation) } },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
@@ -250,7 +255,7 @@ fun StorageOptionCard(
 
                 // Storage bar
                 LinearProgressIndicator(
-                    progress = (storageInfo.usedPercent / 100f).coerceIn(0f, 1f),
+                    progress = { (storageInfo.usedPercent / 100f).coerceIn(0f, 1f) },
                     modifier = Modifier.fillMaxWidth(),
                     color = if (storageInfo.usedPercent > 90) {
                         MaterialTheme.colorScheme.error

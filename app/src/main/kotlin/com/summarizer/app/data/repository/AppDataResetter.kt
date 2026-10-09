@@ -1,0 +1,39 @@
+package com.summarizer.app.data.repository
+
+import android.content.Context
+import com.summarizer.app.data.local.database.AppDatabase
+import com.summarizer.app.domain.ai.AIEngine
+import com.summarizer.app.domain.repository.AuthRepository
+import com.summarizer.app.domain.repository.PreferencesRepository
+import com.summarizer.app.util.StorageHelper
+import com.summarizer.app.worker.WorkScheduler
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * Wipes everything the app stores: database, downloaded models, preferences and the PIN.
+ */
+@Singleton
+class AppDataResetter @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val database: AppDatabase,
+    private val aiEngine: AIEngine,
+    private val preferencesRepository: PreferencesRepository,
+    private val authRepository: AuthRepository,
+    private val workScheduler: WorkScheduler
+) {
+
+    suspend fun resetAll() = withContext(Dispatchers.IO) {
+        workScheduler.cancelDailySummarization()
+        aiEngine.unloadModel()
+        database.clearAllTables()
+        StorageHelper.StorageLocation.entries.forEach { location ->
+            StorageHelper.getModelStorageDirectory(context, location).deleteRecursively()
+        }
+        preferencesRepository.clearAll()
+        authRepository.clearPin()
+    }
+}

@@ -9,7 +9,8 @@ interface ModelRepository {
     suspend fun getDownloadedModel(): AIModel?
     suspend fun insertModel(model: AIModel)
     suspend fun insertModels(models: List<AIModel>)
-    suspend fun updateModel(model: AIModel)
+    /** Refresh catalog metadata without touching download state. */
+    suspend fun updateCatalogMetadata(model: AIModel)
     suspend fun markAsDownloaded(modelId: String, filePath: String, timestamp: Long)
     suspend fun deleteModel(modelId: String)
     suspend fun deleteModelFile(modelId: String): Boolean

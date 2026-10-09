@@ -91,10 +91,7 @@ fun SettingsScreen(
                     onBiometricEnabledChanged = viewModel::setBiometricEnabled,
                     onSmartNotificationsEnabledChanged = viewModel::setSmartNotificationsEnabled,
                     onSmartNotificationThresholdChanged = viewModel::setSmartNotificationThreshold,
-                    onResetApp = {
-                        viewModel.resetApplication()
-                        onResetComplete()
-                    },
+                    onResetApp = { viewModel.resetApplication(onComplete = onResetComplete) },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)

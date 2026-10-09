@@ -37,8 +37,18 @@ class ModelRepositoryImpl @Inject constructor(
         aiModelDao.insertModels(models.map { it.toEntity() })
     }
 
-    override suspend fun updateModel(model: AIModel) {
-        aiModelDao.updateModel(model.toEntity())
+    override suspend fun updateCatalogMetadata(model: AIModel) {
+        aiModelDao.updateCatalogFields(
+            id = model.id,
+            name = model.name,
+            description = model.description,
+            sizeInMB = model.sizeInMB,
+            downloadUrl = model.downloadUrl,
+            isRecommended = model.isRecommended,
+            minimumRAM = model.minimumRAM,
+            estimatedSpeed = model.estimatedSpeed,
+            checksum = model.checksum
+        )
     }
 
     override suspend fun markAsDownloaded(modelId: String, filePath: String, timestamp: Long) {

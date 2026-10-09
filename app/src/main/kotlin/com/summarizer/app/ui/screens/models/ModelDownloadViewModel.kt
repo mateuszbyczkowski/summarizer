@@ -9,7 +9,6 @@ import com.summarizer.app.domain.model.AIModel
 import com.summarizer.app.domain.model.ModelDownloadState
 import com.summarizer.app.domain.repository.ModelRepository
 import com.summarizer.app.domain.repository.PreferencesRepository
-import com.summarizer.app.util.StorageHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -71,7 +70,18 @@ class ModelDownloadViewModel @Inject constructor(
             modelRepository.deleteModel(id)
         }
 
-        val existingIds = existing.map { it.id }.toSet()
+        // Refresh catalog metadata (URL, checksum, size, text) while keeping download state
+        val existingById = existing.associateBy { it.id }
+        DEFAULT_MODELS.forEach { catalogModel ->
+            val current = existingById[catalogModel.id] ?: return@forEach
+            val refreshed = catalogModel.copy(
+                isDownloaded = current.isDownloaded,
+                localFilePath = current.localFilePath
+            )
+            if (refreshed != current) modelRepository.updateCatalogMetadata(refreshed)
+        }
+
+        val existingIds = existingById.keys
         val toInsert = DEFAULT_MODELS.filterNot { it.id in existingIds }
         if (toInsert.isNotEmpty()) {
             Timber.i("Seeding catalog with ${toInsert.size} new model(s): ${toInsert.map { it.id }}")
@@ -85,27 +95,9 @@ class ModelDownloadViewModel @Inject constructor(
         }
     }
 
+    /** Downloads run in the application scope and keep going after leaving this screen. */
     fun downloadModel(model: AIModel) {
-        viewModelScope.launch {
-            Timber.d("Starting download for model: ${model.id}")
-            val result = downloadManager.downloadModel(
-                modelId = model.id,
-                downloadUrl = model.downloadUrl,
-                expectedSizeMB = model.sizeInMB,
-                expectedChecksum = null // TODO: Add checksums to model metadata
-            )
-
-            result.onSuccess { file ->
-                Timber.d("Model ${model.id} downloaded successfully to ${file.absolutePath}")
-                modelRepository.markAsDownloaded(
-                    modelId = model.id,
-                    filePath = file.absolutePath,
-                    timestamp = System.currentTimeMillis()
-                )
-            }.onFailure { error ->
-                Timber.e(error, "Failed to download model ${model.id}")
-            }
-        }
+        downloadManager.startDownload(model)
     }
 
     fun pauseDownload(modelId: String) {
@@ -113,7 +105,7 @@ class ModelDownloadViewModel @Inject constructor(
     }
 
     fun resumeDownload(modelId: String) {
-        downloadManager.resumeDownload(modelId)
+        _models.value.firstOrNull { it.id == modelId }?.let(downloadManager::startDownload)
     }
 
     fun cancelDownload(modelId: String) {
@@ -128,22 +120,12 @@ class ModelDownloadViewModel @Inject constructor(
         }
     }
 
-    fun setStorageLocation(location: StorageHelper.StorageLocation) {
-        viewModelScope.launch {
-            preferencesRepository.setStorageLocation(location)
-        }
-    }
-
     fun deleteModel(modelId: String) {
-        viewModelScope.launch {
-            Timber.d("Deleting model: $modelId")
-            val success = modelRepository.deleteModelFile(modelId)
-            if (success) {
+        applicationScope.launch {
+            // The file may be memory-mapped by the local engine
+            aiEngine.unloadModel()
+            if (modelRepository.deleteModelFile(modelId)) {
                 Timber.i("Model $modelId deleted successfully")
-                // Unload model if it was loaded
-                if (aiEngine.isModelLoaded()) {
-                    aiEngine.unloadModel()
-                }
             } else {
                 Timber.e("Failed to delete model $modelId")
             }
@@ -151,11 +133,14 @@ class ModelDownloadViewModel @Inject constructor(
     }
 
     companion object {
-        // On-device catalog (Sep 2026). Qwen3.5 small series (Apache 2.0, 256K native context,
-        // reasoning off by default on <=4B) plus LFM2.5 as the lowest-RAM option.
-        // Q4_K_M quantization across the board. Text-only GGUFs; the Qwen3.5 vision projector
-        // (mmproj) is a separate file we don't download. Sizes are approximate GGUF artifact sizes.
-        // Requires a llama.cpp build with qwen35 / lfm2 architecture support (Llamatik 1.x).
+        // On-device catalog (Oct 2026). Qwen3.5 small series (Apache 2.0, 256K native context,
+        // reasoning off by default on <=4B), LFM2.5 as the lowest-RAM option, and Gemma 3n
+        // (Google's phone-first models, strong in 140 languages).
+        // Q4_K_M quantization across the board. Text-only GGUFs; vision projectors (mmproj) are
+        // separate files we don't download. Sizes are approximate GGUF artifact sizes.
+        // Requires a llama.cpp build with qwen35 / lfm2 / gemma3n support (Llamatik 1.x).
+        // checksum: SHA-256 of the GGUF from the Hugging Face file page; downloads are verified
+        // against it when set.
         internal val DEFAULT_MODELS = listOf(
             AIModel(
                 id = "qwen3.5-0.8b",
@@ -195,6 +180,26 @@ class ModelDownloadViewModel @Inject constructor(
                 downloadUrl = "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf",
                 isRecommended = false,
                 minimumRAM = 6,
+                estimatedSpeed = "Slow"
+            ),
+            AIModel(
+                id = "gemma-3n-e2b",
+                name = "Gemma 3n E2B (Multilingual)",
+                description = "Google's phone-first model. Very good at non-English chats; runs with a ~2B memory footprint. 32K context.",
+                sizeInMB = 3000,
+                downloadUrl = "https://huggingface.co/unsloth/gemma-3n-E2B-it-GGUF/resolve/main/gemma-3n-E2B-it-Q4_K_M.gguf",
+                isRecommended = false,
+                minimumRAM = 6,
+                estimatedSpeed = "Medium"
+            ),
+            AIModel(
+                id = "gemma-3n-e4b",
+                name = "Gemma 3n E4B (Multilingual Quality)",
+                description = "Larger Gemma 3n. Highest multilingual summary quality for flagship phones. 32K context.",
+                sizeInMB = 4600,
+                downloadUrl = "https://huggingface.co/unsloth/gemma-3n-E4B-it-GGUF/resolve/main/gemma-3n-E4B-it-Q4_K_M.gguf",
+                isRecommended = false,
+                minimumRAM = 8,
                 estimatedSpeed = "Slow"
             )
         )
