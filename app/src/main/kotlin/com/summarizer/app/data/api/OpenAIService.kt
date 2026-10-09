@@ -1,10 +1,8 @@
 package com.summarizer.app.data.api
 
-import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.Header
 import retrofit2.http.POST
-import retrofit2.http.Streaming
 
 /**
  * Retrofit service interface for OpenAI Chat Completions API.
@@ -27,17 +25,4 @@ interface OpenAIService {
         @Body request: ChatCompletionRequest
     ): ChatCompletionResponse
 
-    /**
-     * Create a streaming chat completion (for future use).
-     *
-     * @param authorization Bearer token (format: "Bearer sk-...")
-     * @param request Chat completion request with stream=true
-     * @return Streaming response body (Server-Sent Events format)
-     */
-    @Streaming
-    @POST("v1/chat/completions")
-    suspend fun createChatCompletionStream(
-        @Header("Authorization") authorization: String,
-        @Body request: ChatCompletionRequest
-    ): ResponseBody
 }

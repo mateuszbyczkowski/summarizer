@@ -318,17 +318,10 @@ class WhatsAppNotificationListener : NotificationListenerService() {
                 return
             }
 
-            Timber.tag(TAG).d("Analyzing message importance...")
-            val shouldNotify = analyzeMessageImportanceUseCase.shouldNotify(
-                messageContent = messageContent,
-                senderName = senderName
-            )
-
-            if (shouldNotify) {
-                // Get the full importance score to determine notification priority
-                val importanceScore = analyzeMessageImportanceUseCase.execute(messageContent, senderName) ?: 0.5f
+            val importanceScore = analyzeMessageImportanceUseCase.execute(messageContent, senderName)
+            if (analyzeMessageImportanceUseCase.meetsThreshold(importanceScore)) {
                 showSmartNotification(threadId, threadName, senderName, messageContent, importanceScore)
-                Timber.tag(TAG).i("✅ Showed notification for important message (score: $importanceScore)")
+                Timber.tag(TAG).i("Showed notification for important message (score: $importanceScore)")
             } else {
                 Timber.tag(TAG).d("⏭️ Message not important enough, notification suppressed")
             }

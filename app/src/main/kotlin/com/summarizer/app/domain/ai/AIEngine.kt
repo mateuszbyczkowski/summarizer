@@ -1,7 +1,5 @@
 package com.summarizer.app.domain.ai
 
-import kotlinx.coroutines.flow.Flow
-
 /**
  * Interface for AI inference engine operations.
  * Abstracts the underlying LLM implementation (Llamatik, llama.cpp, etc.)
@@ -33,34 +31,6 @@ interface AIEngine {
     ): Result<String>
 
     /**
-     * Generate text with streaming token-by-token updates.
-     *
-     * @param prompt The input prompt for text generation
-     * @param systemPrompt Optional system-level instructions
-     * @param maxTokens Maximum number of tokens to generate
-     * @param temperature Sampling temperature 0.0-1.0
-     * @return Flow emitting generation events (tokens, completion, errors)
-     */
-    fun generateStream(
-        prompt: String,
-        systemPrompt: String? = null,
-        maxTokens: Int = 512,
-        temperature: Float = 0.7f
-    ): Flow<GenerationEvent>
-
-    /**
-     * Generate JSON-formatted output with optional schema validation.
-     *
-     * @param prompt The input prompt for JSON generation
-     * @param jsonSchema Optional JSON schema for structured output
-     * @return Result containing JSON string or error
-     */
-    suspend fun generateJson(
-        prompt: String,
-        jsonSchema: String? = null
-    ): Result<String>
-
-    /**
      * Cancel ongoing text generation.
      */
     fun cancelGeneration()
@@ -71,35 +41,18 @@ interface AIEngine {
     suspend fun unloadModel()
 
     /**
-     * Check if a model is currently loaded.
+     * Check if the engine is ready for inference (local: model loaded; cloud: API key configured).
      *
      * @return true if model is loaded and ready for inference
      */
-    fun isModelLoaded(): Boolean
+    suspend fun isModelLoaded(): Boolean
 
     /**
      * Get information about the currently loaded model.
      *
      * @return ModelInfo or null if no model is loaded
      */
-    fun getModelInfo(): ModelInfo?
-}
-
-/**
- * Events emitted during streaming text generation.
- */
-sealed class GenerationEvent {
-    /** Generation has started */
-    data object Started : GenerationEvent()
-
-    /** New token generated */
-    data class TokenGenerated(val token: String) : GenerationEvent()
-
-    /** Generation completed successfully */
-    data class Completed(val fullText: String) : GenerationEvent()
-
-    /** Error occurred during generation */
-    data class Error(val message: String, val cause: Throwable? = null) : GenerationEvent()
+    suspend fun getModelInfo(): ModelInfo?
 }
 
 /**

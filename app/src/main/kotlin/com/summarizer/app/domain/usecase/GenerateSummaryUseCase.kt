@@ -2,9 +2,8 @@ package com.summarizer.app.domain.usecase
 
 import com.summarizer.app.domain.ai.AIEngine
 import com.summarizer.app.domain.model.ActionItem
-import com.summarizer.app.domain.model.ParticipantHighlight
-import com.summarizer.app.domain.ai.AIEngineError
 import com.summarizer.app.domain.ai.PromptTemplate
+import com.summarizer.app.domain.ai.ensureModelLoaded
 import com.summarizer.app.domain.model.Summary
 import com.summarizer.app.domain.repository.MessageRepository
 import com.summarizer.app.domain.repository.ModelRepository
@@ -12,12 +11,10 @@ import com.summarizer.app.domain.repository.SummaryRepository
 import com.summarizer.app.domain.repository.ThreadRepository
 import com.summarizer.app.domain.repository.ThreadSettingsRepository
 import com.summarizer.app.domain.model.SummarizationMode
-import com.summarizer.app.util.RetryHelper
+import com.summarizer.app.util.suspendRunCatching
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -41,125 +38,62 @@ class GenerateSummaryUseCase @Inject constructor(
     private val modelRepository: ModelRepository
 ) {
 
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-    }
-
     /**
      * Generate a summary for the specified thread.
      *
      * @param threadId ID of the thread to summarize
-     * @return Result containing the generated Summary or error
+     * @return Result containing the generated Summary, or [NothingToSummarizeException] when the
+     *         thread has no (new) messages to summarize
      */
     suspend fun execute(threadId: String): Result<Summary> = withContext(Dispatchers.Default) {
-        runCatching {
+        suspendRunCatching {
             val startTime = System.currentTimeMillis()
             Timber.d("Starting summary generation for thread: $threadId")
 
-            // Step 1: Ensure model is loaded (with retry)
-            if (!aiEngine.isModelLoaded()) {
-                val downloadedModel = modelRepository.getDownloadedModel()
-                    ?: throw AIEngineError.ModelNotLoaded.also {
-                        Timber.e("No model downloaded. Please download a model first.")
-                    }
-
-                if (downloadedModel.localFilePath == null) {
-                    throw IllegalStateException("Downloaded model has no local file path").also {
-                        Timber.e("Model file path is missing for: ${downloadedModel.name}")
-                    }
-                }
-
-                Timber.i("Loading model: ${downloadedModel.name}")
-                // Retry model loading in case of transient errors
-                RetryHelper.retryResult(times = 2, initialDelay = 500) {
-                    aiEngine.loadModel(downloadedModel.localFilePath)
-                }.getOrElse { error ->
-                    Timber.e(error, "Failed to load model after retries")
-                    throw IllegalStateException("Failed to load AI model: ${error.message}", error)
-                }
+            // Step 1: Ensure the active engine is ready
+            aiEngine.ensureModelLoaded(modelRepository).getOrElse { error ->
+                throw IllegalStateException("Failed to load AI model: ${error.message}", error)
             }
 
-            // Step 2: Fetch thread and check settings
+            // Step 2: Fetch thread and its settings
             val thread = threadRepository.getThread(threadId)
-                ?: throw IllegalArgumentException("Thread not found: $threadId").also {
-                    Timber.e("Thread with ID $threadId does not exist in database")
-                }
-
-            // Get or create thread settings
+                ?: throw IllegalArgumentException("Thread not found: $threadId")
             val settings = threadSettingsRepository.getOrCreateSettings(threadId)
 
             // Step 3: Fetch messages based on summarization mode
-            val messages = when (settings.summarizationMode) {
-                SummarizationMode.INCREMENTAL -> {
-                    // Only fetch new messages since last summarization
-                    val lastTimestamp = settings.lastSummarizedMessageTimestamp
-                    if (lastTimestamp != null) {
-                        Timber.d("Fetching messages since timestamp: $lastTimestamp (INCREMENTAL mode)")
-                        val newMessages = messageRepository.getMessagesForThreadSince(threadId, lastTimestamp + 1)
-                        if (newMessages.isEmpty()) {
-                            Timber.i("No new messages since last summarization")
-                            // Fall back to recent messages if no new messages
-                            messageRepository.getMessagesForThread(threadId).first()
-                        } else {
-                            newMessages
-                        }
-                    } else {
-                        // No previous summarization, fetch all messages
-                        Timber.d("No previous summarization found, fetching all messages")
-                        messageRepository.getMessagesForThread(threadId).first()
-                    }
-                }
-                SummarizationMode.FULL -> {
-                    // Fetch all messages
-                    Timber.d("Fetching all messages (FULL mode)")
-                    messageRepository.getMessagesForThread(threadId).first()
-                }
+            val lastTimestamp = settings.lastSummarizedMessageTimestamp
+            val messages = if (settings.summarizationMode == SummarizationMode.INCREMENTAL && lastTimestamp != null) {
+                messageRepository.getMessagesForThreadSince(threadId, lastTimestamp + 1)
+            } else {
+                messageRepository.getMessagesForThread(threadId).first()
             }
 
-            if (messages.isEmpty()) {
-                throw IllegalStateException("No messages to summarize for thread: ${thread.threadName}").also {
-                    Timber.w("Thread $threadId has no messages to summarize")
-                }
-            }
-
-            Timber.d("Loaded ${messages.size} messages for summarization (mode: ${settings.summarizationMode})")
-
-            // Step 3: Build prompt (simple text format, no JSON)
+            // Step 4: Build prompt
             val prompt = PromptTemplate.buildSummarizationPrompt(
                 messages = messages,
-                threadName = thread.threadName,
-                useJsonOutput = false
+                threadName = thread.threadName
+            ) ?: throw NothingToSummarizeException(
+                if (settings.summarizationMode == SummarizationMode.INCREMENTAL && lastTimestamp != null) {
+                    "No new messages since the last summary"
+                } else {
+                    "No messages to summarize"
+                }
             )
 
-            Timber.d("Generated prompt with ${prompt.length} characters")
+            Timber.d("Summarizing ${messages.size} messages (mode: ${settings.summarizationMode}, prompt: ${prompt.length} chars)")
 
-            // Step 4: Generate summary using AI (with retry for transient failures)
-            val rawResponse = RetryHelper.retryResult(
-                times = 3,
-                initialDelay = 1000,
-                maxDelay = 5000
-            ) {
-                Timber.d("Attempting AI generation...")
-                aiEngine.generate(
-                    prompt = prompt,
-                    systemPrompt = "You are a helpful assistant that summarizes conversations clearly and concisely. Focus on specific details.",
-                    maxTokens = 512,
-                    temperature = 0.3f  // Lower temperature for more focused output
-                )
-            }.getOrElse { error ->
-                Timber.e(error, "AI generation failed after retries")
+            // Step 5: Generate summary. Transient failures are retried by the engine itself.
+            val rawResponse = aiEngine.generate(
+                prompt = prompt,
+                systemPrompt = "You are a helpful assistant that summarizes conversations clearly and concisely. Focus on specific details.",
+                maxTokens = 512,
+                temperature = 0.3f  // Lower temperature for more focused output
+            ).getOrElse { error ->
                 throw IllegalStateException("Failed to generate summary: ${error.message ?: "AI generation error"}", error)
             }
 
-            Timber.d("Received AI response (${rawResponse.length} chars)")
-            Timber.d("Full AI response: $rawResponse")
-
-            // Step 5: Parse JSON response
+            // Step 6: Parse response into a Summary domain model
             val parsedSummary = parseAIResponse(rawResponse)
-            Timber.d("Parsed summary - Overview: ${parsedSummary.overview.take(100)}, Key topics: ${parsedSummary.keyTopics}")
-
-            // Step 6: Create Summary domain model
             val summary = Summary(
                 threadId = threadId,
                 threadName = thread.threadName,
@@ -172,12 +106,7 @@ class GenerateSummaryUseCase @Inject constructor(
                     )
                 },
                 announcements = parsedSummary.announcements,
-                participantHighlights = parsedSummary.participantHighlights.map {
-                    ParticipantHighlight(
-                        participant = it.participant,
-                        contribution = it.contribution
-                    )
-                },
+                participantHighlights = emptyList(),
                 messageCount = messages.size,
                 startTimestamp = messages.minOf { it.timestamp },
                 endTimestamp = messages.maxOf { it.timestamp },
@@ -185,21 +114,15 @@ class GenerateSummaryUseCase @Inject constructor(
                 rawAIResponse = rawResponse  // Save raw AI output for debugging
             )
 
-            // Step 7: Save to database
+            // Step 7: Save and record what was summarized
             val summaryId = summaryRepository.saveSummary(summary)
-
-            // Step 8: Update thread settings with last summarized timestamp
-            val lastMessageTimestamp = messages.maxOf { it.timestamp }
             threadSettingsRepository.updateLastSummarized(
                 threadId = threadId,
-                messageTimestamp = lastMessageTimestamp,
+                messageTimestamp = summary.endTimestamp,
                 summarizedAt = summary.generatedAt
             )
-            Timber.d("Updated thread settings: lastSummarizedMessageTimestamp=$lastMessageTimestamp")
 
-            val executionTime = System.currentTimeMillis() - startTime
-            Timber.i("Summary saved with ID: $summaryId (execution time: ${executionTime}ms)")
-
+            Timber.i("Summary saved with ID: $summaryId (execution time: ${System.currentTimeMillis() - startTime}ms)")
             summary.copy(id = summaryId)
         }
     }
@@ -208,8 +131,6 @@ class GenerateSummaryUseCase @Inject constructor(
      * Parse AI-generated text response into structured summary.
      */
     private fun parseAIResponse(rawResponse: String): ParsedSummary {
-        Timber.d("Parsing plain text response: $rawResponse")
-
         // Try to extract sections with headers first
         val overview = extractSection(rawResponse, "OVERVIEW:")
         val topicsText = extractSection(rawResponse, "TOPICS:")
@@ -227,8 +148,7 @@ class GenerateSummaryUseCase @Inject constructor(
                 overview = extractOverview(rawResponse),
                 keyTopics = extractKeyTopicsFromText(rawResponse),
                 actionItems = emptyList(),
-                announcements = emptyList(),
-                participantHighlights = emptyList()
+                announcements = emptyList()
             )
         }
 
@@ -266,8 +186,7 @@ class GenerateSummaryUseCase @Inject constructor(
                 extractKeyTopicsFromText(rawResponse).take(3)
             },
             actionItems = actions,
-            announcements = announcements,
-            participantHighlights = emptyList() // Skip for now to keep it simple
+            announcements = announcements
         )
     }
 
@@ -335,62 +254,32 @@ class GenerateSummaryUseCase @Inject constructor(
     }
 
     /**
-     * Fallback: extract key topics from unstructured text by looking for keywords.
+     * Fallback: use short phrases from unstructured text as topics.
      */
     private fun extractKeyTopicsFromText(text: String): List<String> {
-        // Look for common topic indicators in the text
-        val topicKeywords = listOf(
-            "chicken dinner", "dinner", "food", "meal",
-            "meeting", "event", "plan", "schedule",
-            "tomorrow", "today", "date", "time"
-        )
-
-        val foundTopics = mutableListOf<String>()
-        val lowerText = text.lowercase()
-
-        // Find mentioned topics
-        for (keyword in topicKeywords) {
-            if (lowerText.contains(keyword) && foundTopics.size < 5) {
-                foundTopics.add(keyword.replaceFirstChar { it.uppercase() })
-            }
-        }
-
-        // If we found some topics, return them
-        if (foundTopics.isNotEmpty()) {
-            return foundTopics.distinct()
-        }
-
-        // Last resort: extract any capitalized phrases or quoted text
         val phrases = text.split(",", ";", "\n")
             .map { it.trim() }
-            .filter { it.isNotBlank() && it.length > 5 && it.length < 50 }
+            .filter { it.length in 6..49 }
             .take(3)
 
         return phrases.ifEmpty { listOf("General discussion") }
     }
 
-    /**
-     * Data class for parsing AI JSON response.
-     */
-    @Serializable
     private data class ParsedSummary(
         val overview: String,
         val keyTopics: List<String>,
         val actionItems: List<ParsedActionItem> = emptyList(),
-        val announcements: List<String> = emptyList(),
-        val participantHighlights: List<ParsedParticipantHighlight> = emptyList()
+        val announcements: List<String> = emptyList()
     )
 
-    @Serializable
     private data class ParsedActionItem(
         val task: String,
         val assignedTo: String? = null,
         val priority: String? = null
     )
-
-    @Serializable
-    private data class ParsedParticipantHighlight(
-        val participant: String,
-        val contribution: String
-    )
 }
+
+/**
+ * Thrown when a thread has no (new) messages to summarize. Not an error for scheduled runs.
+ */
+class NothingToSummarizeException(message: String) : Exception(message)

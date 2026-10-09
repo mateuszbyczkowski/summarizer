@@ -21,10 +21,7 @@ data class ChatCompletionRequest(
     val maxTokens: Int = 512,
 
     @SerializedName("stream")
-    val stream: Boolean = false,
-
-    @SerializedName("response_format")
-    val responseFormat: ResponseFormat? = null
+    val stream: Boolean = false
 )
 
 /**
@@ -36,14 +33,6 @@ data class ChatMessage(
 
     @SerializedName("content")
     val content: String
-)
-
-/**
- * Response format specification for structured outputs.
- */
-data class ResponseFormat(
-    @SerializedName("type")
-    val type: String // "json_object" for JSON mode
 )
 
 /**
