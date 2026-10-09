@@ -37,9 +37,34 @@ class RealAIEngine @Inject constructor() : AIEngine {
         private const val DEFAULT_REPEAT_PENALTY = 1.1f
 
         // Catalog models support 120K-256K natively; we cap on-device at 16K to keep KV-cache RAM reasonable on
-        // mid-range phones. Llamatik 0.13.0's generateWithContext reads the model's embedded ChatML
+        // mid-range phones. Llamatik's generateWithContext reads the model's embedded ChatML
         // chat template from the GGUF, so no manual <|im_start|>/<|im_end|> wrapping is needed here.
         private const val MODEL_CONTEXT_TOKENS = 16_384
+
+        // Runtime settings required since Llamatik 1.x; values follow llama.cpp defaults
+        private const val MAX_THREADS = 4
+        private const val BATCH_SIZE = 512
+    }
+
+    private fun updateGenerateParams(
+        temperature: Float,
+        maxTokens: Int,
+        topP: Float,
+        topK: Int,
+        repeatPenalty: Float
+    ) {
+        bridge.updateGenerateParams(
+            temperature = temperature,
+            maxTokens = maxTokens,
+            topP = topP,
+            topK = topK,
+            repeatPenalty = repeatPenalty,
+            contextLength = MODEL_CONTEXT_TOKENS,
+            numThreads = Runtime.getRuntime().availableProcessors().coerceIn(1, MAX_THREADS),
+            useMmap = true,
+            flashAttention = false,
+            batchSize = BATCH_SIZE
+        )
     }
 
     override suspend fun loadModel(modelPath: String): Result<Unit> = runCatching {
@@ -69,7 +94,7 @@ class RealAIEngine @Inject constructor() : AIEngine {
             }
 
             // Set default generation parameters
-            bridge.updateGenerateParams(
+            updateGenerateParams(
                 temperature = DEFAULT_TEMPERATURE,
                 maxTokens = DEFAULT_MAX_TOKENS,
                 topP = DEFAULT_TOP_P,
@@ -101,7 +126,7 @@ class RealAIEngine @Inject constructor() : AIEngine {
         Timber.d("Generating text (${prompt.length} chars, max tokens: $maxTokens, temp: $temperature)")
 
         // Update generation parameters
-        bridge.updateGenerateParams(
+        updateGenerateParams(
             temperature = temperature,
             maxTokens = maxTokens,
             topP = DEFAULT_TOP_P,
@@ -152,7 +177,7 @@ class RealAIEngine @Inject constructor() : AIEngine {
         Timber.d("Starting streaming generation")
 
         // Update generation parameters
-        bridge.updateGenerateParams(
+        updateGenerateParams(
             temperature = temperature,
             maxTokens = maxTokens,
             topP = DEFAULT_TOP_P,
@@ -230,7 +255,7 @@ class RealAIEngine @Inject constructor() : AIEngine {
         Timber.d("Generating JSON (${prompt.length} chars, schema: ${jsonSchema != null})")
 
         // Use low temperature for structured output
-        bridge.updateGenerateParams(
+        updateGenerateParams(
             temperature = 0.2f, // Low temperature for consistent JSON
             maxTokens = 2048,
             topP = 0.95f,
