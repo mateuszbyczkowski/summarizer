@@ -7,12 +7,18 @@ import com.summarizer.app.domain.model.Summary
 import com.summarizer.app.domain.repository.MessageRepository
 import com.summarizer.app.domain.repository.SummaryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -21,69 +27,57 @@ import javax.inject.Inject
  *
  * Handles searching across both summaries and messages.
  */
-@OptIn(FlowPreview::class)
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val summaryRepository: SummaryRepository,
     private val messageRepository: MessageRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<SearchUiState>(SearchUiState.Empty)
-    val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
-
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    init {
-        // Set up debounced search
-        viewModelScope.launch {
-            _searchQuery
-                .debounce(500) // Wait 500ms after user stops typing
-                .collect { query ->
-                    if (query.isNotBlank()) {
-                        performSearch(query)
-                    } else {
-                        _uiState.value = SearchUiState.Empty
-                    }
-                }
+    // transformLatest cancels a running search when the query changes, so stale results
+    // can never overwrite newer ones
+    val uiState: StateFlow<SearchUiState> = _searchQuery
+        .debounce(SEARCH_DEBOUNCE_MS)
+        .map { it.trim() }
+        .distinctUntilChanged()
+        .transformLatest { query ->
+            if (query.isEmpty()) {
+                emit(SearchUiState.Empty)
+                return@transformLatest
+            }
+            emit(SearchUiState.Loading)
+            emit(search(query))
         }
-    }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchUiState.Empty)
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
     }
 
-    private fun performSearch(query: String) {
-        viewModelScope.launch {
-            try {
-                Timber.d("Performing search for: $query")
-                _uiState.value = SearchUiState.Loading
-
-                // Search both summaries and messages
-                val summaries = summaryRepository.searchSummaries(query)
-                val messages = messageRepository.searchMessages(query)
-
-                Timber.d("Search results: ${summaries.size} summaries, ${messages.size} messages")
-
-                if (summaries.isEmpty() && messages.isEmpty()) {
-                    _uiState.value = SearchUiState.NoResults(query)
-                } else {
-                    _uiState.value = SearchUiState.Success(
-                        query = query,
-                        summaries = summaries,
-                        messages = messages
-                    )
-                }
-            } catch (e: Exception) {
-                Timber.e(e, "Search failed")
-                _uiState.value = SearchUiState.Error("Search failed: ${e.message}")
-            }
-        }
-    }
-
     fun clearSearch() {
         _searchQuery.value = ""
-        _uiState.value = SearchUiState.Empty
+    }
+
+    private suspend fun search(query: String): SearchUiState = try {
+        val summaries = summaryRepository.searchSummaries(query)
+        val messages = messageRepository.searchMessages(query)
+        if (summaries.isEmpty() && messages.isEmpty()) {
+            SearchUiState.NoResults(query)
+        } else {
+            SearchUiState.Success(query = query, summaries = summaries, messages = messages)
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Timber.e(e, "Search failed")
+        SearchUiState.Error("Search failed: ${e.message}")
+    }
+
+    private companion object {
+        const val SEARCH_DEBOUNCE_MS = 400L
     }
 }
 

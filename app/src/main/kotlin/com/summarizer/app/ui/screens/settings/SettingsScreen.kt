@@ -1,5 +1,6 @@
 package com.summarizer.app.ui.screens.settings
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -47,7 +48,7 @@ fun SettingsScreen(
     onResetComplete: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -775,7 +776,7 @@ private fun SettingsContent(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     // Model options with radio buttons
-                    OpenAIModel.values().forEach { model ->
+                    OpenAIModel.entries.forEach { model ->
                         ModelOption(
                             model = model,
                             isSelected = state.selectedModel == model,

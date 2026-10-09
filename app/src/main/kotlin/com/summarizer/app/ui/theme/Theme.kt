@@ -1,16 +1,14 @@
 package com.summarizer.app.ui.theme
 
-import android.app.Activity
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
 
 // OPTION 1: PROFESSIONAL OCEAN BLUE (ACTIVE)
 private val DarkColorScheme = darkColorScheme(
@@ -44,19 +42,16 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun SummarizerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    // Material You colors from the wallpaper (available on every supported version, API 31+)
+    dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
+    val context = LocalContext.current
     val colorScheme = when {
+        dynamicColor && darkTheme -> dynamicDarkColorScheme(context)
+        dynamicColor -> dynamicLightColorScheme(context)
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
-    }
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
-        }
     }
 
     MaterialTheme(

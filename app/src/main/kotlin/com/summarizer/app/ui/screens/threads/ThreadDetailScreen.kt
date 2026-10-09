@@ -13,7 +13,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,9 +36,9 @@ fun ThreadDetailScreen(
     onSummarizeClick: (threadId: String, threadName: String) -> Unit,
     viewModel: ThreadDetailViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val thread by viewModel.thread.collectAsState()
-    val threadSettings by viewModel.threadSettings.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val thread by viewModel.thread.collectAsStateWithLifecycle()
+    val threadSettings by viewModel.threadSettings.collectAsStateWithLifecycle()
     var showMenu by remember { mutableStateOf(false) }
     val threadName = when (val state = uiState) {
         is ThreadDetailUiState.Success -> state.messages.firstOrNull()?.threadName ?: thread?.threadName ?: "Thread"

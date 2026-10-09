@@ -12,10 +12,9 @@ import com.summarizer.app.domain.repository.ThreadRepository
 import com.summarizer.app.domain.repository.ThreadSettingsRepository
 import kotlinx.coroutines.launch
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
@@ -34,56 +33,20 @@ class ThreadDetailViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val threadId: String = savedStateHandle.get<String>("threadId") ?: ""
-    private val _isLoading = MutableStateFlow(true)
 
     val thread: StateFlow<Thread?> = threadRepository
-        .getAllThreads()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
-        .combine(MutableStateFlow(threadId)) { threads, id ->
-            threads.find { it.threadId == id }
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = null
-        )
-
-    val messages: StateFlow<List<Message>> = messageRepository
-        .getMessagesForThread(threadId)
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+        .observeThread(threadId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val threadSettings: StateFlow<ThreadSettings?> = threadSettingsRepository
         .getSettingsFlow(threadId)
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = null
-        )
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val uiState: StateFlow<ThreadDetailUiState> = combine(
-        messages,
-        _isLoading
-    ) { messageList, isLoading ->
-        when {
-            isLoading && messageList.isEmpty() -> ThreadDetailUiState.Loading
-            else -> {
-                _isLoading.value = false
-                ThreadDetailUiState.Success(messageList)
-            }
-        }
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = ThreadDetailUiState.Loading
-    )
+    // Loading only until Room's first emission; an empty thread shows the empty state
+    val uiState: StateFlow<ThreadDetailUiState> = messageRepository
+        .getMessagesForThread(threadId)
+        .map<List<Message>, ThreadDetailUiState> { ThreadDetailUiState.Success(it) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThreadDetailUiState.Loading)
 
     fun toggleFollowStatus(isFollowed: Boolean) {
         viewModelScope.launch {

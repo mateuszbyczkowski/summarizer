@@ -1,5 +1,6 @@
 package com.summarizer.app.ui.screens.search
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,8 +32,8 @@ fun SearchScreen(
     onThreadClick: (String) -> Unit,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -109,7 +110,7 @@ private fun SearchBar(
         modifier = modifier,
         placeholder = { Text("Search summaries and messages...") },
         leadingIcon = {
-            Icon(Icons.Default.Search, contentDescription = "Search")
+            Icon(Icons.Default.Search, contentDescription = null)
         },
         trailingIcon = {
             if (query.isNotEmpty()) {
@@ -300,7 +301,7 @@ private fun SummaryResultCard(
 
             if (summary.actionItems.isNotEmpty()) {
                 Text(
-                    text = "Actions: ${summary.actionItems.first()}${if (summary.actionItems.size > 1) " (+${summary.actionItems.size - 1} more)" else ""}",
+                    text = "Actions: ${summary.actionItems.first().task}${if (summary.actionItems.size > 1) " (+${summary.actionItems.size - 1} more)" else ""}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

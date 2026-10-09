@@ -28,6 +28,10 @@ class ThreadRepositoryImpl @Inject constructor(
         return threadDao.getThread(threadId)?.toDomainModel()
     }
 
+    override fun observeThread(threadId: String): Flow<Thread?> {
+        return threadDao.observeThread(threadId).map { it?.toDomainModel() }
+    }
+
     override suspend fun updateThread(thread: Thread) {
         threadDao.update(thread.toEntity())
     }

@@ -1,5 +1,6 @@
 package com.summarizer.app.ui.screens.models
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -42,9 +43,9 @@ fun ModelDownloadScreen(
     onBackClick: (() -> Unit)? = null,
     onStorageClick: (() -> Unit)? = null
 ) {
-    val models by viewModel.models.collectAsState()
-    val downloadStates by viewModel.downloadStates.collectAsState()
-    val isWiFiOnly by viewModel.isWiFiOnly.collectAsState()
+    val models by viewModel.models.collectAsStateWithLifecycle()
+    val downloadStates by viewModel.downloadStates.collectAsStateWithLifecycle()
+    val isWiFiOnly by viewModel.isWiFiOnly.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -351,10 +352,7 @@ fun ModelCard(
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Bold
                                 )
-                                IconButton(
-                                    onClick = onPauseClick,
-                                    modifier = Modifier.size(32.dp)
-                                ) {
+                                IconButton(onClick = onPauseClick) {
                                     Icon(
                                         imageVector = Icons.Default.Pause,
                                         contentDescription = "Pause",

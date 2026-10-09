@@ -15,9 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.summarizer.app.util.PermissionHelper
 
 @Composable
@@ -25,23 +23,13 @@ fun PermissionExplanationScreen(
     onContinueClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
     var hasPermission by remember { mutableStateOf(PermissionHelper.hasNotificationListenerPermission(context)) }
 
-    // Check permission when app comes to foreground
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                hasPermission = PermissionHelper.hasNotificationListenerPermission(context)
-                if (hasPermission) {
-                    onContinueClick()
-                }
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
+    // Check permission when returning from system settings
+    LifecycleResumeEffect(Unit) {
+        hasPermission = PermissionHelper.hasNotificationListenerPermission(context)
+        if (hasPermission) onContinueClick()
+        onPauseOrDispose { }
     }
     Scaffold { paddingValues ->
         Column(

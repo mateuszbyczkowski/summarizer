@@ -20,6 +20,9 @@ interface ThreadDao {
     @Query("SELECT * FROM threads WHERE threadId = :threadId")
     suspend fun getThread(threadId: String): ThreadEntity?
 
+    @Query("SELECT * FROM threads WHERE threadId = :threadId")
+    fun observeThread(threadId: String): Flow<ThreadEntity?>
+
     /** Creates the thread unless it exists. Never REPLACE: that deletes the row and cascades to its settings. */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIfAbsent(thread: ThreadEntity): Long

@@ -1,5 +1,6 @@
 package com.summarizer.app.ui.screens.onboarding
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -37,7 +38,7 @@ fun OpenAISetupScreen(
 ) {
     var apiKeyInput by remember { mutableStateOf("") }
     var showApiKey by remember { mutableStateOf(false) }
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // Auto-navigate when API key is saved
     LaunchedEffect(uiState) {
