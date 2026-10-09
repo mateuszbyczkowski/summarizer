@@ -3,6 +3,7 @@ package com.summarizer.app.data.local.entity
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.summarizer.app.domain.model.MessageType
 import java.security.MessageDigest
 
 @Entity(
@@ -36,18 +37,4 @@ data class MessageEntity(
             return digest.joinToString("") { "%02x".format(it) }
         }
     }
-}
-
-enum class MessageType {
-    TEXT,
-    IMAGE,
-    VIDEO,
-    DOCUMENT,
-    AUDIO,
-    LOCATION,
-    CONTACT,
-    STICKER,
-    DELETED,
-    SYSTEM,
-    UNKNOWN
 }

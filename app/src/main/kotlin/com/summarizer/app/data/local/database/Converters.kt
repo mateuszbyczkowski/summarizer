@@ -1,7 +1,7 @@
 package com.summarizer.app.data.local.database
 
 import androidx.room.TypeConverter
-import com.summarizer.app.data.local.entity.MessageType
+import com.summarizer.app.domain.model.MessageType
 import com.summarizer.app.domain.model.ActionItem
 import com.summarizer.app.domain.model.ParticipantHighlight
 import kotlinx.serialization.encodeToString
