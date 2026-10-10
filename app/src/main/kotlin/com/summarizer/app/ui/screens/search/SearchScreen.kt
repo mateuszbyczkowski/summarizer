@@ -1,348 +1,453 @@
 package com.summarizer.app.ui.screens.search
 
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.content.Context
+import android.text.format.DateUtils
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.automirrored.outlined.Chat
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.outlined.ErrorOutline
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.outlined.TaskAlt
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SearchBar
+import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.summarizer.app.R
 import com.summarizer.app.domain.model.Message
 import com.summarizer.app.domain.model.Summary
 import com.summarizer.app.ui.components.EmptyState
-import com.summarizer.app.ui.components.appTopBarColors
-import java.text.SimpleDateFormat
-import java.util.*
+import com.summarizer.app.ui.components.SettingsRowIcon
+import com.summarizer.app.util.ThreadNaming
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 /**
- * Search screen for searching across summaries and messages.
+ * Search across summaries, their tasks and messages, as a full-screen Material 3 search view:
+ * recent searches before typing, filter chips (type and chat) and highlighted matches. Results
+ * open in context: a summary or task opens the thread's summary, a message opens the thread.
+ *
+ * @param onSummaryClick opens a thread's latest summary; falls back to [onThreadClick]
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     onBackPressed: () -> Unit,
     onThreadClick: (String) -> Unit,
+    onSummaryClick: ((threadId: String) -> Unit)? = null,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val recentSearches by viewModel.recentSearches.collectAsStateWithLifecycle()
+    val keyboard = LocalSoftwareKeyboardController.current
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    SearchBar(
-                        query = searchQuery,
-                        onQueryChange = viewModel::updateSearchQuery,
-                        onClearClick = viewModel::clearSearch,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+    val openThread = { threadId: String ->
+        viewModel.onResultOpened()
+        onThreadClick(threadId)
+    }
+    val openSummary = { threadId: String ->
+        viewModel.onResultOpened()
+        (onSummaryClick ?: onThreadClick)(threadId)
+    }
+
+    SearchBar(
+        inputField = {
+            SearchBarDefaults.InputField(
+                query = searchQuery,
+                onQueryChange = viewModel::updateSearchQuery,
+                onSearch = { query ->
+                    viewModel.submitSearch(query)
+                    keyboard?.hide()
                 },
-                navigationIcon = {
+                expanded = true,
+                onExpandedChange = { expanded -> if (!expanded) onBackPressed() },
+                placeholder = { Text(stringResource(R.string.search_bar_placeholder)) },
+                leadingIcon = {
                     IconButton(onClick = onBackPressed) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
-                colors = appTopBarColors()
-            )
-        }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            when (val state = uiState) {
-                is SearchUiState.Empty -> {
-                    EmptySearchState()
-                }
-
-                is SearchUiState.Loading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = viewModel::clearSearch) {
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.search_clear))
+                        }
                     }
                 }
+            )
+        },
+        expanded = true,
+        onExpandedChange = { expanded -> if (!expanded) onBackPressed() }
+    ) {
+        when (val state = uiState) {
+            is SearchUiState.Empty -> if (recentSearches.isEmpty()) {
+                EmptyState(
+                    icon = Icons.Default.Search,
+                    title = stringResource(R.string.search_empty_title),
+                    body = stringResource(R.string.search_empty_body)
+                )
+            } else {
+                RecentSearches(
+                    queries = recentSearches,
+                    onPick = viewModel::useRecentSearch,
+                    onRemove = viewModel::removeRecentSearch,
+                    onClearAll = viewModel::clearRecentSearches
+                )
+            }
 
-                is SearchUiState.Success -> {
-                    SearchResults(
-                        summaries = state.summaries,
-                        messages = state.messages,
-                        query = state.query,
-                        onThreadClick = onThreadClick
+            is SearchUiState.Loading -> LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+
+            is SearchUiState.Success -> Column(modifier = Modifier.fillMaxSize()) {
+                FilterChips(
+                    state = state,
+                    onToggleType = viewModel::toggleTypeFilter,
+                    onToggleChat = viewModel::toggleChatFilter
+                )
+                if (state.isEmpty) {
+                    EmptyState(
+                        icon = Icons.Default.SearchOff,
+                        title = stringResource(R.string.search_filter_empty)
                     )
-                }
-
-                is SearchUiState.NoResults -> {
-                    NoResultsState(query = state.query)
-                }
-
-                is SearchUiState.Error -> {
-                    ErrorState(message = state.message)
+                } else {
+                    SearchResultsList(
+                        state = state,
+                        onSummaryClick = openSummary,
+                        onMessageClick = openThread
+                    )
                 }
             }
+
+            is SearchUiState.NoResults -> EmptyState(
+                icon = Icons.Default.SearchOff,
+                title = stringResource(R.string.search_no_results_title),
+                body = stringResource(R.string.search_no_results_body, state.query)
+            )
+
+            is SearchUiState.Error -> EmptyState(
+                icon = Icons.Outlined.ErrorOutline,
+                title = stringResource(R.string.search_error_title),
+                body = state.message,
+                iconTint = MaterialTheme.colorScheme.error
+            )
         }
     }
 }
 
-@Composable
-private fun SearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    onClearClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier = modifier,
-        placeholder = { Text(stringResource(R.string.search_placeholder)) },
-        leadingIcon = {
-            Icon(Icons.Default.Search, contentDescription = null)
-        },
-        trailingIcon = {
-            if (query.isNotEmpty()) {
-                IconButton(onClick = onClearClick) {
-                    Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.search_clear))
-                }
-            }
-        },
-        singleLine = true,
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface
-        )
-    )
-}
+private val bottomInsetPadding: PaddingValues
+    @Composable get() = WindowInsets.navigationBars.asPaddingValues()
 
 @Composable
-private fun EmptySearchState() {
-    EmptyState(
-        icon = Icons.Default.Search,
-        title = stringResource(R.string.search_empty_title),
-        body = stringResource(R.string.search_empty_body)
-    )
-}
-
-@Composable
-private fun NoResultsState(query: String) {
-    EmptyState(
-        icon = Icons.Default.SearchOff,
-        title = stringResource(R.string.search_no_results_title),
-        body = stringResource(R.string.search_no_results_body, query)
-    )
-}
-
-@Composable
-private fun ErrorState(message: String) {
-    EmptyState(
-        icon = Icons.Outlined.ErrorOutline,
-        title = stringResource(R.string.search_error_title),
-        body = message,
-        iconTint = MaterialTheme.colorScheme.error
-    )
-}
-
-@Composable
-private fun SearchResults(
-    summaries: List<Summary>,
-    messages: List<Message>,
-    query: String,
-    onThreadClick: (String) -> Unit
+private fun RecentSearches(
+    queries: List<String>,
+    onPick: (String) -> Unit,
+    onRemove: (String) -> Unit,
+    onClearAll: () -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = Modifier
+            .fillMaxSize()
+            .imePadding(),
+        contentPadding = bottomInsetPadding
     ) {
-        // Summary results
-        if (summaries.isNotEmpty()) {
-            item {
-                Text(
-                    text = stringResource(R.string.search_section_summaries, summaries.size),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            items(summaries) { summary ->
-                SummaryResultCard(
-                    summary = summary,
-                    query = query,
-                    onClick = { onThreadClick(summary.threadId) }
-                )
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-        }
-
-        // Message results
-        if (messages.isNotEmpty()) {
-            item {
-                Text(
-                    text = stringResource(R.string.search_section_messages, messages.size),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            items(messages) { message ->
-                MessageResultCard(
-                    message = message,
-                    query = query,
-                    onClick = { onThreadClick(message.threadId) }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SummaryResultCard(
-    summary: Summary,
-    query: String,
-    onClick: () -> Unit
-) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Thread name and timestamp
+        item {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 8.dp, top = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = summary.threadName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    text = stringResource(R.string.search_recent_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f)
                 )
-                Text(
-                    text = formatTimestamp(summary.generatedAt),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // Summary content preview
-            if (summary.keyTopics.isNotEmpty()) {
-                Text(
-                    text = stringResource(
-                        R.string.search_result_topics,
-                        summary.keyTopics.take(2).joinToString(", ") + if (summary.keyTopics.size > 2) "…" else ""
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            if (summary.actionItems.isNotEmpty()) {
-                Text(
-                    text = summary.actionItems.size.let { count ->
-                        val first = summary.actionItems.first().task
-                        if (count > 1) {
-                            pluralStringResource(R.plurals.search_result_actions_more, count - 1, first, count - 1)
-                        } else {
-                            stringResource(R.string.search_result_actions, first)
-                        }
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                TextButton(onClick = onClearAll) { Text(stringResource(R.string.search_recent_clear)) }
             }
         }
-    }
-}
-
-@Composable
-private fun MessageResultCard(
-    message: Message,
-    query: String,
-    onClick: () -> Unit
-) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Thread name and sender
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = message.threadName,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = message.sender,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Text(
-                    text = formatTimestamp(message.timestamp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // Message content
-            Text(
-                text = message.content,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
+        items(queries, key = { it }) { query ->
+            ListItem(
+                headlineContent = { Text(query, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                leadingContent = { Icon(Icons.Default.History, contentDescription = null) },
+                trailingContent = {
+                    IconButton(onClick = { onRemove(query) }) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = stringResource(R.string.search_recent_remove_cd, query)
+                        )
+                    }
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                modifier = Modifier.clickableRow { onPick(query) }
             )
         }
     }
 }
 
-private fun formatTimestamp(timestamp: Long): String {
-    val dateFormat = SimpleDateFormat("MMM d, h:mm a", Locale.getDefault())
-    return dateFormat.format(Date(timestamp))
+@Composable
+private fun FilterChips(
+    state: SearchUiState.Success,
+    onToggleType: (SearchResultType) -> Unit,
+    onToggleChat: (String) -> Unit
+) {
+    val types = listOf(
+        SearchResultType.SUMMARIES to R.string.search_filter_summaries,
+        SearchResultType.TASKS to R.string.search_filter_tasks,
+        SearchResultType.MESSAGES to R.string.search_filter_messages
+    )
+    val showChats = state.chats.size > 1
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        items(types, key = { it.first.name }) { (type, label) ->
+            val selected = state.filter.type == type
+            FilterChip(
+                selected = selected,
+                onClick = { onToggleType(type) },
+                label = { Text(stringResource(label)) },
+                leadingIcon = if (selected) {
+                    { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
+                } else {
+                    null
+                }
+            )
+        }
+        if (showChats) {
+            item(key = "divider") { VerticalDivider(modifier = Modifier.height(24.dp)) }
+            items(state.chats, key = { "chat-${it.threadId}" }) { chat ->
+                FilterChip(
+                    selected = state.filter.threadId == chat.threadId,
+                    onClick = { onToggleChat(chat.threadId) },
+                    label = {
+                        Text(
+                            text = ThreadNaming.displayName(chat.threadName),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                )
+            }
+        }
+    }
 }
+
+@Composable
+private fun SearchResultsList(
+    state: SearchUiState.Success,
+    onSummaryClick: (String) -> Unit,
+    onMessageClick: (String) -> Unit
+) {
+    val context = LocalContext.current
+    val query = state.query
+    // Section headers only help when several kinds of results are mixed
+    val showHeaders = state.filter.type == null
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .imePadding(),
+        contentPadding = bottomInsetPadding
+    ) {
+        if (state.summaries.isNotEmpty()) {
+            if (showHeaders) item(key = "h-summaries") {
+                SectionHeader(stringResource(R.string.search_section_summaries, state.summaries.size))
+            }
+            items(state.summaries, key = { "s-${it.id}" }) { summary ->
+                SummaryResult(summary, query, context) { onSummaryClick(summary.threadId) }
+            }
+        }
+        if (state.tasks.isNotEmpty()) {
+            if (showHeaders) item(key = "h-tasks") {
+                SectionHeader(stringResource(R.string.search_section_tasks, state.tasks.size))
+            }
+            items(state.tasks, key = { "t-${it.summary.id}-${it.index}" }) { hit ->
+                TaskResult(hit, query) { onSummaryClick(hit.summary.threadId) }
+            }
+        }
+        if (state.messages.isNotEmpty()) {
+            if (showHeaders) item(key = "h-messages") {
+                SectionHeader(stringResource(R.string.search_section_messages, state.messages.size))
+            }
+            items(state.messages, key = { "m-${it.id}-${it.messageHash}" }) { message ->
+                MessageResult(message, query, context) { onMessageClick(message.threadId) }
+            }
+        }
+        item(key = "bottom") { Spacer(modifier = Modifier.height(8.dp)) }
+    }
+}
+
+@Composable
+private fun SectionHeader(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp)
+    )
+}
+
+@Composable
+private fun SummaryResult(summary: Summary, query: String, context: Context, onClick: () -> Unit) {
+    ResultItem(
+        icon = Icons.Default.AutoAwesome,
+        headline = highlighted(ThreadNaming.displayName(summary.threadName), query),
+        supporting = highlighted(SearchText.summarySnippet(summary, query), query),
+        trailing = formatWhen(context, summary.generatedAt),
+        onClick = onClick
+    )
+}
+
+@Composable
+private fun TaskResult(hit: TaskHit, query: String, onClick: () -> Unit) {
+    val chat = ThreadNaming.displayName(hit.summary.threadName)
+    val due = hit.item.due?.let(::formatIsoDate)
+    ResultItem(
+        icon = Icons.Outlined.TaskAlt,
+        headline = highlighted(hit.item.task, query),
+        supporting = AnnotatedString(
+            if (due != null) stringResource(R.string.search_task_due, chat, due) else chat
+        ),
+        trailing = if (hit.item.done) stringResource(R.string.search_task_done) else null,
+        strikeThrough = hit.item.done,
+        onClick = onClick
+    )
+}
+
+@Composable
+private fun MessageResult(message: Message, query: String, context: Context, onClick: () -> Unit) {
+    ResultItem(
+        icon = Icons.AutoMirrored.Outlined.Chat,
+        headline = highlighted(ThreadNaming.displayName(message.threadName), query),
+        supporting = highlighted(
+            stringResource(R.string.search_message_line, message.sender, SearchText.snippet(message.content, query)),
+            query
+        ),
+        trailing = formatWhen(context, message.timestamp),
+        onClick = onClick
+    )
+}
+
+@Composable
+private fun ResultItem(
+    icon: ImageVector,
+    headline: AnnotatedString,
+    supporting: AnnotatedString,
+    trailing: String?,
+    onClick: () -> Unit,
+    strikeThrough: Boolean = false
+) {
+    ListItem(
+        headlineContent = {
+            Text(
+                text = headline,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textDecoration = if (strikeThrough) TextDecoration.LineThrough else null
+            )
+        },
+        supportingContent = {
+            Text(text = supporting, maxLines = 3, overflow = TextOverflow.Ellipsis)
+        },
+        leadingContent = { SettingsRowIcon(icon) },
+        trailingContent = trailing?.let { { Text(it, style = MaterialTheme.typography.labelSmall) } },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier.clickableRow(onClick)
+    )
+}
+
+private fun Modifier.clickableRow(onClick: () -> Unit): Modifier =
+    this
+        .fillMaxWidth()
+        .clickable(onClick = onClick)
+
+/** [text] with every occurrence of [query] emphasized. */
+@Composable
+private fun highlighted(text: String, query: String): AnnotatedString {
+    val colors = MaterialTheme.colorScheme
+    val style = SpanStyle(
+        background = colors.tertiaryContainer,
+        color = colors.onTertiaryContainer,
+        fontWeight = FontWeight.SemiBold
+    )
+    return remember(text, query, style) {
+        buildAnnotatedString {
+            var last = 0
+            SearchText.matchRanges(text, query).forEach { range ->
+                append(text.substring(last, range.first))
+                withStyle(style) { append(text.substring(range.first, range.last + 1)) }
+                last = range.last + 1
+            }
+            append(text.substring(last))
+        }
+    }
+}
+
+/** Time for today, otherwise the date, in the phone's locale. */
+private fun formatWhen(context: Context, timestamp: Long): String {
+    val flags = if (DateUtils.isToday(timestamp)) {
+        DateUtils.FORMAT_SHOW_TIME
+    } else {
+        DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_MONTH
+    }
+    return DateUtils.formatDateTime(context, timestamp, flags)
+}
+
+private fun formatIsoDate(isoDate: String): String? =
+    runCatching { LocalDate.parse(isoDate).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)) }.getOrNull()

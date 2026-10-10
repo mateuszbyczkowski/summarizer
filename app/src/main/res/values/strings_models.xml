@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AI engine / model manager (stage 2E) -->
+    <string name="engine_title">AI engine</string>
+    <string name="engine_title_onboarding">Choose an AI model</string>
+    <string name="engine_tab_on_device">On device</string>
+    <string name="engine_tab_openai">OpenAI</string>
+
+    <!-- Active model -->
+    <string name="engine_active_label">Active model</string>
+    <string name="engine_ready">Ready</string>
+    <string name="engine_hero_subtitle">%1$s · %2$s</string>
+    <string name="engine_try_example">Try on example</string>
+    <string name="engine_try_started">Summarizing the test chat. You will get a notification when it is ready.</string>
+    <string name="engine_continue_with_model">Continue with this model</string>
+    <string name="engine_none_title">No model downloaded yet</string>
+    <string name="engine_none_body">Download a model below. Summaries are then written on this phone, without the internet.</string>
+
+    <!-- Plain names (shown first) and descriptions -->
+    <string name="engine_plain_recommended">Recommended</string>
+    <string name="engine_plain_best_quality">Best quality</string>
+    <string name="engine_plain_backup_cpu">Backup (CPU)</string>
+    <string name="engine_plain_demo">Demo (debug)</string>
+    <string name="engine_language_gemma">Good with Polish and many other languages</string>
+    <string name="engine_language_lfm">Simpler summaries, weaker Polish; for phones whose GPU cannot run Gemma</string>
+    <string name="engine_language_demo">Canned Polish summary of the test chat</string>
+
+    <!-- Specs -->
+    <string name="engine_time_seconds">~%1$d s</string>
+    <string name="engine_time_minutes">~%1$d min</string>
+    <string name="engine_time_per_summary">%1$s per summary</string>
+    <string name="engine_backend_gpu">GPU</string>
+    <string name="engine_backend_cpu">CPU</string>
+    <string name="engine_no_download">No download</string>
+    <string name="engine_needs_ram">Needs %1$d GB RAM; this phone has %2$d GB</string>
+
+    <!-- Model list -->
+    <string name="engine_other_models">Other models</string>
+    <string name="engine_models">Models</string>
+    <string name="engine_use">Use</string>
+    <string name="engine_now_using">Now using %1$s</string>
+    <string name="engine_delete">Delete model</string>
+    <string name="engine_download_cd">Download %1$s</string>
+    <string name="engine_resume_cd">Resume download</string>
+    <string name="engine_cancel_cd">Cancel download</string>
+    <string name="engine_retry_cd">Try the download again</string>
+    <string name="engine_downloading">%1$s of %2$s · %3$d%%</string>
+
+    <!-- Storage -->
+    <string name="engine_storage_title">Storage</string>
+    <string name="engine_storage_internal">Internal storage</string>
+    <string name="engine_storage_external">SD card</string>
+    <string name="engine_storage_models">Models %1$s</string>
+    <string name="engine_storage_other">Other</string>
+    <string name="engine_storage_free">Free %1$s</string>
+    <string name="engine_storage_location">Storage location</string>
+    <string name="engine_storage_location_value">%1$s · for new downloads</string>
+    <string name="engine_wifi_only">Download only over Wi-Fi</string>
+    <string name="engine_wifi_only_on">Saves mobile data</string>
+    <string name="engine_wifi_only_off">Downloads over any network</string>
+
+    <!-- OpenAI tab -->
+    <string name="engine_openai_active_title">OpenAI is active</string>
+    <string name="engine_openai_inactive_title">Add your API key to use OpenAI</string>
+    <string name="engine_openai_body">Messages are sent to OpenAI to be summarized. Needs an internet connection.</string>
+    <string name="engine_openai_key_group">API key</string>
+    <string name="engine_openai_key_saved">Key saved</string>
+    <string name="engine_openai_validate">Check key</string>
+    <string name="engine_openai_remove">Remove key</string>
+    <string name="engine_openai_save_use">Save and use OpenAI</string>
+    <string name="engine_openai_use">Use OpenAI</string>
+    <string name="engine_openai_model_group">Model</string>
+</resources>

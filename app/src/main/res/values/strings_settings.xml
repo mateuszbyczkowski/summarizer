@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings: grouped list (stage 2E) -->
+    <string name="settings_group_summaries">Summaries</string>
+    <string name="settings_group_notifications">Notifications</string>
+    <string name="settings_group_privacy">Privacy &amp; security</string>
+    <string name="settings_group_about">About</string>
+
+    <!-- Summaries -->
+    <string name="settings_engine_title">AI engine</string>
+    <string name="settings_engine_local">On device · %1$s</string>
+    <string name="settings_engine_local_none">On device · no model downloaded</string>
+    <string name="settings_engine_openai">OpenAI · %1$s</string>
+    <string name="settings_engine_openai_no_key">OpenAI · API key missing</string>
+    <string name="settings_daily_title">Daily summary</string>
+    <string name="settings_daily_on">At %1$s · followed chats</string>
+    <string name="settings_value_off">Off</string>
+    <string name="settings_daily_time_title">Daily summary time</string>
+    <string name="settings_daily_time_note">Followed chats are summarized at the start of the chosen hour.</string>
+
+    <!-- Notifications -->
+    <string name="settings_smart_title">Smart notifications</string>
+    <string name="settings_smart_on">Only important messages · %1$s</string>
+    <string name="settings_sensitivity_title">Notification sensitivity</string>
+    <string name="settings_sensitivity_low">More notifications</string>
+    <string name="settings_sensitivity_medium">Balanced</string>
+    <string name="settings_sensitivity_high">Fewer notifications</string>
+    <string name="settings_sensitivity_very_high">Only critical</string>
+
+    <!-- Privacy & security -->
+    <string name="settings_app_lock_system">Fingerprint, face or screen lock</string>
+    <string name="settings_app_lock_pin">App PIN (this phone has no screen lock)</string>
+    <string name="settings_app_lock_off">Off · anyone with your phone can read your chats</string>
+    <string name="settings_retention_row_title">Message retention</string>
+    <string name="settings_retention_value">%1$s · summaries are kept</string>
+    <string name="settings_retention_dialog_title">Keep messages for</string>
+    <string name="settings_access_title">Notification access</string>
+    <string name="settings_access_on">On · new messages are captured</string>
+    <string name="settings_access_off">Off · tap to turn it on</string>
+    <string name="settings_access_granted">Granted</string>
+    <string name="settings_access_missing">Missing</string>
+    <string name="settings_autostart_title">Auto-start (%1$s)</string>
+
+    <!-- About and reset -->
+    <string name="settings_about_row_title">About</string>
+    <string name="settings_reset_row_title">Reset app…</string>
+    <string name="settings_reset_row_value">Delete all data and start over</string>
+
+    <!-- Status banner, shown only when something is wrong -->
+    <string name="settings_banner_access_title">Notification access is off</string>
+    <string name="settings_banner_access_body">New WhatsApp messages are not being captured.</string>
+    <string name="settings_banner_access_action">Turn on</string>
+    <string name="settings_banner_model_title">No AI model downloaded</string>
+    <string name="settings_banner_model_body">Download a model to summarize chats on this phone.</string>
+    <string name="settings_banner_model_action">Choose a model</string>
+    <string name="settings_banner_key_title">OpenAI API key missing</string>
+    <string name="settings_banner_key_body">Add a key, or switch back to the on-device engine.</string>
+    <string name="settings_banner_key_action">Add key</string>
+
+    <!-- Dialog buttons -->
+    <string name="settings_dialog_save">Save</string>
+    <string name="settings_dialog_close">Close</string>
+</resources>
