@@ -1,112 +1,94 @@
 package com.summarizer.app.util
 
+import android.app.KeyguardManager
 import android.content.Context
 import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
+import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 
-/**
- * Helper class for biometric authentication.
- */
+/** The phone's own lock: screen lock state and BiometricPrompt. */
 object BiometricHelper {
 
-    /**
-     * Check if biometric authentication is available on this device.
-     */
-    fun isBiometricAvailable(context: Context): Boolean {
-        val biometricManager = BiometricManager.from(context)
-        return when (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)) {
-            BiometricManager.BIOMETRIC_SUCCESS -> true
-            BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> false
-            BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> false
-            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> false
-            else -> false
-        }
+    private const val SYSTEM_LOCK_AUTHENTICATORS = BIOMETRIC_STRONG or DEVICE_CREDENTIAL
+
+    /** Why a prompt ended without success. */
+    sealed interface Failure {
+        /** Dismissed by the user or the system; nothing to show. */
+        data object Cancelled : Failure
+
+        /** The phone no longer has a screen lock (or no enrolled biometrics). */
+        data object NoCredential : Failure
+
+        /** Any other error, e.g. too many attempts; [message] comes from the system. */
+        data class Error(val message: String) : Failure
     }
 
-    /**
-     * Check if biometric authentication can be used (device has capability AND user has enrolled biometrics).
-     */
-    fun canUseBiometric(context: Context): Boolean {
-        val biometricManager = BiometricManager.from(context)
-        return biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) ==
-               BiometricManager.BIOMETRIC_SUCCESS
-    }
+    /** True when the phone has a PIN, pattern or password screen lock. */
+    fun isDeviceSecure(context: Context): Boolean =
+        context.getSystemService(KeyguardManager::class.java)?.isDeviceSecure == true
+
+    /** True when a strong biometric (e.g. fingerprint) is present and enrolled. */
+    fun canUseBiometric(context: Context): Boolean =
+        BiometricManager.from(context).canAuthenticate(BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS
+
+    /** True when the phone's own lock (strong biometric or screen lock) can be prompted. */
+    fun canUseSystemLock(context: Context): Boolean =
+        BiometricManager.from(context).canAuthenticate(SYSTEM_LOCK_AUTHENTICATORS) == BiometricManager.BIOMETRIC_SUCCESS
 
     /**
-     * Get a user-friendly message about biometric availability status.
+     * Shows the system prompt. With [negativeButtonText] null it accepts the phone's screen lock
+     * as well as a strong biometric; otherwise only a strong biometric, with that button to
+     * dismiss it (e.g. "Use PIN").
      */
-    fun getBiometricStatusMessage(context: Context): String {
-        val biometricManager = BiometricManager.from(context)
-        return when (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)) {
-            BiometricManager.BIOMETRIC_SUCCESS -> "Biometric authentication available"
-            BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> "No biometric hardware available"
-            BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> "Biometric hardware unavailable"
-            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> "No biometric credentials enrolled"
-            BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED -> "Security update required"
-            BiometricManager.BIOMETRIC_ERROR_UNSUPPORTED -> "Biometric authentication not supported"
-            BiometricManager.BIOMETRIC_STATUS_UNKNOWN -> "Biometric status unknown"
-            else -> "Biometric authentication unavailable"
-        }
-    }
-
-    /**
-     * Show biometric prompt for authentication.
-     *
-     * @param activity The FragmentActivity to show the prompt on
-     * @param title Title for the biometric prompt
-     * @param subtitle Subtitle for the biometric prompt
-     * @param onSuccess Callback when authentication succeeds
-     * @param onError Callback when authentication fails or is cancelled
-     */
-    fun showBiometricPrompt(
+    fun authenticate(
         activity: FragmentActivity,
-        title: String = "Biometric Authentication",
-        subtitle: String = "Authenticate to unlock the app",
+        title: String,
+        subtitle: String?,
+        negativeButtonText: String?,
         onSuccess: () -> Unit,
-        onError: (String) -> Unit
+        onFailure: (Failure) -> Unit
     ) {
-        val executor = ContextCompat.getMainExecutor(activity)
-
-        val biometricPrompt = BiometricPrompt(
+        val prompt = BiometricPrompt(
             activity,
-            executor,
+            ContextCompat.getMainExecutor(activity),
             object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    super.onAuthenticationError(errorCode, errString)
-                    when (errorCode) {
-                        BiometricPrompt.ERROR_NEGATIVE_BUTTON,
-                        BiometricPrompt.ERROR_USER_CANCELED -> {
-                            // User cancelled, treat as error
-                            onError("Authentication cancelled")
-                        }
-                        else -> {
-                            onError(errString.toString())
-                        }
-                    }
-                }
-
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    super.onAuthenticationSucceeded(result)
                     onSuccess()
                 }
 
-                override fun onAuthenticationFailed() {
-                    super.onAuthenticationFailed()
-                    // Don't call onError here - this is called for each failed attempt
-                    // The prompt will remain open for retry
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    onFailure(
+                        when (errorCode) {
+                            BiometricPrompt.ERROR_USER_CANCELED,
+                            BiometricPrompt.ERROR_NEGATIVE_BUTTON,
+                            BiometricPrompt.ERROR_CANCELED -> Failure.Cancelled
+                            BiometricPrompt.ERROR_NO_DEVICE_CREDENTIAL,
+                            BiometricPrompt.ERROR_NO_BIOMETRICS -> Failure.NoCredential
+                            else -> Failure.Error(errString.toString())
+                        }
+                    )
                 }
+
+                // onAuthenticationFailed (a single unrecognised attempt) keeps the prompt open
             }
         )
 
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
             .setTitle(title)
-            .setSubtitle(subtitle)
-            .setNegativeButtonText("Use PIN")
-            .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+            .apply { if (subtitle != null) setSubtitle(subtitle) }
+            .apply {
+                if (negativeButtonText == null) {
+                    setAllowedAuthenticators(SYSTEM_LOCK_AUTHENTICATORS)
+                } else {
+                    setAllowedAuthenticators(BIOMETRIC_STRONG)
+                    setNegativeButtonText(negativeButtonText)
+                }
+            }
             .build()
 
-        biometricPrompt.authenticate(promptInfo)
+        prompt.authenticate(promptInfo)
     }
 }

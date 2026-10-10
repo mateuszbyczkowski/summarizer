@@ -59,7 +59,9 @@ class SettingsViewModel @Inject constructor(
             is SettingsEvent.SetAutoSummarizationEnabled -> setAutoSummarizationEnabled(event.enabled)
             is SettingsEvent.SetAutoSummarizationHour -> setAutoSummarizationHour(event.hour)
             is SettingsEvent.SetDataRetentionDays -> setDataRetentionDays(event.days)
-            is SettingsEvent.SetBiometricEnabled -> setBiometricEnabled(event.enabled)
+            is SettingsEvent.SetAppLockEnabled -> setAppLockEnabled(event.enabled)
+            SettingsEvent.AppLockPinCreated -> setAppLockEnabled(true)
+            SettingsEvent.AppLockPinCancelled -> showAppLockPinSetup(false)
             is SettingsEvent.SetSmartNotificationsEnabled -> setSmartNotificationsEnabled(event.enabled)
             is SettingsEvent.SetSmartNotificationThreshold -> setSmartNotificationThreshold(event.threshold)
             SettingsEvent.ManageModels, SettingsEvent.ResetApp -> Unit
@@ -76,7 +78,7 @@ class SettingsViewModel @Inject constructor(
                 val autoSummarizationEnabled = preferencesRepository.isAutoSummarizationEnabled()
                 val autoSummarizationHour = preferencesRepository.getAutoSummarizationHour()
                 val dataRetentionDays = preferencesRepository.getDataRetentionDays()
-                val biometricEnabled = preferencesRepository.isBiometricEnabled()
+                val appLockEnabled = preferencesRepository.isAppLockEnabled()
                 val smartNotificationsEnabled = preferencesRepository.isSmartNotificationsEnabled()
                 val smartNotificationThreshold = preferencesRepository.getSmartNotificationThreshold()
 
@@ -88,12 +90,12 @@ class SettingsViewModel @Inject constructor(
                     autoSummarizationEnabled = autoSummarizationEnabled,
                     autoSummarizationHour = autoSummarizationHour,
                     dataRetentionDays = dataRetentionDays,
-                    biometricEnabled = biometricEnabled,
+                    appLockEnabled = appLockEnabled,
                     smartNotificationsEnabled = smartNotificationsEnabled,
                     smartNotificationThreshold = smartNotificationThreshold
                 )
 
-                Timber.d("Settings loaded: provider=$provider, hasApiKey=${!apiKey.isNullOrBlank()}, autoSummary=$autoSummarizationEnabled@$autoSummarizationHour, biometric=$biometricEnabled, smartNotifications=$smartNotificationsEnabled@$smartNotificationThreshold")
+                Timber.d("Settings loaded: provider=$provider, hasApiKey=${!apiKey.isNullOrBlank()}, autoSummary=$autoSummarizationEnabled@$autoSummarizationHour, appLock=$appLockEnabled, smartNotifications=$smartNotificationsEnabled@$smartNotificationThreshold")
             } catch (e: Exception) {
                 Timber.e(e, "Failed to load settings")
                 _uiState.value = SettingsUiState.Error("Failed to load settings: ${e.message}")
@@ -255,19 +257,29 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setBiometricEnabled(enabled: Boolean) {
+    fun setAppLockEnabled(enabled: Boolean) {
         viewModelScope.launch {
             try {
-                Timber.d("Setting biometric enabled: $enabled")
-                preferencesRepository.setBiometricEnabled(enabled)
+                // Without a screen lock the app PIN protects the app; create it first
+                if (enabled && appLockManager.needsPinSetup()) {
+                    showAppLockPinSetup(true)
+                    return@launch
+                }
+                Timber.d("Setting app lock enabled: $enabled")
+                preferencesRepository.setAppLockEnabled(enabled)
 
                 // Reload settings to update UI
                 loadSettings()
             } catch (e: Exception) {
-                Timber.e(e, "Failed to set biometric enabled")
+                Timber.e(e, "Failed to set app lock enabled")
                 _uiState.value = SettingsUiState.Error("Failed to update setting: ${e.message}")
             }
         }
+    }
+
+    private fun showAppLockPinSetup(show: Boolean) {
+        val state = _uiState.value as? SettingsUiState.Success ?: return
+        _uiState.value = state.copy(showAppLockPinSetup = show)
     }
 
     fun setSmartNotificationsEnabled(enabled: Boolean) {
@@ -355,7 +367,8 @@ sealed class SettingsUiState {
         val autoSummarizationEnabled: Boolean = false,
         val autoSummarizationHour: Int = 20,
         val dataRetentionDays: Int = 30,
-        val biometricEnabled: Boolean = false,
+        val appLockEnabled: Boolean = true,
+        val showAppLockPinSetup: Boolean = false,
         val smartNotificationsEnabled: Boolean = false,
         val smartNotificationThreshold: Float = 0.6f
     ) : SettingsUiState()

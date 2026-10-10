@@ -35,7 +35,7 @@ class PreferencesRepositoryImpl @Inject constructor(
         val AUTO_SUMMARIZATION_ENABLED = booleanPreferencesKey("auto_summarization_enabled")
         val AUTO_SUMMARIZATION_HOUR = stringPreferencesKey("auto_summarization_hour")
         val DATA_RETENTION_DAYS = stringPreferencesKey("data_retention_days")
-        val BIOMETRIC_ENABLED = booleanPreferencesKey("biometric_enabled")
+        val APP_LOCK_ENABLED = booleanPreferencesKey("app_lock_enabled")
         val SMART_NOTIFICATIONS_ENABLED = booleanPreferencesKey("smart_notifications_enabled")
         val SMART_NOTIFICATION_THRESHOLD = stringPreferencesKey("smart_notification_threshold")
         val SELECTED_OPENAI_MODEL = stringPreferencesKey("selected_openai_model")
@@ -158,16 +158,16 @@ class PreferencesRepositoryImpl @Inject constructor(
         }
     }
 
-    // Biometric authentication preferences
-    override suspend fun isBiometricEnabled(): Boolean {
+    // App lock
+    override suspend fun isAppLockEnabled(): Boolean {
         return context.dataStore.data.map { preferences ->
-            preferences[PreferencesKeys.BIOMETRIC_ENABLED] ?: false // Default to disabled
+            preferences[PreferencesKeys.APP_LOCK_ENABLED] ?: true // Default to enabled
         }.first()
     }
 
-    override suspend fun setBiometricEnabled(enabled: Boolean) {
+    override suspend fun setAppLockEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.BIOMETRIC_ENABLED] = enabled
+            preferences[PreferencesKeys.APP_LOCK_ENABLED] = enabled
         }
     }
 

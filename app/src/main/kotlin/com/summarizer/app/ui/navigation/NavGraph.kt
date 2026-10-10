@@ -22,7 +22,6 @@ import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.summarizer.app.domain.model.AIProvider
-import com.summarizer.app.domain.repository.AuthRepository
 import com.summarizer.app.domain.repository.PreferencesRepository
 import com.summarizer.app.ui.screens.auth.PinSetupScreen
 import com.summarizer.app.ui.screens.models.ModelDownloadScreen
@@ -36,6 +35,7 @@ import com.summarizer.app.ui.screens.settings.SettingsScreen
 import com.summarizer.app.ui.screens.summary.SummaryDisplayScreen
 import com.summarizer.app.ui.screens.threads.ThreadDetailScreen
 import com.summarizer.app.ui.screens.threads.ThreadListScreen
+import com.summarizer.app.util.BiometricHelper
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.launch
 
@@ -92,14 +92,12 @@ fun NavGraph(
             RepositoriesEntryPoint::class.java
         )
     }
-    val authRepository = entryPoint.authRepository()
     val preferencesRepository = entryPoint.preferencesRepository()
 
     var startDestination by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        val onboardingComplete = preferencesRepository.hasCompletedOnboarding()
-        startDestination = if (onboardingComplete && authRepository.hasPin()) {
+        startDestination = if (preferencesRepository.hasCompletedOnboarding()) {
             Screen.ThreadList.route
         } else {
             ONBOARDING_GRAPH
@@ -165,7 +163,11 @@ fun NavGraph(
 
             composable(Screen.PermissionExplanation.route) {
                 PermissionExplanationScreen(
-                    onContinueClick = { navController.navigate(Screen.PinSetup.route) }
+                    onContinueClick = {
+                        // The phone's own screen lock protects the app; an app PIN only without one
+                        val next = if (BiometricHelper.isDeviceSecure(context)) Screen.AIProviderChoice else Screen.PinSetup
+                        navController.navigate(next.route)
+                    }
                 )
             }
 
@@ -302,6 +304,5 @@ private fun NavHostController.restartAtOnboarding() {
 @dagger.hilt.EntryPoint
 @dagger.hilt.InstallIn(dagger.hilt.components.SingletonComponent::class)
 interface RepositoriesEntryPoint {
-    fun authRepository(): AuthRepository
     fun preferencesRepository(): PreferencesRepository
 }
