@@ -71,7 +71,8 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private fun loadSettings() {
+    /** @param clearValidation drop the last key validation result (the key was saved or removed) */
+    private fun loadSettings(clearValidation: Boolean = false) {
         viewModelScope.launch {
             try {
                 val provider = preferencesRepository.getAIProvider()
@@ -101,7 +102,7 @@ class SettingsViewModel @Inject constructor(
                     smartNotificationThreshold = smartNotificationThreshold,
                     activeModelName = activeModel?.name,
                     isValidating = previous?.isValidating ?: false,
-                    validationMessage = previous?.validationMessage,
+                    validationMessage = if (clearValidation) null else previous?.validationMessage,
                     showAppLockPinSetup = previous?.showAppLockPinSetup ?: false
                 )
 
@@ -146,8 +147,8 @@ class SettingsViewModel @Inject constructor(
                     workScheduler.refreshAutoSummarization()
                 }
 
-                // Reload settings to update UI
-                loadSettings()
+                // A previous validation result belonged to the old key
+                loadSettings(clearValidation = true)
 
                 Timber.i("API key saved successfully")
             } catch (e: Exception) {
@@ -211,8 +212,7 @@ class SettingsViewModel @Inject constructor(
                 // Network is no longer required for scheduled runs
                 workScheduler.refreshAutoSummarization()
 
-                // Reload settings to update UI
-                loadSettings()
+                loadSettings(clearValidation = true)
 
                 Timber.i("API key cleared, switched to Local provider")
             } catch (e: Exception) {

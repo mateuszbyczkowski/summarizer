@@ -51,6 +51,8 @@ class GenerateSummaryUseCase @Inject constructor(
      * @param allowRepeat When the thread has no new messages (incremental mode), summarize the
      *        recent conversation again instead of failing. Used for summaries the user asks for;
      *        scheduled runs skip idle threads.
+     * @param forceFull Summarize the whole conversation this time, whatever the thread's
+     *        summarization mode (a one-off full re-summary)
      * @param onProgress Receives each stage and, while the model writes, the overview written so
      *        far; may be called from a background thread
      * @return Result containing the generated Summary, or [NothingToSummarizeException] when the
@@ -59,6 +61,7 @@ class GenerateSummaryUseCase @Inject constructor(
     suspend fun execute(
         threadId: String,
         allowRepeat: Boolean = false,
+        forceFull: Boolean = false,
         onProgress: ((stage: GenerationStage, partialOverview: String?) -> Unit)? = null
     ): Result<Summary> = withContext(Dispatchers.Default) {
         suspendRunCatching {
@@ -73,7 +76,7 @@ class GenerateSummaryUseCase @Inject constructor(
 
             // Step 2: Fetch messages based on summarization mode
             val lastTimestamp = settings.lastSummarizedMessageTimestamp
-            val incremental = settings.summarizationMode == SummarizationMode.INCREMENTAL && lastTimestamp != null
+            val incremental = !forceFull && settings.summarizationMode == SummarizationMode.INCREMENTAL && lastTimestamp != null
             val newMessages = if (incremental) {
                 messageRepository.getMessagesForThreadSince(threadId, lastTimestamp + 1)
             } else {
@@ -111,7 +114,7 @@ class GenerateSummaryUseCase @Inject constructor(
                 languageName = language
             ) ?: throw NothingToSummarizeException("No messages to summarize")
 
-            Timber.d("Summarizing ${messages.size} messages (mode: ${settings.summarizationMode}, language: $language, prompt: ${prompt.length} chars)")
+            Timber.d("Summarizing ${messages.size} messages (mode: ${if (incremental) "incremental" else "full"}, language: $language, prompt: ${prompt.length} chars)")
 
             // Step 5: Generate summary. Transient failures are retried by the engine itself.
             onProgress?.invoke(GenerationStage.READING, null)

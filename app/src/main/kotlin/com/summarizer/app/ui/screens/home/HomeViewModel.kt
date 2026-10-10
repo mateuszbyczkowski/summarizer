@@ -70,19 +70,8 @@ class HomeViewModel @Inject constructor(
     private val overviews = threadRepository.getThreadOverviews()
         .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
 
-    /** Generation state of every thread that has one, by thread ID. */
-    private val generations = overviews
-        .map { list -> list.map { it.thread.threadId } }
-        .distinctUntilChanged()
-        .flatMapLatest { ids ->
-            if (ids.isEmpty()) {
-                flowOf(emptyMap())
-            } else {
-                combine(ids.map { id -> coordinator.stateFor(id).map { id to it } }) { states ->
-                    states.mapNotNull { (id, state) -> state?.let { id to it } }.toMap()
-                }
-            }
-        }
+    /** Generation state of every thread that has one, by thread ID (one WorkManager query). */
+    private val generations = coordinator.runningStates()
 
     val uiState: StateFlow<HomeUiState> = combine(overviews, generations, minuteTicks()) { list, states, now ->
         val today = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).toLocalDate()

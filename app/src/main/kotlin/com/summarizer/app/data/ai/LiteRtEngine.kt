@@ -126,6 +126,8 @@ class LiteRtEngine @Inject constructor(
         // One generation at a time: waiting for another summary must not count against this
         // one's timeout, and a timeout must only cancel this summary's conversation
         val raw = generationMutex.withLock { coroutineScope {
+            // Reset before the conversation exists, so a cancel during its creation is kept
+            cancelRequestedAt = 0L
             val nativeCall = async(dispatcher) {
                 val loaded = engine ?: throw AIEngineError.ModelNotLoaded
                 val config = ConversationConfig(
@@ -134,7 +136,11 @@ class LiteRtEngine @Inject constructor(
                     maxOutputToken = maxTokens
                 )
                 loaded.createConversation(config).use { conversation ->
-                    synchronized(conversationLock) { activeConversation = conversation }
+                    synchronized(conversationLock) {
+                        activeConversation = conversation
+                        // Cancelled while the conversation was being created
+                        if (cancelRequestedAt > 0) conversation.cancelProcess()
+                    }
                     try {
                         streamReply(conversation, prompt, onPartial)
                     } finally {
@@ -167,24 +173,25 @@ class LiteRtEngine @Inject constructor(
         var lastChunk = ""
         var chunkCount = 0
         // LiteRT-LM 0.18 does not document whether a message carries only the new text or
-        // everything so far. Treat it as cumulative only while every message extends the
-        // previous one; a single exception means the messages are pieces to be joined.
-        var looksCumulative = true
+        // everything so far. Count how many messages extend the previous one: mostly yes means
+        // cumulative (an occasional rewrite of the last character, e.g. a finished multi-byte
+        // letter, does not flip it), mostly no means pieces to be joined.
+        var extending = 0
+        var notExtending = 0
+        fun looksCumulative() = extending > notExtending
         val done = CountDownLatch(1)
         var error: Throwable? = null
         val started = SystemClock.elapsedRealtime()
         var firstTextAt = 0L
-        cancelRequestedAt = 0L
-
-        fun text(): String = if (looksCumulative && chunkCount > 1) lastChunk else pieces.toString()
+        fun text(): String = if (looksCumulative() && chunkCount > 1) lastChunk else pieces.toString()
 
         conversation.sendMessageAsync(prompt, object : MessageCallback {
             override fun onMessage(message: Message) {
                 val chunk = message.contents.contents.filterIsInstance<Content.Text>().joinToString("") { it.text }
                 if (chunk.isEmpty()) return
                 if (firstTextAt == 0L) firstTextAt = SystemClock.elapsedRealtime()
-                if (chunkCount > 0 && !(chunk.length >= lastChunk.length && chunk.startsWith(lastChunk))) {
-                    looksCumulative = false
+                if (chunkCount > 0) {
+                    if (chunk.length > lastChunk.length && chunk.startsWith(lastChunk)) extending++ else notExtending++
                 }
                 pieces.append(chunk)
                 lastChunk = chunk

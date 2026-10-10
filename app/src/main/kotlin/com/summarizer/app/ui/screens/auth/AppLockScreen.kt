@@ -75,12 +75,14 @@ fun AppLockScreen(
         )
         LockMethod.PIN -> {
             val viewModel: PinLockViewModel = hiltViewModel(key = "pin-lock")
-            LaunchedEffect(session) { viewModel.startSession() }
+            // Reset during composition, before PinLockScreen reads the state: a LaunchedEffect would
+            // run after the first frame, which could still see "unlocked" from the previous lock
+            remember(session) { viewModel.startSession() }
             PinLockScreen(onUnlocked = onUnlocked, viewModel = viewModel)
         }
         LockMethod.PIN_SETUP -> {
             val viewModel: PinSetupViewModel = hiltViewModel(key = "pin-setup")
-            LaunchedEffect(session) { viewModel.restart() }
+            remember(session) { viewModel.restart() }
             PinSetupScreen(
                 onPinSet = onUnlocked,
                 subtitle = stringResource(R.string.lock_pin_setup_required_subtitle),

@@ -12,8 +12,6 @@
     <string name="dismiss">Dismiss</string>
     <string name="cd_more_options">More options</string>
     <string name="cd_search">Search</string>
-    <string name="cd_follow">Follow</string>
-    <string name="cd_unfollow">Unfollow</string>
     <string name="badge_recommended">Recommended</string>
     <string name="size_mb">%1$d MB</string>
     <string name="size_gb">%1$.1f GB</string>
@@ -204,27 +202,6 @@
     <string name="models_resume">Resume Download</string>
     <string name="models_skip">Skip for Now</string>
 
-    <!-- Thread detail -->
-    <string name="thread_detail_fallback_title">Thread</string>
-    <string name="thread_detail_mode_title">Summarization Mode</string>
-    <string name="thread_detail_mode_incremental">Incremental</string>
-    <string name="thread_detail_mode_incremental_description">New messages only</string>
-    <string name="thread_detail_mode_full">Full</string>
-    <string name="thread_detail_mode_full_description">All messages</string>
-    <string name="thread_detail_empty_title">No messages in this thread</string>
-    <string name="thread_detail_empty_body">New messages in this chat will appear here as they arrive.</string>
-    <string name="thread_detail_error_title">Error loading messages</string>
-    <string name="thread_detail_summarize">Summarize Now</string>
-    <string name="message_type_image">📷 Image</string>
-    <string name="message_type_video">📹 Video</string>
-    <string name="message_type_audio">🎵 Audio</string>
-    <string name="message_type_document">📄 Document</string>
-    <string name="message_type_location">📍 Location</string>
-    <string name="message_type_contact">👤 Contact</string>
-    <string name="message_type_sticker">Sticker</string>
-    <string name="message_type_deleted">🚫 Deleted</string>
-    <string name="message_type_system">System</string>
-
     <!-- Search -->
     <string name="search_placeholder">Search summaries and messages…</string>
     <string name="search_clear">Clear search</string>
@@ -243,14 +220,6 @@
     </plurals>
 
     <!-- Summary -->
-    <string name="summary_title">Summary: %1$s</string>
-    <string name="summary_title_fallback">Summary</string>
-    <string name="summary_regenerate">Regenerate summary</string>
-    <string name="summary_initial_title">Generate AI Summary</string>
-    <string name="summary_initial_body">Create a concise summary of this conversation using AI</string>
-    <string name="summary_generate">Generate Summary</string>
-    <string name="summary_generating">Generating summary…</string>
-    <string name="summary_generating_hint">On-device summaries can take a few minutes. You can leave the app: we\'ll notify you when it\'s ready.</string>
     <string name="summary_channel_progress">Summary in progress</string>
     <string name="summary_channel_result">Summary ready</string>
     <string name="summary_notification_progress_title">Summarizing…</string>
@@ -259,16 +228,4 @@
     <string name="summary_notification_failed_title">Summary failed</string>
     <string name="summary_notification_failed_text">Could not generate the summary</string>
     <string name="summary_notification_nothing_new_title">Nothing new to summarize</string>
-    <string name="summary_error_title">Error</string>
-    <string name="summary_section_raw_output">Raw AI Output</string>
-    <string name="summary_section_overview">Overview</string>
-    <string name="summary_section_key_topics">Key Topics</string>
-    <string name="summary_section_action_items">Action Items</string>
-    <string name="summary_section_announcements">Announcements</string>
-    <string name="summary_section_participants">Participant Highlights</string>
-    <string name="summary_show_raw_output">Show Raw Output</string>
-    <string name="summary_hide_raw_output">Hide Raw Output</string>
-    <string name="summary_generated_at">Generated %1$s</string>
-    <string name="summary_assigned_to">Assigned: %1$s</string>
-    <string name="summary_priority">Priority: %1$s</string>
 </resources>

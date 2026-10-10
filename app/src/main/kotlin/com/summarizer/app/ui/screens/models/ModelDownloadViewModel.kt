@@ -10,6 +10,7 @@ import com.summarizer.app.data.download.ModelDownloadManager
 import com.summarizer.app.di.ApplicationScope
 import com.summarizer.app.domain.ai.AIEngine
 import com.summarizer.app.domain.model.AIModel
+import com.summarizer.app.domain.model.AIProvider
 import com.summarizer.app.domain.model.ModelDownloadState
 import com.summarizer.app.domain.repository.ModelRepository
 import com.summarizer.app.domain.repository.PreferencesRepository
@@ -17,6 +18,7 @@ import com.summarizer.app.domain.repository.ThreadRepository
 import com.summarizer.app.domain.usecase.SummaryGenerationCoordinator
 import com.summarizer.app.util.StorageHelper
 import com.summarizer.app.util.ThreadNaming
+import com.summarizer.app.worker.WorkScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -42,6 +44,7 @@ class ModelDownloadViewModel @Inject constructor(
     private val modelRepository: ModelRepository,
     private val downloadManager: ModelDownloadManager,
     private val preferencesRepository: PreferencesRepository,
+    private val workScheduler: WorkScheduler,
     private val aiEngine: AIEngine,
     threadRepository: ThreadRepository,
     private val generationCoordinator: SummaryGenerationCoordinator,
@@ -277,6 +280,11 @@ class ModelDownloadViewModel @Inject constructor(
                 filePath = model.localFilePath,
                 timestamp = System.currentTimeMillis()
             )
+            // Choosing an on-device model means using the on-device engine
+            if (preferencesRepository.getAIProvider() != AIProvider.LOCAL) {
+                preferencesRepository.setAIProvider(AIProvider.LOCAL)
+                workScheduler.refreshAutoSummarization()
+            }
 
             // Unload any previously loaded model so the new one takes effect immediately.
             if (aiEngine.isModelLoaded() &&

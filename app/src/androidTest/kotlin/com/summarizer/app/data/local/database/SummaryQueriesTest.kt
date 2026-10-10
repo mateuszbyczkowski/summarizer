@@ -8,6 +8,9 @@ import com.summarizer.app.data.local.entity.SummaryEntity
 import com.summarizer.app.data.local.entity.ThreadEntity
 import com.summarizer.app.data.repository.ThreadRepositoryImpl
 import com.summarizer.app.domain.model.ActionItem
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -23,13 +26,19 @@ class SummaryQueriesTest {
 
     private lateinit var db: AppDatabase
 
+    // Shares the overview flow; cancelled after each test
+    private val applicationScope = CoroutineScope(SupervisorJob())
+
     @Before
     fun setUp() {
         db = Room.inMemoryDatabaseBuilder(InstrumentationRegistry.getInstrumentation().targetContext, AppDatabase::class.java).build()
     }
 
     @After
-    fun tearDown() = db.close()
+    fun tearDown() {
+        applicationScope.cancel()
+        db.close()
+    }
 
     private fun message(threadId: String, timestamp: Long) = MessageEntity(
         threadId = threadId,
@@ -64,7 +73,7 @@ class SummaryQueriesTest {
             summary("a", endTimestamp = 200, generatedAt = 2_000, actions = listOf(ActionItem("x"), ActionItem("y", done = true)))
         )
 
-        val overviews = ThreadRepositoryImpl(db.threadDao(), db.summaryDao()).getThreadOverviews().first()
+        val overviews = ThreadRepositoryImpl(db.threadDao(), db.summaryDao(), applicationScope).getThreadOverviews().first()
 
         assertEquals(listOf("a", "b"), overviews.map { it.thread.threadId })
         assertEquals(200L, overviews[0].latestSummary?.endTimestamp)

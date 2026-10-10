@@ -233,6 +233,7 @@ private fun EngineHub(
     // The tab the user is looking at; follows the active provider until they pick one
     var tab by rememberSaveable { mutableStateOf<AIProvider?>(null) }
     val shownTab = tab ?: provider
+    val activeLocalModelId by viewModel.activeModelId.collectAsStateWithLifecycle()
 
     Column(modifier = modifier) {
         SingleChoiceSegmentedButtonRow(
@@ -244,7 +245,9 @@ private fun EngineHub(
                 selected = shownTab == AIProvider.LOCAL,
                 onClick = {
                     tab = AIProvider.LOCAL
-                    if (success != null && provider != AIProvider.LOCAL) {
+                    // Only switch when a local model is ready; otherwise the user is just looking,
+                    // and the engine switches once they pick a model
+                    if (success != null && provider != AIProvider.LOCAL && activeLocalModelId != null) {
                         engineViewModel.onEvent(SettingsEvent.SelectProvider(AIProvider.LOCAL))
                     }
                 },

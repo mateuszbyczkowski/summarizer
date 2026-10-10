@@ -32,7 +32,7 @@ object SummaryDates {
     // amount ("$2.10", "1.5 kg", "2.10 zł")
     private val NUMERIC_DATE = Regex(
         "(?<![\\d.,:/$€£])(\\d{1,2})[./](\\d{1,2})(?:[./](\\d{4}|\\d{2}))?(?![\\d:/]|[.,]\\d)" +
-            "(?!\\s*(?:zł|zl|pln|eur|usd|kg|km|ml|mg|g|l|m|%|\\$|€)(?!\\p{L}))",
+            "(?!\\s*(?:zł|zl|pln|eur|usd|kg|km|ml|mg|%|\\$|€)(?!\\p{L}))",
         RegexOption.IGNORE_CASE
     )
 
@@ -66,8 +66,15 @@ object SummaryDates {
     private val DEADLINE_FILLER = Regex("^[\\s:,]*(?:$DEADLINE_WORD(?!\\p{L}))?[\\s:,]*(?:$WEEKDAY)?[\\s:,.]*$", RegexOption.IGNORE_CASE)
     private val DEADLINE_BEFORE = Regex("(?<!\\p{L})$DEADLINE_WORD\\s*:?\\s*(?:$WEEKDAY\\s*)?$", RegexOption.IGNORE_CASE)
     private val TRAILING_PARENS = Regex("\\s*[(\\[]([^()\\[\\]]*)[)\\]]\\s*\\.?\\s*$")
+    private val WHEN_FILLER = Regex(
+        "^\\s*(?:(?:w|we|do|od|na|by|on|at|until|o|godz\\.?|g\\.)(?!\\p{L})\\s*)*(?:$WEEKDAY)?\\s*$",
+        RegexOption.IGNORE_CASE
+    )
     private val WEEKDAY_ONLY = Regex("^\\s*(?:$WEEKDAY\\s*)*$", RegexOption.IGNORE_CASE)
     private val SEPARATOR = Regex("\\s+[-–—]\\s+|\\s*\\|\\s*")
+    private val WEEKDAY_BEFORE = Regex("(?<!\\p{L})$WEEKDAY\\s*$", RegexOption.IGNORE_CASE)
+    /** What may stand between a date and its time for both to be one span: "21.10, 18:00", "21.10 o 18:00". */
+    private val SPAN_JOINER = Regex("^[\\s,]*(?:(?:o|at|godz\\.?|g\\.)\\s*)?$", RegexOption.IGNORE_CASE)
     private val EDGE_PUNCTUATION = " \t-–—:|,;."
     private val WHITESPACE = Regex("\\s+")
 
@@ -86,10 +93,10 @@ object SummaryDates {
         add(11, "listopada", "listopad", "lis", "november", "nov")
         add(12, "grudnia", "grudzień", "grudzien", "gru", "december", "dec")
     }
-    /** Month names allowed before the day ("October 17"); abbreviations collide with names and words. */
+    /** Month names allowed before the day ("Oct 17"); "Jan" and "Mar" are left out (a name and a Polish word). */
     private val ENGLISH_MONTHS = setOf(
-        "january", "february", "march", "april", "may", "june", "july",
-        "august", "september", "october", "november", "december"
+        "january", "february", "feb", "march", "april", "apr", "may", "june", "jun", "july", "jul",
+        "august", "aug", "september", "sept", "sep", "october", "oct", "november", "nov", "december", "dec"
     )
 
     /** All dates in [text] that resolve to a real day, in reading order. */
@@ -127,6 +134,38 @@ object SummaryDates {
             .minByOrNull { it.range.first }
             ?.let { m -> TimeMatch(m.range, LocalTime.of(m.groupValues[1].toInt(), m.groupValues[2].toInt())) }
 
+    /** Every time of day in [text], in reading order; ranges cover only the time ("7:30"), not "o"/"at". */
+    fun findTimes(text: String): List<TimeMatch> =
+        (TIME_COLON.findAll(text) + TIME_DOT.findAll(text))
+            .map { m ->
+                val digits = m.groups[1]!!.range
+                TimeMatch(digits.first..m.range.last, LocalTime.of(m.groupValues[1].toInt(), m.groupValues[2].toInt()))
+            }
+            .sortedBy { it.range.first }
+            .toList()
+
+    /**
+     * Spans of [text] that name a date or time, for highlighting: a weekday before a date is
+     * included ("pt 17.10") and a date followed by its time is one span ("wt 21.10, 18:00").
+     */
+    fun findDateTimeSpans(text: String, reference: LocalDate): List<IntRange> {
+        val dates = findDates(text, reference).map { match ->
+            val weekday = WEEKDAY_BEFORE.find(text.substring(0, match.range.first))
+            // "17 października." keeps its full stop out of the mark
+            val end = if (text[match.range.last] == '.') match.range.last - 1 else match.range.last
+            (weekday?.range?.first ?: match.range.first)..end
+        }
+        val times = findTimes(text).map { it.range }
+            .filter { time -> dates.none { time.first <= it.last && it.first <= time.last } }
+        val spans = dates.toMutableList()
+        times.forEach { time ->
+            // A time right after a date belongs to it
+            val index = spans.indexOfFirst { it.last < time.first && SPAN_JOINER.matches(text.substring(it.last + 1, time.first)) }
+            if (index >= 0 && spans[index] in dates) spans[index] = spans[index].first..time.last else spans += time
+        }
+        return spans.sortedBy { it.first }
+    }
+
     /**
      * A DATES line such as "17.10 7:30 | Wycieczka, autobus": the part with the date and time,
      * then what happens; text after the first comma becomes the detail (usually the place).
@@ -149,7 +188,11 @@ object SummaryDates {
         val withoutDate = whenText.blankOut(date?.range)
         val time = findTime(withoutDate)
         val rest = withoutDate.blankOut(time?.range).cleanup()
-        val meaningfulRest = rest.takeIf { it.isNotEmpty() && !WEEKDAY_ONLY.matches(it) }
+        // Next to a resolved date, leftovers like "w piątek" or "do" are not an event name; without
+        // one, "w środę" is the only "when" there is and stays as the detail
+        val meaningfulRest = rest.takeIf {
+            it.isNotEmpty() && !WEEKDAY_ONLY.matches(it) && !(date != null && WHEN_FILLER.matches(it))
+        }
 
         // Text next to a resolved date is the event ("17.10 Wycieczka | Kopernik": event
         // "Wycieczka", detail "Kopernik"); next to an unresolved one ("w środę | Basen") it is

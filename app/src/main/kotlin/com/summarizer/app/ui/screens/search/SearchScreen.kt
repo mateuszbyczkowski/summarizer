@@ -80,14 +80,14 @@ import java.time.format.FormatStyle
  * recent searches before typing, filter chips (type and chat) and highlighted matches. Results
  * open in context: a summary or task opens the thread's summary, a message opens the thread.
  *
- * @param onSummaryClick opens a thread's latest summary; falls back to [onThreadClick]
+ * @param onSummaryClick opens the summary that matched in its thread; falls back to [onThreadClick]
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     onBackPressed: () -> Unit,
     onThreadClick: (String) -> Unit,
-    onSummaryClick: ((threadId: String) -> Unit)? = null,
+    onSummaryClick: ((threadId: String, summaryId: Long) -> Unit)? = null,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -99,9 +99,9 @@ fun SearchScreen(
         viewModel.onResultOpened()
         onThreadClick(threadId)
     }
-    val openSummary = { threadId: String ->
+    val openSummary = { threadId: String, summaryId: Long ->
         viewModel.onResultOpened()
-        (onSummaryClick ?: onThreadClick)(threadId)
+        if (onSummaryClick != null) onSummaryClick(threadId, summaryId) else onThreadClick(threadId)
     }
 
     SearchBar(
@@ -291,7 +291,7 @@ private fun FilterChips(
 @Composable
 private fun SearchResultsList(
     state: SearchUiState.Success,
-    onSummaryClick: (String) -> Unit,
+    onSummaryClick: (threadId: String, summaryId: Long) -> Unit,
     onMessageClick: (String) -> Unit
 ) {
     val context = LocalContext.current
@@ -310,7 +310,7 @@ private fun SearchResultsList(
                 SectionHeader(stringResource(R.string.search_section_summaries, state.summaries.size))
             }
             items(state.summaries, key = { "s-${it.id}" }) { summary ->
-                SummaryResult(summary, query, context) { onSummaryClick(summary.threadId) }
+                SummaryResult(summary, query, context) { onSummaryClick(summary.threadId, summary.id) }
             }
         }
         if (state.tasks.isNotEmpty()) {
@@ -318,7 +318,7 @@ private fun SearchResultsList(
                 SectionHeader(stringResource(R.string.search_section_tasks, state.tasks.size))
             }
             items(state.tasks, key = { "t-${it.summary.id}-${it.index}" }) { hit ->
-                TaskResult(hit, query) { onSummaryClick(hit.summary.threadId) }
+                TaskResult(hit, query) { onSummaryClick(hit.summary.threadId, hit.summary.id) }
             }
         }
         if (state.messages.isNotEmpty()) {

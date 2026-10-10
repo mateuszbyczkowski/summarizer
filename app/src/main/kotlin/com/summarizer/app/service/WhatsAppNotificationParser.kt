@@ -47,7 +47,8 @@ data class ParsedMessage(
 object WhatsAppNotificationParser {
 
     private const val CATEGORY_MESSAGE = "msg"
-    private const val SELF_SENDER = "You"
+    /** Sender name of messages the user sent. */
+    const val SELF_SENDER = "You"
     private const val UNKNOWN_SENDER = "Unknown"
 
     private val SUMMARY_TEXT = Regex(

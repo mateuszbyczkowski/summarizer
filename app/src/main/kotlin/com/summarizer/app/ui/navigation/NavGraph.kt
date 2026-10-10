@@ -1,5 +1,6 @@
 package com.summarizer.app.ui.navigation
 
+import android.net.Uri
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.EaseInOutCubic
@@ -47,15 +48,17 @@ import com.summarizer.app.ui.screens.onboarding.PermissionExplanationScreen
 import com.summarizer.app.ui.screens.onboarding.WelcomeScreen
 import com.summarizer.app.ui.screens.search.SearchScreen
 import com.summarizer.app.ui.screens.settings.SettingsScreen
-import com.summarizer.app.ui.screens.summary.SummaryDisplayScreen
 import com.summarizer.app.ui.screens.tasks.TasksScreen
-import com.summarizer.app.ui.screens.threads.ThreadDetailScreen
+import com.summarizer.app.ui.screens.thread.ThreadScreen
+import com.summarizer.app.ui.screens.thread.ThreadTab
+import com.summarizer.app.ui.screens.thread.ThreadViewModel
 import com.summarizer.app.util.BiometricHelper
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.launch
 
 private const val ONBOARDING_GRAPH = "onboarding"
 private const val ARG_ONBOARDING = "onboarding"
+private const val NO_SUMMARY_ID = -1L
 
 sealed class Screen(val route: String) {
     object Welcome : Screen("welcome")
@@ -73,11 +76,21 @@ sealed class Screen(val route: String) {
     object Tasks : Screen("tasks")
     object Settings : Screen("settings")
     object Search : Screen("search")
-    object ThreadDetail : Screen("thread_detail/{threadId}") {
-        fun createRoute(threadId: String) = "thread_detail/$threadId"
-    }
-    object SummaryDisplay : Screen("summary/{threadId}") {
-        fun createRoute(threadId: String) = "summary/$threadId"
+    object Thread : Screen(
+        "thread/{${ThreadViewModel.ARG_THREAD_ID}}" +
+            "?${ThreadViewModel.ARG_TAB}={${ThreadViewModel.ARG_TAB}}" +
+            "&${ThreadViewModel.ARG_SUMMARY_ID}={${ThreadViewModel.ARG_SUMMARY_ID}}"
+    ) {
+        /**
+         * @param tab Tab to open; null picks the summary when there is one, else the messages
+         * @param summaryId Summary to show instead of the latest
+         */
+        fun createRoute(threadId: String, tab: ThreadTab? = null, summaryId: Long? = null): String =
+            buildString {
+                append("thread/").append(Uri.encode(threadId))
+                append("?${ThreadViewModel.ARG_TAB}=").append(tab?.route.orEmpty())
+                append("&${ThreadViewModel.ARG_SUMMARY_ID}=").append(summaryId ?: NO_SUMMARY_ID)
+            }
     }
 }
 
@@ -126,7 +139,6 @@ fun NavGraph(
         when (pendingNavigation) {
             is PendingNavigation.Thread -> navController.openThread(pendingNavigation.threadId) {
                 popUpTo(Screen.Home.route)
-                launchSingleTop = true
             }
             is PendingNavigation.Summary -> navController.openSummary(pendingNavigation.threadId) {
                 popUpTo(Screen.Home.route)
@@ -322,49 +334,51 @@ fun NavGraph(
             composable(Screen.Search.route) {
                 SearchScreen(
                     onBackPressed = { navController.popBackStack() },
-                    onThreadClick = { threadId -> navController.openThread(threadId) },
-                    onSummaryClick = { threadId -> navController.openSummary(threadId) }
+                    onThreadClick = { threadId -> navController.openThread(threadId, ThreadTab.MESSAGES) },
+                    onSummaryClick = { threadId, summaryId -> navController.openSummary(threadId, summaryId) }
                 )
             }
 
             composable(
-                route = Screen.ThreadDetail.route,
-                arguments = listOf(navArgument("threadId") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val threadId = backStackEntry.arguments?.getString("threadId") ?: ""
-                ThreadDetailScreen(
-                    threadId = threadId,
-                    onBackClick = { navController.popBackStack() },
-                    onSummarizeClick = { id, _ ->
-                        navController.navigate(Screen.SummaryDisplay.createRoute(id))
+                route = Screen.Thread.route,
+                arguments = listOf(
+                    navArgument(ThreadViewModel.ARG_THREAD_ID) { type = NavType.StringType },
+                    navArgument(ThreadViewModel.ARG_TAB) {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                    navArgument(ThreadViewModel.ARG_SUMMARY_ID) {
+                        type = NavType.LongType
+                        defaultValue = NO_SUMMARY_ID
                     }
                 )
-            }
-
-            composable(
-                route = Screen.SummaryDisplay.route,
-                arguments = listOf(navArgument("threadId") { type = NavType.StringType })
             ) {
-                SummaryDisplayScreen(
-                    onBackClick = { navController.popBackStack() }
-                )
+                ThreadScreen(onBackClick = { navController.popBackStack() })
             }
         }
     }
 }
 
 /**
- * Opens a thread. The only place that builds the thread route, so the thread screen can be
- * swapped here.
+ * Opens a thread on its summary when it has one, else on its messages. The only place, with
+ * [openSummary], that builds the thread route.
  */
-private fun NavHostController.openThread(threadId: String, builder: NavOptionsBuilder.() -> Unit = {}) {
-    navigate(Screen.ThreadDetail.createRoute(threadId), builder)
+private fun NavHostController.openThread(
+    threadId: String,
+    tab: ThreadTab? = null,
+    builder: NavOptionsBuilder.() -> Unit = {}
+) {
+    navigate(Screen.Thread.createRoute(threadId, tab), builder)
 }
 
-/** Opens a thread's summary, with the thread underneath so Back returns to it. */
-private fun NavHostController.openSummary(threadId: String, builder: NavOptionsBuilder.() -> Unit = {}) {
-    openThread(threadId, builder)
-    navigate(Screen.SummaryDisplay.createRoute(threadId)) { launchSingleTop = true }
+/** Opens a thread on its summary tab: the latest summary, or [summaryId] (e.g. a search match). */
+private fun NavHostController.openSummary(
+    threadId: String,
+    summaryId: Long? = null,
+    builder: NavOptionsBuilder.() -> Unit = {}
+) {
+    navigate(Screen.Thread.createRoute(threadId, ThreadTab.SUMMARY, summaryId), builder)
 }
 
 /** Switches tabs: one copy of each tab on the stack, each keeping its state, home at the bottom. */

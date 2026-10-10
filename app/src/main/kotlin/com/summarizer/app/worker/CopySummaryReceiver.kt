@@ -2,17 +2,12 @@ package com.summarizer.app.worker
 
 import android.app.NotificationManager
 import android.content.BroadcastReceiver
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.os.Build
-import android.os.PersistableBundle
-import android.widget.Toast
-import com.summarizer.app.R
 import com.summarizer.app.di.ApplicationScope
 import com.summarizer.app.domain.repository.PreferencesRepository
 import com.summarizer.app.domain.repository.SummaryRepository
+import com.summarizer.app.util.SummaryClipboard
 import com.summarizer.app.util.SummaryFormatter
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -31,7 +26,6 @@ class CopySummaryReceiver : BroadcastReceiver() {
     companion object {
         const val EXTRA_SUMMARY_ID = "summary_id"
         const val EXTRA_NOTIFICATION_ID = "notification_id"
-        private const val EXTRA_IS_SENSITIVE = "android.content.extra.IS_SENSITIVE"
     }
 
     @Inject
@@ -55,17 +49,7 @@ class CopySummaryReceiver : BroadcastReceiver() {
                 val summary = summaryRepository.getSummary(summaryId) ?: return@launch
                 val text = SummaryFormatter.toPlainText(context, summary)
                 withContext(Dispatchers.Main) {
-                    val clip = ClipData.newPlainText(context.getString(R.string.summary_copy_label), text).apply {
-                        description.extras = PersistableBundle().apply {
-                            // ClipDescription.EXTRA_IS_SENSITIVE (API 33); harmless on older versions
-                            putBoolean(EXTRA_IS_SENSITIVE, true)
-                        }
-                    }
-                    context.getSystemService(ClipboardManager::class.java).setPrimaryClip(clip)
-                    // Android 13+ confirms copies itself
-                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-                        Toast.makeText(context, R.string.summary_copied, Toast.LENGTH_SHORT).show()
-                    }
+                    SummaryClipboard.copy(context, text)
                     context.getSystemService(NotificationManager::class.java)
                         .cancel(intent.getIntExtra(EXTRA_NOTIFICATION_ID, 0))
                 }

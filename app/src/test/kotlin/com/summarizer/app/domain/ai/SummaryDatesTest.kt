@@ -140,5 +140,16 @@ class SummaryDatesTest {
         assertEquals("2026-10-17", range.date)
         assertEquals("– 18.10", range.detail)
     }
+
+    @Test
+    fun `prepositions and weekdays next to the date are not the event`() {
+        assertEquals("Basen", SummaryDates.parseKeyDate("w piątek 17.10 | Basen", reference)!!.label)
+        assertEquals("Przelew za wycieczkę", SummaryDates.parseKeyDate("Do 17.10 | Przelew za wycieczkę", reference)!!.label)
+        val withTime = SummaryDates.parseKeyDate("17.10 g. 8:00 | Wycieczka", reference)!!
+        assertEquals("2026-10-17", withTime.date)
+        assertEquals("08:00", withTime.time)
+        assertEquals(LocalDate.of(2026, 10, 17), firstDate("Oct 17"))
+        assertEquals(LocalDate.of(2026, 12, 5), firstDate("Pay fee (due Dec 5)"))
+    }
 }
 

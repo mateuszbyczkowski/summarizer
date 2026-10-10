@@ -53,6 +53,9 @@ class SummaryGenerationWorker @AssistedInject constructor(
 
     companion object {
         const val KEY_THREAD_ID = "thread_id"
+
+        /** Input: summarize the whole conversation this time, whatever the thread's mode */
+        const val KEY_FULL = "full"
         const val KEY_ERROR = "error"
         const val KEY_NOTHING_NEW = "nothing_new"
 
@@ -139,7 +142,11 @@ class SummaryGenerationWorker @AssistedInject constructor(
             }
         }
         try {
-            generateSummaryUseCase.execute(threadId, allowRepeat = true) { stage, partialOverview ->
+            generateSummaryUseCase.execute(
+                threadId,
+                allowRepeat = true,
+                forceFull = inputData.getBoolean(KEY_FULL, false)
+            ) { stage, partialOverview ->
                 progress.value = Progress(stage, partialOverview)
             }
         } finally {

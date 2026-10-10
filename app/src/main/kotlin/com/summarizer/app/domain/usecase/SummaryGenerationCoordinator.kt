@@ -44,6 +44,11 @@ class SummaryGenerationCoordinator @Inject constructor(
         data class Failed(val message: String, val nothingNew: Boolean) : State
     }
 
+    private companion object {
+        const val TAG = "summary_generation"
+        const val THREAD_TAG_PREFIX = "summary_thread:"
+    }
+
     private val workManager get() = WorkManager.getInstance(context)
 
     /** Failed jobs the user already dismissed; WorkManager keeps finished jobs around for a while. */
@@ -55,15 +60,30 @@ class SummaryGenerationCoordinator @Inject constructor(
             dismissed
         ) { infos, dismissedIds ->
             val info = infos.lastOrNull() ?: return@combine null
-            when (info.state) {
-                WorkInfo.State.ENQUEUED, WorkInfo.State.RUNNING, WorkInfo.State.BLOCKED -> runningState(info)
-                WorkInfo.State.FAILED -> if (info.id in dismissedIds) null else State.Failed(
-                    message = info.outputData.getString(SummaryGenerationWorker.KEY_ERROR).orEmpty(),
-                    nothingNew = info.outputData.getBoolean(SummaryGenerationWorker.KEY_NOTHING_NEW, false)
-                )
-                WorkInfo.State.SUCCEEDED, WorkInfo.State.CANCELLED -> null
-            }
+            stateOf(info, dismissedIds)
         }.distinctUntilChanged()
+
+    /**
+     * States of all threads with a summary job, from one WorkManager query (for lists such as
+     * Home, instead of one [stateFor] flow per thread).
+     */
+    fun runningStates(): Flow<Map<String, State>> =
+        combine(workManager.getWorkInfosByTagFlow(TAG), dismissed) { infos, dismissedIds ->
+            infos.mapNotNull { info ->
+                val threadId = info.tags.firstOrNull { it.startsWith(THREAD_TAG_PREFIX) }
+                    ?.removePrefix(THREAD_TAG_PREFIX) ?: return@mapNotNull null
+                stateOf(info, dismissedIds)?.let { threadId to it }
+            }.toMap()
+        }.distinctUntilChanged()
+
+    private fun stateOf(info: WorkInfo, dismissedIds: Set<UUID>): State? = when (info.state) {
+        WorkInfo.State.ENQUEUED, WorkInfo.State.RUNNING, WorkInfo.State.BLOCKED -> runningState(info)
+        WorkInfo.State.FAILED -> if (info.id in dismissedIds) null else State.Failed(
+            message = info.outputData.getString(SummaryGenerationWorker.KEY_ERROR).orEmpty(),
+            nothingNew = info.outputData.getBoolean(SummaryGenerationWorker.KEY_NOTHING_NEW, false)
+        )
+        WorkInfo.State.SUCCEEDED, WorkInfo.State.CANCELLED -> null
+    }
 
     private fun runningState(info: WorkInfo): State.Running {
         val progress = info.progress
@@ -76,11 +96,21 @@ class SummaryGenerationCoordinator @Inject constructor(
         )
     }
 
-    fun generate(threadId: String) {
+    /**
+     * Summarizes the thread in the background. By default it follows the thread's mode
+     * (incremental or full); [full] summarizes the whole conversation once without changing it.
+     */
+    fun generate(threadId: String, full: Boolean = false) {
         val request = OneTimeWorkRequestBuilder<SummaryGenerationWorker>()
-            .setInputData(workDataOf(SummaryGenerationWorker.KEY_THREAD_ID to threadId))
+            .setInputData(
+                workDataOf(
+                    SummaryGenerationWorker.KEY_THREAD_ID to threadId,
+                    SummaryGenerationWorker.KEY_FULL to full
+                )
+            )
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-            .addTag("summary_generation")
+            .addTag(TAG)
+            .addTag(THREAD_TAG_PREFIX + threadId)
             .build()
         // KEEP: a second tap while a summary is generating does nothing
         workManager.enqueueUniqueWork(
