@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-WhatsApp Thread Summarizer - Android app that captures WhatsApp messages via NotificationListenerService and generates AI summaries using either a local LLM (Llamatik/llama.cpp with Qwen3.5, LFM2.5 or Gemma 3n GGUFs) or the OpenAI API. Kotlin + Jetpack Compose, MVVM + Clean Architecture, Android 12+ (API 31+).
+WhatsApp Thread Summarizer - Android app that captures WhatsApp messages via NotificationListenerService and generates AI summaries using either an on-device LLM (Gemma 4 on Google LiteRT-LM using the GPU, or LFM2.5 on Llamatik/llama.cpp using the CPU) or the OpenAI API. Kotlin + Jetpack Compose, MVVM + Clean Architecture, Android 12+ (API 31+).
 
 ## Build Commands
 
@@ -13,8 +13,10 @@ WhatsApp Thread Summarizer - Android app that captures WhatsApp messages via Not
 ./gradlew installDebug     # Install on device
 ./gradlew clean && rm -rf app/build && ./gradlew assembleDebug  # Clean build (fixes Hilt/Room issues)
 ./gradlew testDebugUnitTest            # JVM unit tests (parser, prompts, retry)
-./gradlew connectedDebugAndroidTest    # Instrumented tests (migrations, DB key, PIN); needs emulator
+./gradlew connectedDebugAndroidTest    # Instrumented tests (migrations, DB key, PIN); EMULATOR ONLY
 ```
+
+`connectedDebugAndroidTest` uninstalls the app afterwards; never run it on a phone with real data. On a phone, install the test APK and use `adb shell am instrument` (see `benchmark/LocalModelBenchmark.kt`, `LiteRtBenchmark.kt`). Benchmarks and `LiteRtEngineTest` use the debug sample chat (`data/debug/DebugSampleData.kt`), never user data.
 
 ## Architecture: Dual AI Provider System
 
@@ -25,14 +27,16 @@ Use Cases → AIEngine (interface) ← AIEngineProvider (singleton)
                                         ↓
                                    User Settings
                                         ↓
-                            RealAIEngine OR OpenAIEngine
+              LiteRtEngine (.litertlm, GPU) | RealAIEngine (.gguf, CPU) | OpenAIEngine
 ```
 
 **How it works:**
 - `domain/ai/AIEngine.kt`: Single interface for all AI operations
 - `data/ai/AIEngineProvider.kt`: Factory that reads user settings and returns correct implementation
 - `di/AIModule.kt`: Provides active engine as singleton - switches at runtime when settings change
-- `data/ai/RealAIEngine.kt`: Local Llamatik (llama.cpp wrapper). LlamaBridge is one global, non-thread-safe context: every native call runs on the engine's single `llama-native` thread
+- `data/ai/LiteRtEngine.kt`: Google LiteRT-LM on the GPU for `.litertlm` models (default: Gemma 4 E2B). ~10-40x faster prompt reading than llama.cpp on a mid-range phone. Native calls on the single `litert-native` thread; a fresh conversation per summary
+- `data/ai/RealAIEngine.kt`: Local Llamatik (llama.cpp wrapper) for `.gguf` models (CPU fallback: LFM2.5). LlamaBridge is one global, non-thread-safe context: every native call runs on the engine's single `llama-native` thread
+- The local engine is chosen by the model file extension; if the GPU cannot load a model, `AIEngineProvider` falls back to a downloaded GGUF model
 - `domain/ai/ModelLoading.kt`: `ensureModelLoaded()` loads the active local model on demand (use cases never assume it is loaded)
 - `data/ai/OpenAIEngine.kt`: Cloud API (Retrofit)
 
@@ -79,8 +83,8 @@ All use `@HiltWorker` for dependency injection.
 1. **Minimum API 31** - User requirement. Do not lower without approval.
 2. **Hilt caching** - On compile errors: `./gradlew clean && rm -rf app/build`
 3. **No cloud storage** - All data on-device only (privacy commitment)
-4. **APK size ~110MB debug / ~45MB release** - Llamatik includes llama.cpp; only `arm64-v8a` is packaged (`abiFilters`)
-5. **Model catalog** - `ModelDownloadViewModel.DEFAULT_MODELS`; set `checksum` (SHA-256 from Hugging Face) to have downloads verified
+4. **APK size ~135MB debug / ~66MB release** - llama.cpp (Llamatik) and LiteRT-LM native libraries; only `arm64-v8a` is packaged (`abiFilters`)
+5. **Model catalog** - `ModelDownloadViewModel.DEFAULT_MODELS`; URLs pinned to a Hugging Face commit with a SHA-256 `checksum` (look them up from the phone with `LiteRtModelProbe#fileHashes`; Hugging Face is blocked on the corporate network)
 
 ## Documentation
 

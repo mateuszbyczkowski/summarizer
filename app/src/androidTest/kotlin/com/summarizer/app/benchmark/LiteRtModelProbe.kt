@@ -2,6 +2,7 @@ package com.summarizer.app.benchmark
 
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.google.gson.JsonParser
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -42,6 +43,20 @@ class LiteRtModelProbe {
                     }
                 if (files.isNotEmpty()) log("$id gated=$gated sha=${model["sha"]?.asString} files=[$files]")
             }.onFailure { log("$id FAILED: ${it.message}") }
+        }
+    }
+
+    /** Logs commit and SHA-256 of model files: -e specs "repo|file;repo|file" (pins the catalog). */
+    @Test
+    fun fileHashes() {
+        val specs = InstrumentationRegistry.getArguments().getString("specs") ?: return
+        specs.split(";").map { it.split("|") }.forEach { (repo, file) ->
+            runCatching {
+                val model = JsonParser.parseString(get("https://huggingface.co/api/models/$repo?blobs=true")).asJsonObject
+                val sibling = model["siblings"].asJsonArray.map { it.asJsonObject }.first { it["rfilename"].asString == file }
+                val lfs = sibling["lfs"].asJsonObject
+                log("HASH $repo|$file|${model["sha"].asString}|${lfs["sha256"].asString}|${lfs["size"].asLong}")
+            }.onFailure { log("HASH $repo|$file FAILED: ${it.message}") }
         }
     }
 

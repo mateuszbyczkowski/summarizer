@@ -5,7 +5,7 @@ object Constants {
     const val WHATSAPP_PACKAGE = "com.whatsapp"
     const val WHATSAPP_BUSINESS_PACKAGE = "com.whatsapp.w4b"
 
-    // Model catalog now lives in ModelDownloadViewModel.DEFAULT_MODELS (Qwen3.5 + LFM2.5).
+    // Model catalog now lives in ModelDownloadViewModel.DEFAULT_MODELS (Gemma 4 on LiteRT-LM + LFM2.5 on llama.cpp).
 
     // Database
     const val DATABASE_NAME = "summarizer_database"

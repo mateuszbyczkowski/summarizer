@@ -122,8 +122,10 @@ class ModelDownloadManager @Inject constructor(
         }
 
         val downloadDir = StorageHelper.getModelStorageDirectory(context, storageLocation)
+        // .gguf runs on llama.cpp, .litertlm on LiteRT-LM; the engine is chosen by extension
+        val extension = model.downloadUrl.substringAfterLast('/').substringAfterLast('.', "gguf")
         val tempFile = File(downloadDir, "${model.id}.tmp")
-        val finalFile = File(downloadDir, "${model.id}.gguf")
+        val finalFile = File(downloadDir, "${model.id}.$extension")
 
         if (finalFile.exists() && finalFile.length() > 0) {
             if (model.checksum == null || sha256(finalFile).equals(model.checksum, ignoreCase = true)) {

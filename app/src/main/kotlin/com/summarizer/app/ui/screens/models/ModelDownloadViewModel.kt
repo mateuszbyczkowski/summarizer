@@ -134,74 +134,47 @@ class ModelDownloadViewModel @Inject constructor(
     }
 
     companion object {
-        // On-device catalog (Oct 2026). Qwen3.5 small series (Apache 2.0, 256K native context,
-        // reasoning off by default on <=4B), LFM2.5 as the lowest-RAM option, and Gemma 3n
-        // (Google's phone-first models, strong in 140 languages).
-        // Q4_K_M quantization across the board. Text-only GGUFs; vision projectors (mmproj) are
-        // separate files we don't download. Sizes are approximate GGUF artifact sizes.
-        // Requires a llama.cpp build with qwen35 / lfm2 / gemma3n support (Llamatik 1.x).
-        // checksum: SHA-256 of the GGUF from the Hugging Face file page; downloads are verified
-        // against it when set.
+        // On-device catalog (Oct 2026), chosen from measurements on a mid-range phone
+        // (Dimensity 900, LocalModelBenchmark / LiteRtBenchmark on the debug sample chat):
+        // - Gemma 4 on LiteRT-LM (GPU): ~160 tok/s prompt reading, ~30-60 s per summary,
+        //   correct Polish. Default.
+        // - LFM2.5 on llama.cpp (CPU): fallback for phones whose GPU cannot run Gemma; also
+        //   used automatically when GPU loading fails.
+        // Qwen3.5 / Gemma 3n GGUFs were dropped: 2-6 min per summary with weaker output.
+        // URLs are pinned to a commit and checksum-verified after download.
         internal val DEFAULT_MODELS = listOf(
             AIModel(
-                id = "qwen3.5-0.8b",
-                name = "Qwen3.5 0.8B (Fast)",
-                description = "Fastest option. Best for low-end devices and quick previews. 256K context, 201 languages.",
-                sizeInMB = 530,
-                downloadUrl = "https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf",
+                id = "gemma-4-e2b-gpu",
+                name = "Gemma 4 E2B (GPU)",
+                description = "Recommended. Runs on the phone's GPU: fast, accurate summaries in many languages.",
+                sizeInMB = 2010,
+                downloadUrl = "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/b3ca0d2f076785a8f4b2219ddbd2bdb99954eae1/gemma-4-E2B-it-gpu.litertlm",
+                isRecommended = true,
+                minimumRAM = 6,
+                estimatedSpeed = "Fast",
+                checksum = "a53a59001894c58e6bdb5b9b227709f91a2e3e556baa7d85acf9c55402ba5cf5"
+            ),
+            AIModel(
+                id = "gemma-4-e4b-gpu",
+                name = "Gemma 4 E4B (GPU, Quality)",
+                description = "Larger Gemma 4 for phones with 8 GB+ RAM. Best summary quality, somewhat slower.",
+                sizeInMB = 2970,
+                downloadUrl = "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/2eee7ac325f20eb8c9ac1d0e972f7c84663062da/gemma-4-E4B-it-gpu.litertlm",
                 isRecommended = false,
-                minimumRAM = 3,
-                estimatedSpeed = "Fast"
+                minimumRAM = 8,
+                estimatedSpeed = "Medium",
+                checksum = "4912bb5a9c30993c51a7711f763212077458529312175df0573a78323a2bb7ff"
             ),
             AIModel(
                 id = "lfm2.5-1.2b-instruct",
-                name = "LFM2.5 1.2B (Efficient)",
-                description = "Liquid AI hybrid model. Runs in under 1GB RAM with very fast decoding — ideal for older phones. ~120K context.",
+                name = "LFM2.5 1.2B (CPU)",
+                description = "Small model that runs on the CPU. For phones whose GPU cannot run Gemma; simpler summaries.",
                 sizeInMB = 730,
-                downloadUrl = "https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF/resolve/main/LFM2.5-1.2B-Instruct-Q4_K_M.gguf",
+                downloadUrl = "https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF/resolve/8ed288026e23958ad9dfa92d53ed773a8eee7125/LFM2.5-1.2B-Instruct-Q4_K_M.gguf",
                 isRecommended = false,
                 minimumRAM = 3,
-                estimatedSpeed = "Fast"
-            ),
-            AIModel(
-                id = "qwen3.5-2b",
-                name = "Qwen3.5 2B (Balanced)",
-                description = "Recommended daily driver. Strong multilingual summaries with snappy on-device speed. 256K context.",
-                sizeInMB = 1300,
-                downloadUrl = "https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/Qwen3.5-2B-Q4_K_M.gguf",
-                isRecommended = true,
-                minimumRAM = 4,
-                estimatedSpeed = "Medium"
-            ),
-            AIModel(
-                id = "qwen3.5-4b",
-                name = "Qwen3.5 4B (Quality)",
-                description = "Best summary quality on flagship phones. Outperforms Qwen3 4B 2507 by a wide margin. 256K context.",
-                sizeInMB = 2700,
-                downloadUrl = "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf",
-                isRecommended = false,
-                minimumRAM = 6,
-                estimatedSpeed = "Slow"
-            ),
-            AIModel(
-                id = "gemma-3n-e2b",
-                name = "Gemma 3n E2B (Multilingual)",
-                description = "Google's phone-first model. Very good at non-English chats; runs with a ~2B memory footprint. 32K context.",
-                sizeInMB = 3000,
-                downloadUrl = "https://huggingface.co/unsloth/gemma-3n-E2B-it-GGUF/resolve/main/gemma-3n-E2B-it-Q4_K_M.gguf",
-                isRecommended = false,
-                minimumRAM = 6,
-                estimatedSpeed = "Medium"
-            ),
-            AIModel(
-                id = "gemma-3n-e4b",
-                name = "Gemma 3n E4B (Multilingual Quality)",
-                description = "Larger Gemma 3n. Highest multilingual summary quality for flagship phones. 32K context.",
-                sizeInMB = 4600,
-                downloadUrl = "https://huggingface.co/unsloth/gemma-3n-E4B-it-GGUF/resolve/main/gemma-3n-E4B-it-Q4_K_M.gguf",
-                isRecommended = false,
-                minimumRAM = 8,
-                estimatedSpeed = "Slow"
+                estimatedSpeed = "Slow",
+                checksum = "b1b3de114215d9507409a662a501a631095a479a419584e8a2ded6304b19b4f5"
             )
         )
     }

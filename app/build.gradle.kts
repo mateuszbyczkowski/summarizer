@@ -146,8 +146,8 @@ dependencies {
     // APIs confirmed: initGenerateModel, generateJson, generateWithContext, generateStream, GenStream interface
     implementation("com.llamatik:library:1.10.1")
 
-    // Experiment: Google LiteRT-LM (GPU inference); debug builds only until evaluated
-    debugImplementation("com.google.ai.edge.litertlm:litertlm-android:0.18.0")
+    // Google LiteRT-LM: GPU inference for .litertlm models (Gemma 4); GGUF models use Llamatik
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.18.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

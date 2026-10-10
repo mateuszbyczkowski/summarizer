@@ -34,6 +34,11 @@ class ModelRepositoryImpl @Inject constructor(
         return aiModelDao.getDownloadedModel()?.toDomainModel()
     }
 
+    override suspend fun getDownloadedModels(): List<AIModel> {
+        forgetMissingFiles()
+        return aiModelDao.getDownloadedModels().map { it.toDomainModel() }
+    }
+
     /** Models whose file disappeared (deleted, SD card removed) are no longer "downloaded". */
     private suspend fun forgetMissingFiles() = withContext(Dispatchers.IO) {
         aiModelDao.getDownloadedModels()

@@ -9,7 +9,9 @@ interface ModelRepository {
     /** Mark models whose files no longer exist as not downloaded. */
     suspend fun refreshDownloadState()
     suspend fun getModelById(modelId: String): AIModel?
+    /** The active model: the most recently selected downloaded one. */
     suspend fun getDownloadedModel(): AIModel?
+    suspend fun getDownloadedModels(): List<AIModel>
     suspend fun insertModel(model: AIModel)
     suspend fun insertModels(models: List<AIModel>)
     /** Refresh catalog metadata without touching download state. */

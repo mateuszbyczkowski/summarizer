@@ -44,3 +44,7 @@
 # Llamatik: native code calls GenStream.onDelta/onComplete/onError by name
 -keep interface com.llamatik.library.platform.GenStream { *; }
 -keep class * implements com.llamatik.library.platform.GenStream { *; }
+
+# LiteRT-LM: JNI entry points and classes its native code and Gson/reflection touch by name
+-keep class com.google.ai.edge.litertlm.** { *; }
+-dontwarn com.google.ai.edge.litertlm.**
