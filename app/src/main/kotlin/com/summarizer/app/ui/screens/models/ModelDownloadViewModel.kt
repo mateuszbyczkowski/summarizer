@@ -1,9 +1,11 @@
 package com.summarizer.app.ui.screens.models
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.summarizer.app.BuildConfig
 import com.summarizer.app.data.ai.DemoEngine
+import com.summarizer.app.data.debug.DebugSampleData
 import com.summarizer.app.data.download.ModelDownloadManager
 import com.summarizer.app.di.ApplicationScope
 import com.summarizer.app.domain.ai.AIEngine
@@ -11,22 +13,39 @@ import com.summarizer.app.domain.model.AIModel
 import com.summarizer.app.domain.model.ModelDownloadState
 import com.summarizer.app.domain.repository.ModelRepository
 import com.summarizer.app.domain.repository.PreferencesRepository
+import com.summarizer.app.domain.repository.ThreadRepository
+import com.summarizer.app.domain.usecase.SummaryGenerationCoordinator
+import com.summarizer.app.util.StorageHelper
+import com.summarizer.app.util.ThreadNaming
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ModelDownloadViewModel @Inject constructor(
     private val modelRepository: ModelRepository,
     private val downloadManager: ModelDownloadManager,
     private val preferencesRepository: PreferencesRepository,
     private val aiEngine: AIEngine,
+    threadRepository: ThreadRepository,
+    private val generationCoordinator: SummaryGenerationCoordinator,
+    @ApplicationContext private val context: Context,
     @ApplicationScope private val applicationScope: CoroutineScope
 ) : ViewModel() {
 
@@ -38,6 +57,26 @@ class ModelDownloadViewModel @Inject constructor(
     private val _isWiFiOnly = MutableStateFlow(true)
     val isWiFiOnly: StateFlow<Boolean> = _isWiFiOnly.asStateFlow()
 
+    /** The active on-device model (most recently selected downloaded one), or null. */
+    val activeModelId: StateFlow<String?> = _models
+        .mapLatest { modelRepository.getDownloadedModel()?.id }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /**
+     * The debug sample chat ("Try on example"), when it exists: debug builds seed it at start.
+     * Release builds never look it up.
+     */
+    val sampleThreadId: StateFlow<String?> =
+        (if (BuildConfig.DEBUG) {
+            threadRepository.observeThread(ThreadNaming.threadIdFor(DebugSampleData.THREAD_NAME)).map { it?.threadId }
+        } else {
+            flowOf(null)
+        }).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    private val _storage = MutableStateFlow<StorageUsage?>(null)
+    /** Space used by models, by everything else and free, where new models are saved. */
+    val storage: StateFlow<StorageUsage?> = _storage.asStateFlow()
+
     init {
         loadModels()
         loadWiFiPreference()
@@ -48,8 +87,46 @@ class ModelDownloadViewModel @Inject constructor(
             reconcileCatalog()
             modelRepository.getAllModels().collect { models ->
                 _models.value = models
+                // A download finished or a model was deleted
+                refreshStorage()
             }
         }
+    }
+
+    /** Re-reads the storage location and usage, e.g. when the screen resumes. */
+    fun refreshStorage() {
+        viewModelScope.launch {
+            val location = preferencesRepository.getStorageLocation()
+            _storage.value = withContext(Dispatchers.IO) { readStorageUsage(location) }
+        }
+    }
+
+    private fun readStorageUsage(location: StorageHelper.StorageLocation): StorageUsage {
+        val external = StorageHelper.getExternalStorageInfo(context)
+        // Downloads fall back to internal storage when the SD card is gone
+        val info = if (location == StorageHelper.StorageLocation.EXTERNAL && external != null) {
+            external
+        } else {
+            StorageHelper.getInternalStorageInfo(context)
+        }
+        val modelsBytes = StorageHelper.getModelStorageDirectory(context, info.location)
+            .listFiles()
+            ?.sumOf { it.length() }
+            ?: 0L
+        return StorageUsage(
+            location = info.location,
+            totalMB = info.totalSpaceMB,
+            freeMB = info.availableSpaceMB,
+            modelsMB = modelsBytes / (1024 * 1024),
+            externalAvailable = external != null
+        )
+    }
+
+    /** Summarizes the debug sample chat with the active engine; the result arrives as a notification. */
+    fun tryOnExample(): String? {
+        val threadId = sampleThreadId.value ?: return null
+        generationCoordinator.generate(threadId)
+        return threadId
     }
 
     /**

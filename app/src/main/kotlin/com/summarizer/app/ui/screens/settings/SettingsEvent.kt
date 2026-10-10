@@ -6,7 +6,8 @@ import com.summarizer.app.domain.model.OpenAIModel
 /** User actions on the Settings screen. */
 sealed interface SettingsEvent {
     data class SelectProvider(val provider: AIProvider) : SettingsEvent
-    data class SaveApiKey(val apiKey: String) : SettingsEvent
+    /** Save the OpenAI key; with [activate], also switch to OpenAI. */
+    data class SaveApiKey(val apiKey: String, val activate: Boolean = false) : SettingsEvent
     data object ValidateApiKey : SettingsEvent
     data object ClearApiKey : SettingsEvent
     data class SelectOpenAIModel(val model: OpenAIModel) : SettingsEvent
@@ -20,6 +21,9 @@ sealed interface SettingsEvent {
     data object AppLockPinCancelled : SettingsEvent
     data class SetSmartNotificationsEnabled(val enabled: Boolean) : SettingsEvent
     data class SetSmartNotificationThreshold(val threshold: Float) : SettingsEvent
+
+    /** Reload everything, e.g. when the screen resumes after the model manager or system settings. */
+    data object Refresh : SettingsEvent
 
     /** Navigation: open the local model manager. Handled by the screen. */
     data object ManageModels : SettingsEvent

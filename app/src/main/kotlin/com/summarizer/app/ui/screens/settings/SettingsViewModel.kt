@@ -7,6 +7,7 @@ import com.summarizer.app.domain.model.AIProvider
 import com.summarizer.app.domain.model.OpenAIModel
 import com.summarizer.app.data.repository.AppDataResetter
 import com.summarizer.app.di.ApplicationScope
+import com.summarizer.app.domain.repository.ModelRepository
 import com.summarizer.app.domain.repository.PreferencesRepository
 import com.summarizer.app.ui.lock.AppLockManager
 import com.summarizer.app.worker.WorkScheduler
@@ -32,6 +33,7 @@ class SettingsViewModel @Inject constructor(
     private val workScheduler: WorkScheduler,
     private val appDataResetter: AppDataResetter,
     private val appLockManager: AppLockManager,
+    private val modelRepository: ModelRepository,
     @ApplicationScope private val applicationScope: CoroutineScope
 ) : ViewModel() {
 
@@ -52,7 +54,7 @@ class SettingsViewModel @Inject constructor(
     fun onEvent(event: SettingsEvent) {
         when (event) {
             is SettingsEvent.SelectProvider -> setAIProvider(event.provider)
-            is SettingsEvent.SaveApiKey -> saveApiKey(event.apiKey)
+            is SettingsEvent.SaveApiKey -> saveApiKey(event.apiKey, activate = event.activate)
             SettingsEvent.ValidateApiKey -> validateApiKey()
             SettingsEvent.ClearApiKey -> clearApiKey()
             is SettingsEvent.SelectOpenAIModel -> setSelectedModel(event.model)
@@ -64,6 +66,7 @@ class SettingsViewModel @Inject constructor(
             SettingsEvent.AppLockPinCancelled -> showAppLockPinSetup(false)
             is SettingsEvent.SetSmartNotificationsEnabled -> setSmartNotificationsEnabled(event.enabled)
             is SettingsEvent.SetSmartNotificationThreshold -> setSmartNotificationThreshold(event.threshold)
+            SettingsEvent.Refresh -> loadSettings()
             SettingsEvent.ManageModels, SettingsEvent.ResetApp -> Unit
         }
     }
@@ -81,6 +84,9 @@ class SettingsViewModel @Inject constructor(
                 val appLockEnabled = preferencesRepository.isAppLockEnabled()
                 val smartNotificationsEnabled = preferencesRepository.isSmartNotificationsEnabled()
                 val smartNotificationThreshold = preferencesRepository.getSmartNotificationThreshold()
+                val activeModel = modelRepository.getDownloadedModel()
+                // Keep what the user is in the middle of (validation result, PIN setup) across reloads
+                val previous = _uiState.value as? SettingsUiState.Success
 
                 _uiState.value = SettingsUiState.Success(
                     aiProvider = provider,
@@ -92,7 +98,11 @@ class SettingsViewModel @Inject constructor(
                     dataRetentionDays = dataRetentionDays,
                     appLockEnabled = appLockEnabled,
                     smartNotificationsEnabled = smartNotificationsEnabled,
-                    smartNotificationThreshold = smartNotificationThreshold
+                    smartNotificationThreshold = smartNotificationThreshold,
+                    activeModelName = activeModel?.name,
+                    isValidating = previous?.isValidating ?: false,
+                    validationMessage = previous?.validationMessage,
+                    showAppLockPinSetup = previous?.showAppLockPinSetup ?: false
                 )
 
                 Timber.d("Settings loaded: provider=$provider, hasApiKey=${!apiKey.isNullOrBlank()}, autoSummary=$autoSummarizationEnabled@$autoSummarizationHour, appLock=$appLockEnabled, smartNotifications=$smartNotificationsEnabled@$smartNotificationThreshold")
@@ -120,7 +130,8 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun saveApiKey(apiKey: String) {
+    /** @param activate also switch to OpenAI once the key is saved */
+    fun saveApiKey(apiKey: String, activate: Boolean = false) {
         if (apiKey.isBlank()) {
             _uiState.value = SettingsUiState.Error("API key cannot be empty")
             return
@@ -130,6 +141,10 @@ class SettingsViewModel @Inject constructor(
             try {
                 Timber.d("Saving OpenAI API key (${apiKey.length} chars)")
                 preferencesRepository.setOpenAIApiKey(apiKey.trim())
+                if (activate) {
+                    preferencesRepository.setAIProvider(AIProvider.OPENAI)
+                    workScheduler.refreshAutoSummarization()
+                }
 
                 // Reload settings to update UI
                 loadSettings()
@@ -370,8 +385,16 @@ sealed class SettingsUiState {
         val appLockEnabled: Boolean = true,
         val showAppLockPinSetup: Boolean = false,
         val smartNotificationsEnabled: Boolean = false,
-        val smartNotificationThreshold: Float = 0.6f
-    ) : SettingsUiState()
+        val smartNotificationThreshold: Float = 0.6f,
+        /** Catalog name of the active on-device model, or null when none is downloaded. */
+        val activeModelName: String? = null
+    ) : SettingsUiState() {
+        /** The on-device engine is selected but has no model to run. */
+        val localModelMissing: Boolean get() = aiProvider == AIProvider.LOCAL && activeModelName == null
+
+        /** OpenAI is selected but cannot run without a key. */
+        val openAiKeyMissing: Boolean get() = aiProvider == AIProvider.OPENAI && !hasApiKey
+    }
 
     data class Error(val message: String) : SettingsUiState()
 }

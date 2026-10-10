@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Search (stage 2E) -->
+    <string name="search_bar_placeholder">Search chats and summaries</string>
+    <string name="search_recent_title">Recent searches</string>
+    <string name="search_recent_clear">Clear all</string>
+    <string name="search_recent_remove_cd">Remove %1$s from recent searches</string>
+    <string name="search_filter_summaries">Summaries</string>
+    <string name="search_filter_tasks">Tasks</string>
+    <string name="search_filter_messages">Messages</string>
+    <string name="search_section_tasks">Tasks (%1$d)</string>
+    <string name="search_filter_empty">Nothing here matches. Try another filter.</string>
+    <string name="search_message_line">%1$s: %2$s</string>
+    <string name="search_task_due">%1$s · by %2$s</string>
+    <string name="search_task_done">Done</string>
+</resources>

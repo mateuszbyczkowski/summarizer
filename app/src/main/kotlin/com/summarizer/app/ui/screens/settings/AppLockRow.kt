@@ -1,6 +1,10 @@
-package com.summarizer.app.ui.screens.settings.sections
+package com.summarizer.app.ui.screens.settings
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Pin
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -17,17 +21,18 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.summarizer.app.R
-import com.summarizer.app.ui.components.InfoCard
-import com.summarizer.app.ui.components.InfoCardTone
-import com.summarizer.app.ui.components.SettingsSectionCard
-import com.summarizer.app.ui.components.SwitchRow
+import com.summarizer.app.ui.components.SettingsRow
+import com.summarizer.app.ui.components.SettingsRowTrailing
 import com.summarizer.app.ui.screens.auth.PinSetupScreen
-import com.summarizer.app.ui.screens.settings.SettingsEvent
 import com.summarizer.app.util.BiometricHelper
 import java.util.UUID
 
+/**
+ * App lock on/off. Uses the phone's screen lock when it has one; otherwise turning the lock on
+ * first asks for an app PIN (full-screen [PinSetupScreen] dialog).
+ */
 @Composable
-fun SecuritySection(
+fun AppLockRow(
     appLockEnabled: Boolean,
     showPinSetup: Boolean,
     onEvent: (SettingsEvent) -> Unit,
@@ -41,26 +46,26 @@ fun SecuritySection(
         onPauseOrDispose { }
     }
 
-    SettingsSectionCard(
-        title = stringResource(R.string.settings_security_title),
-        description = stringResource(R.string.lock_settings_description),
-        modifier = modifier
-    ) {
-        SwitchRow(
-            title = stringResource(R.string.lock_settings_app_lock),
+    SettingsRow(
+        title = stringResource(R.string.lock_settings_app_lock),
+        icon = when {
+            !appLockEnabled -> Icons.Default.LockOpen
+            deviceSecure -> Icons.Default.Fingerprint
+            else -> Icons.Default.Pin
+        },
+        value = stringResource(
+            when {
+                !appLockEnabled -> R.string.settings_app_lock_off
+                deviceSecure -> R.string.settings_app_lock_system
+                else -> R.string.settings_app_lock_pin
+            }
+        ),
+        trailing = SettingsRowTrailing.Switch(
             checked = appLockEnabled,
             onCheckedChange = { onEvent(SettingsEvent.SetAppLockEnabled(it)) }
-        )
-
-        when {
-            !appLockEnabled -> InfoCard(
-                text = stringResource(R.string.lock_settings_off_info),
-                tone = InfoCardTone.Warning
-            )
-            deviceSecure -> InfoCard(text = stringResource(R.string.lock_settings_system_info))
-            else -> InfoCard(text = stringResource(R.string.lock_settings_pin_info))
-        }
-    }
+        ),
+        modifier = modifier
+    )
 
     if (showPinSetup) {
         val session = rememberSaveable { UUID.randomUUID().toString() }

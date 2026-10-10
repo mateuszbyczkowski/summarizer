@@ -2,6 +2,7 @@ package com.summarizer.app.data.repository
 
 import android.content.Context
 import com.summarizer.app.data.local.database.AppDatabase
+import com.summarizer.app.data.local.preferences.RecentSearchesStore
 import com.summarizer.app.domain.ai.AIEngine
 import com.summarizer.app.domain.repository.AuthRepository
 import com.summarizer.app.domain.repository.PreferencesRepository
@@ -14,7 +15,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Wipes everything the app stores: database, downloaded models, preferences and the PIN.
+ * Wipes everything the app stores: database, downloaded models, preferences, recent searches
+ * and the PIN.
  */
 @Singleton
 class AppDataResetter @Inject constructor(
@@ -23,7 +25,8 @@ class AppDataResetter @Inject constructor(
     private val aiEngine: AIEngine,
     private val preferencesRepository: PreferencesRepository,
     private val authRepository: AuthRepository,
-    private val workScheduler: WorkScheduler
+    private val workScheduler: WorkScheduler,
+    private val recentSearchesStore: RecentSearchesStore
 ) {
 
     suspend fun resetAll() = withContext(Dispatchers.IO) {
@@ -34,6 +37,7 @@ class AppDataResetter @Inject constructor(
             StorageHelper.getModelStorageDirectory(context, location).deleteRecursively()
         }
         preferencesRepository.clearAll()
+        recentSearchesStore.clear()
         authRepository.clearPin()
     }
 }
