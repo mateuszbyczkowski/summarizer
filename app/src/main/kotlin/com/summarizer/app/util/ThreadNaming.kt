@@ -35,4 +35,13 @@ object ThreadNaming {
      * threads keep their IDs.
      */
     fun threadIdFor(threadName: String): String = normalize(threadName).hashCode().toString()
+
+    /**
+     * The character shown in a thread's avatar: the first letter or digit of the name, skipping
+     * emoji, punctuation and other symbols ("🧪 Test" -> "T"). "#" when the name has none.
+     */
+    fun initial(threadName: String): String {
+        val codePoint = threadName.codePoints().filter { Character.isLetterOrDigit(it) }.findFirst()
+        return if (codePoint.isPresent) String(Character.toChars(codePoint.asInt)).uppercase() else "#"
+    }
 }

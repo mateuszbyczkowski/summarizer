@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Bottom navigation -->
+    <string name="nav_chats">Chats</string>
+    <string name="nav_tasks">Tasks</string>
+    <string name="nav_settings">Settings</string>
+    <plurals name="nav_tasks_badge_cd">
+        <item quantity="one">%1$d task due this week</item>
+        <item quantity="other">%1$d tasks due this week</item>
+    </plurals>
+
+    <!-- Home -->
+    <string name="home_search_hint">Search chats and summaries</string>
+    <string name="home_this_week">This week</string>
+    <string name="home_this_week_all">All</string>
+    <string name="home_this_week_all_cd">All tasks and dates</string>
+    <string name="home_followed">Followed</string>
+    <string name="home_auto_summary">Auto-summary at %1$s</string>
+    <string name="home_followed_empty">Follow the chats you care about to get summaries and see their dates here. Long-press a chat to follow it.</string>
+    <string name="home_other_chats">Other chats · %1$d</string>
+    <string name="home_other_chats_hint">Follow to get summaries</string>
+    <string name="state_expanded">Expanded</string>
+    <string name="state_collapsed">Collapsed</string>
+    <string name="home_empty_title">No chats yet</string>
+    <string name="home_empty_body">Messages from your WhatsApp groups appear here as they arrive.</string>
+    <string name="home_empty_no_permission_body">Grant notification access so the app can collect messages from your WhatsApp groups.</string>
+
+    <!-- Home: thread row -->
+    <string name="thread_row_summarize">Summarize</string>
+    <string name="thread_row_summarizing">Summarizing…</string>
+    <string name="thread_row_failed">Couldn\'t summarize</string>
+    <string name="thread_row_no_summary">No summary</string>
+    <string name="thread_row_up_to_date">Up to date</string>
+    <string name="thread_row_sender_message">%1$s: %2$s</string>
+    <string name="thread_row_options">show options</string>
+    <string name="thread_row_follow">Follow</string>
+    <string name="thread_row_unfollow">Unfollow</string>
+    <plurals name="thread_row_open_tasks">
+        <item quantity="one">%1$d task</item>
+        <item quantity="other">%1$d tasks</item>
+    </plurals>
+    <!-- Spoken by TalkBack, joined with commas -->
+    <string name="thread_row_cd_last_message_time">last message %1$s</string>
+    <plurals name="thread_row_cd_new_messages">
+        <item quantity="one">%1$d new message since the summary</item>
+        <item quantity="other">%1$d new messages since the summary</item>
+    </plurals>
+    <plurals name="thread_row_cd_new_messages_no_summary">
+        <item quantity="one">%1$d message, not summarized yet</item>
+        <item quantity="other">%1$d messages, not summarized yet</item>
+    </plurals>
+    <plurals name="thread_row_cd_open_tasks">
+        <item quantity="one">%1$d open task</item>
+        <item quantity="other">%1$d open tasks</item>
+    </plurals>
+    <string name="thread_row_cd_summary">summary: %1$s</string>
+    <string name="thread_row_cd_summarized">summarized %1$s</string>
+    <string name="thread_row_cd_last_message">last message: %1$s</string>
+
+    <!-- Relative times -->
+    <string name="rel_time_just_now">just now</string>
+    <plurals name="rel_time_minutes_ago">
+        <item quantity="one">%1$d min ago</item>
+        <item quantity="other">%1$d min ago</item>
+    </plurals>
+    <plurals name="rel_time_hours_ago">
+        <item quantity="one">%1$d h ago</item>
+        <item quantity="other">%1$d h ago</item>
+    </plurals>
+    <plurals name="rel_time_days_ago">
+        <item quantity="one">%1$d d ago</item>
+        <item quantity="other">%1$d d ago</item>
+    </plurals>
+    <string name="rel_time_yesterday">Yesterday</string>
+    <!-- java.time patterns -->
+    <string name="pattern_short_date" translatable="false">d MMM</string>
+    <string name="pattern_agenda_date" translatable="false">EEE, d MMM</string>
+    <string name="pattern_weekday" translatable="false">EEE</string>
+
+    <!-- Agenda (home card and tasks) -->
+    <string name="agenda_today">today</string>
+    <string name="agenda_tomorrow">tomorrow</string>
+    <plurals name="agenda_in_days">
+        <item quantity="one">in %1$d day</item>
+        <item quantity="other">in %1$d days</item>
+    </plurals>
+    <plurals name="agenda_overdue_days">
+        <item quantity="one">%1$d day overdue</item>
+        <item quantity="other">%1$d days overdue</item>
+    </plurals>
+    <string name="agenda_meta">%1$s · %2$s</string>
+
+    <!-- Tasks -->
+    <string name="tasks_title">Tasks</string>
+    <string name="tasks_bucket_overdue">Overdue</string>
+    <string name="tasks_bucket_today">Today</string>
+    <string name="tasks_bucket_tomorrow">Tomorrow</string>
+    <string name="tasks_bucket_this_week">This week</string>
+    <string name="tasks_bucket_later">Later</string>
+    <string name="tasks_bucket_no_date">No date</string>
+    <string name="tasks_done_snackbar">Task done</string>
+    <string name="tasks_undo">Undo</string>
+    <string name="tasks_add_to_calendar">Add to calendar</string>
+    <string name="tasks_no_calendar_app">No calendar app found</string>
+    <string name="tasks_kind_date">Date</string>
+    <string name="tasks_empty_title">Nothing coming up</string>
+    <string name="tasks_empty_body">Dates and tasks from the summaries of your followed chats appear here.</string>
+
+    <!-- Notification access card -->
+    <string name="permission_card_title">Notification access needed</string>
+    <string name="permission_card_body">To collect WhatsApp messages, Summarizer needs notification access. Messages stay on your device.</string>
+    <string name="permission_card_open_settings">Open settings</string>
+</resources>

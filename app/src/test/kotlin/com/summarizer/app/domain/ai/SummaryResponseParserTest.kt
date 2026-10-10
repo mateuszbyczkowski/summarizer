@@ -177,4 +177,21 @@ class SummaryResponseParserTest {
         assertEquals("Wycieczka.", SummaryResponseParser.streamingOverview("OVERVIEW: Wycieczka.\nTOPICS:\n- Wyc"))
         assertEquals("Everyone agreed", SummaryResponseParser.streamingOverview("Everyone agreed"))
     }
+
+    @Test
+    fun `date lines without a bullet keep their day`() {
+        val parsed = SummaryResponseParser.parse(
+            """
+            OVERVIEW: Wycieczka w piątek.
+            DATES:
+            17.10 7:15 | Zbiórka
+            1. 21.10 18:00 | Zebranie
+            """.trimIndent(),
+            reference = java.time.LocalDate.of(2026, 10, 13)
+        )
+
+        assertEquals(listOf("2026-10-17", "2026-10-21"), parsed.keyDates.map { it.date })
+        assertEquals(listOf("07:15", "18:00"), parsed.keyDates.map { it.time })
+    }
 }
+

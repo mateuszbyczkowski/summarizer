@@ -204,39 +204,6 @@
     <string name="models_resume">Resume Download</string>
     <string name="models_skip">Skip for Now</string>
 
-    <!-- Thread list -->
-    <string name="threads_title">Messages</string>
-    <string name="threads_filter_followed">Followed only</string>
-    <string name="threads_filter_all">All threads</string>
-    <string name="threads_empty_title">No messages yet</string>
-    <string name="threads_empty_followed_title">No followed threads</string>
-    <string name="threads_empty_no_permission_body">Grant notification access to start tracking important updates from your groups</string>
-    <string name="threads_empty_followed_body">You haven\'t followed any threads yet.\nTap the filter to see all threads and follow the ones you care about.</string>
-    <string name="threads_empty_body">Important updates from your groups will appear here.\nStay informed about announcements and deadlines.</string>
-    <string name="threads_item_meta">%1$s • %2$s</string>
-    <plurals name="message_count">
-        <item quantity="one">%1$d message</item>
-        <item quantity="other">%1$d messages</item>
-    </plurals>
-    <string name="time_just_now">Just now</string>
-    <plurals name="time_minutes_ago">
-        <item quantity="one">%1$dm ago</item>
-        <item quantity="other">%1$dm ago</item>
-    </plurals>
-    <plurals name="time_hours_ago">
-        <item quantity="one">%1$dh ago</item>
-        <item quantity="other">%1$dh ago</item>
-    </plurals>
-    <plurals name="time_days_ago">
-        <item quantity="one">%1$dd ago</item>
-        <item quantity="other">%1$dd ago</item>
-    </plurals>
-
-    <string name="permission_card_title">Notification Access Required</string>
-    <string name="permission_card_body">To capture WhatsApp messages, Summarizer needs notification access. Your messages stay private and are stored only on your device.</string>
-    <string name="permission_card_open_settings">Open Settings</string>
-    <string name="permission_card_hint">In Settings, find \'Summarizer\' and enable notification access</string>
-
     <!-- Thread detail -->
     <string name="thread_detail_fallback_title">Thread</string>
     <string name="thread_detail_mode_title">Summarization Mode</string>

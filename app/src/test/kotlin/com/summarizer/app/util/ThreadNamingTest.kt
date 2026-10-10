@@ -22,4 +22,13 @@ class ThreadNamingTest {
     fun `thread ids stay compatible with the historical scheme`() {
         assertEquals("family".hashCode().toString(), ThreadNaming.threadIdFor("Family"))
     }
+
+    @Test
+    fun `avatar initial skips emoji and symbols`() {
+        assertEquals("T", ThreadNaming.initial("🧪 Test: Klasa 3B – rodzice"))
+        assertEquals("3", ThreadNaming.initial("\"3B\" parents"))
+        assertEquals("Ś", ThreadNaming.initial("świetlica"))
+        assertEquals("#", ThreadNaming.initial("🎉🎉"))
+        assertEquals("#", ThreadNaming.initial(""))
+    }
 }

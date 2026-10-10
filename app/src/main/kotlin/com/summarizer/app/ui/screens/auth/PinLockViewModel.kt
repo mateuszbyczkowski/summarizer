@@ -39,6 +39,11 @@ class PinLockViewModel @Inject constructor(
 
     private var countdown: Job? = null
 
+    /** A new lock-screen session: clear the previous entry and result, keep a running lockout. */
+    fun startSession() {
+        _uiState.update { PinLockUiState(lockoutSeconds = it.lockoutSeconds) }
+    }
+
     fun onDigit(digit: Char) {
         val state = _uiState.value
         if (!state.keypadEnabled || state.entry.length >= Constants.PIN_LENGTH) return

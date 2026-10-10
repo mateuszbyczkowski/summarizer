@@ -24,14 +24,14 @@ class DatabaseKeyProvider(
 ) {
 
     companion object {
-        private const val WRAPPING_KEY_ALIAS = "summarizer_database_key"
-        private const val PREFS_NAME = "summarizer_database_key"
         private const val KEY_CURRENT = "wrapped_key"
         private const val KEY_PENDING = "wrapped_key_pending"
     }
 
-    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    private val cipher = KeystoreCipher(WRAPPING_KEY_ALIAS)
+    // Named after the database, so a test database never touches the app's key
+    // ("summarizer_database" -> "summarizer_database_key", the historical name)
+    private val prefs = context.getSharedPreferences("${databaseName}_key", Context.MODE_PRIVATE)
+    private val cipher = KeystoreCipher("${databaseName}_key")
 
     @Synchronized
     fun getPassphrase(): ByteArray {

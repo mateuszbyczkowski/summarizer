@@ -23,7 +23,7 @@ interface ThreadDao {
 
     /**
      * Every thread with the number of messages newer than its latest summary (all messages when
-     * it has none). Uses the (threadId, timestamp) index on messages.
+     * it has none) and its latest message. Uses the (threadId, timestamp) index on messages.
      */
     @Query("""
         SELECT t.*, (
@@ -32,7 +32,13 @@ interface ThreadDao {
                 SELECT s.endTimestamp FROM summaries s WHERE s.threadId = t.threadId
                 ORDER BY s.generatedAt DESC, s.id DESC LIMIT 1
             ), -1)
-        ) AS newSinceSummary
+        ) AS newSinceSummary, (
+            SELECT m.sender FROM messages m WHERE m.threadId = t.threadId
+            ORDER BY m.timestamp DESC, m.id DESC LIMIT 1
+        ) AS lastMessageSender, (
+            SELECT m.content FROM messages m WHERE m.threadId = t.threadId
+            ORDER BY m.timestamp DESC, m.id DESC LIMIT 1
+        ) AS lastMessageText
         FROM threads t
         ORDER BY t.lastMessageTimestamp DESC, t.threadName ASC
     """)
@@ -83,8 +89,10 @@ interface ThreadDao {
     suspend fun updateFollowStatus(threadId: String, isFollowed: Boolean)
 }
 
-/** A thread with the number of messages that arrived after its latest summary. */
+/** A thread with the number of messages that arrived after its latest summary, and its latest message. */
 data class ThreadWithNewCount(
     @Embedded val thread: ThreadEntity,
-    val newSinceSummary: Int
+    val newSinceSummary: Int,
+    val lastMessageSender: String?,
+    val lastMessageText: String?
 )

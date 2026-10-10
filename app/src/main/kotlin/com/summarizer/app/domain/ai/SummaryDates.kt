@@ -28,8 +28,13 @@ object SummaryDates {
 
     private val ISO_DATE = Regex("(?<!\\d)(\\d{4})-(\\d{1,2})-(\\d{1,2})(?!\\d)")
 
-    // "17.10", "17/10", "17.10.2026", "17.10.26"; not part of a longer number, time or decimal
-    private val NUMERIC_DATE = Regex("(?<![\\d.,:/])(\\d{1,2})[./](\\d{1,2})(?:[./](\\d{4}|\\d{2}))?(?![\\d:/]|[.,]\\d)")
+    // "17.10", "17/10", "17.10.2026", "17.10.26"; not part of a longer number, time, decimal or
+    // amount ("$2.10", "1.5 kg", "2.10 zł")
+    private val NUMERIC_DATE = Regex(
+        "(?<![\\d.,:/$€£])(\\d{1,2})[./](\\d{1,2})(?:[./](\\d{4}|\\d{2}))?(?![\\d:/]|[.,]\\d)" +
+            "(?!\\s*(?:zł|zl|pln|eur|usd|kg|km|ml|mg|g|l|m|%|\\$|€)(?!\\p{L}))",
+        RegexOption.IGNORE_CASE
+    )
 
     // "17 października", "17 paź", "17th October 2026"
     private val DAY_MONTH_NAME = Regex(
@@ -37,7 +42,7 @@ object SummaryDates {
         RegexOption.IGNORE_CASE
     )
 
-    // "October 17", "Oct 17, 2026"
+    // "October 17", "October 17, 2026" (full English names only: "Jan 2" is also a Polish name)
     private val MONTH_NAME_DAY = Regex(
         "(?<!\\p{L})(\\p{L}{3,})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,?\\s+(\\d{4}))?(?![\\p{L}\\d])",
         RegexOption.IGNORE_CASE
@@ -81,9 +86,10 @@ object SummaryDates {
         add(11, "listopada", "listopad", "lis", "november", "nov")
         add(12, "grudnia", "grudzień", "grudzien", "gru", "december", "dec")
     }
+    /** Month names allowed before the day ("October 17"); abbreviations collide with names and words. */
     private val ENGLISH_MONTHS = setOf(
-        "january", "jan", "february", "feb", "march", "mar", "april", "apr", "may", "june", "jun", "july", "jul",
-        "august", "aug", "september", "sept", "sep", "october", "oct", "november", "nov", "december", "dec"
+        "january", "february", "march", "april", "may", "june", "july",
+        "august", "september", "october", "november", "december"
     )
 
     /** All dates in [text] that resolve to a real day, in reading order. */
@@ -134,26 +140,38 @@ object SummaryDates {
         val whenIndex = parts.indexOfFirst { findDates(it, reference).isNotEmpty() || findTime(it) != null }
             .takeIf { it >= 0 } ?: if ('|' in line && parts.size > 1) 0 else -1
         val whenText = if (whenIndex >= 0) parts[whenIndex] else line
-        val whatText = if (whenIndex >= 0 && parts.size > 1) parts.filterIndexed { i, _ -> i != whenIndex }.joinToString(", ") else null
+        // A further part that is only a date is the end of a range ("17.10 - 18.10 | Ferie")
+        val rangeEnds = parts.filterIndexed { i, part -> i != whenIndex && isOnlyDate(part, reference) }
+        val whatParts = parts.filterIndexed { i, part -> i != whenIndex && part !in rangeEnds }
+        val whatText = if (whenIndex >= 0 && whatParts.isNotEmpty()) whatParts.joinToString(", ") else null
 
         val date = findDates(whenText, reference).firstOrNull()
         val withoutDate = whenText.blankOut(date?.range)
         val time = findTime(withoutDate)
         val rest = withoutDate.blankOut(time?.range).cleanup()
+        val meaningfulRest = rest.takeIf { it.isNotEmpty() && !WEEKDAY_ONLY.matches(it) }
 
-        // Without a separate "what", the rest of the line is the event; a resolved date makes a
-        // leftover weekday redundant, an unresolved one ("w środę") is kept as the detail
-        val description = whatText ?: rest
-        val unresolvedWhen = if (whatText != null && date == null && !WEEKDAY_ONLY.matches(rest)) rest else null
+        // Text next to a resolved date is the event ("17.10 Wycieczka | Kopernik": event
+        // "Wycieczka", detail "Kopernik"); next to an unresolved one ("w środę | Basen") it is
+        // kept as the detail
+        val description: String
+        val extraDetail: String?
+        when {
+            whatText == null -> { description = rest; extraDetail = null }
+            meaningfulRest != null && date != null -> { description = meaningfulRest; extraDetail = whatText }
+            date == null -> { description = whatText; extraDetail = meaningfulRest }
+            else -> { description = whatText; extraDetail = null }
+        }
         val label = description.substringBefore(',').cleanup()
         val place = description.substringAfter(',', "").cleanup()
         if (label.isEmpty()) return null
+        val rangeEnd = rangeEnds.firstOrNull()?.let { "– $it" }
 
         return KeyDate(
             label = label,
             date = date?.date?.toString(),
             time = time?.time?.format(TIME_FORMAT),
-            detail = listOfNotNull(unresolvedWhen?.ifEmpty { null }, place.ifEmpty { null }).joinToString(", ").ifEmpty { null }
+            detail = listOfNotNull(rangeEnd, extraDetail, place.ifEmpty { null }).joinToString(", ").ifEmpty { null }
         )
     }
 
@@ -182,6 +200,11 @@ object SummaryDates {
             DEADLINE_BEFORE.find(before)?.let { task = before.substring(0, it.range.first) }
         }
         return ActionItem(task = task.cleanup().ifEmpty { text }, due = due.date.toString())
+    }
+
+    private fun isOnlyDate(text: String, reference: LocalDate): Boolean {
+        val date = findDates(text, reference).firstOrNull() ?: return false
+        return text.blankOut(date.range).let { rest -> rest.blankOut(findTime(rest)?.range) }.cleanup().isEmpty()
     }
 
     private fun resolve(day: Int, month: Int, yearText: String, reference: LocalDate): LocalDate? {

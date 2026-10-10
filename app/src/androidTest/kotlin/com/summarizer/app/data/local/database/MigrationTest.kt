@@ -22,7 +22,13 @@ class MigrationTest {
     @Test
     fun allMigrationsFromVersion4ProduceTheCurrentSchema() {
         helper.createDatabase(databaseName, 4).close()
-        helper.runMigrationsAndValidate(databaseName, 10, true, *ALL_MIGRATIONS).close()
+        helper.runMigrationsAndValidate(databaseName, 11, true, *ALL_MIGRATIONS).close()
+    }
+
+    @Test
+    fun migration10To11AddsSummaryIndex() {
+        helper.createDatabase(databaseName, 10).close()
+        helper.runMigrationsAndValidate(databaseName, 11, true, MIGRATION_10_11).close()
     }
 
     @Test

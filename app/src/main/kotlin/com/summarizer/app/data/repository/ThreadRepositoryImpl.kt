@@ -41,6 +41,8 @@ class ThreadRepositoryImpl @Inject constructor(
                     thread = row.thread.toDomainModel(),
                     latestSummary = summary,
                     newSinceSummary = row.newSinceSummary,
+                    lastMessageSender = row.lastMessageSender,
+                    lastMessageText = row.lastMessageText,
                     openTasks = summary?.actionItems?.count { !it.done } ?: 0
                 )
             }

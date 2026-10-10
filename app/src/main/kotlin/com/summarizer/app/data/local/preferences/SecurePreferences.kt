@@ -20,9 +20,16 @@ import javax.inject.Singleton
  * should be used off the main thread.
  */
 @Singleton
-class SecurePreferences @Inject constructor(
-    @ApplicationContext private val context: Context
+class SecurePreferences(
+    private val context: Context,
+    private val storeName: String,
+    keyAlias: String,
+    private val migrateLegacy: Boolean
 ) {
+    /** The app's store. Tests use the primary constructor with their own names. */
+    @Inject
+    constructor(@ApplicationContext context: Context) : this(context, STORE_NAME, KEY_ALIAS, migrateLegacy = true)
+
     private companion object {
         const val STORE_NAME = "summarizer_secure_store"
         const val KEY_ALIAS = "summarizer_secure_store_key"
@@ -32,10 +39,10 @@ class SecurePreferences @Inject constructor(
         val LEGACY_STORES = listOf(Constants.PREFS_NAME, "encrypted_prefs")
     }
 
-    private val cipher = KeystoreCipher(KEY_ALIAS)
+    private val cipher = KeystoreCipher(keyAlias)
 
     private val prefs: SharedPreferences by lazy {
-        context.getSharedPreferences(STORE_NAME, Context.MODE_PRIVATE).also(::migrateLegacyStores)
+        context.getSharedPreferences(storeName, Context.MODE_PRIVATE).also { if (migrateLegacy) migrateLegacyStores(it) }
     }
 
     fun getString(key: String, defaultValue: String? = null): String? =

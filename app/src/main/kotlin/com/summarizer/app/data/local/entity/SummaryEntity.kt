@@ -2,12 +2,14 @@ package com.summarizer.app.data.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.summarizer.app.domain.model.ActionItem
 import com.summarizer.app.domain.model.KeyDate
 import com.summarizer.app.domain.model.ParticipantHighlight
 
-@Entity(tableName = "summaries")
+// Home and agenda queries look up the latest summary per thread
+@Entity(tableName = "summaries", indices = [Index(value = ["threadId", "generatedAt"])])
 data class SummaryEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

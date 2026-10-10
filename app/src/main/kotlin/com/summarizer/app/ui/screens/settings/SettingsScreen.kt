@@ -46,7 +46,8 @@ import com.summarizer.app.ui.screens.settings.sections.SmartNotificationsSection
  */
 @Composable
 fun SettingsScreen(
-    onBackPressed: () -> Unit,
+    /** Null when Settings is a top-level tab, which has no back arrow. */
+    onBackPressed: (() -> Unit)? = null,
     onModelConfigClick: () -> Unit = {},
     onResetComplete: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()

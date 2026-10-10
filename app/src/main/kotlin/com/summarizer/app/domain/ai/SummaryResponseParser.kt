@@ -42,7 +42,9 @@ object SummaryResponseParser {
     // Date placeholders from the format a model may copy into a real item ("Przelew (by DD.MM)")
     private val TEMPLATE_FRAGMENT = Regex("\\s*\\(?(?:by\\s+)?DD\\.MM\\)?|\\s*HH:MM", RegexOption.IGNORE_CASE)
     private val MARKDOWN = Regex("\\*\\*|__|^#+\\s*", RegexOption.MULTILINE)
-    private val BULLET = Regex("^(?:[-*•–]|\\d+[.)])\\s*")
+    // "- ", "* ", "• " or a list number followed by a space ("1. "); "17.10" is a date, not a number
+    private val WHITESPACE_RUN = Regex("\\s+")
+    private val BULLET = Regex("^(?:[-*•–]\\s*|\\d{1,2}[.)]\\s+)")
     private val EMPTY_MARKERS = setOf(
         "none", "none.", "n/a", "-", "...", "…", "nothing", "no", "brak", "brak.", "nic",
         "keine", "aucun", "aucune", "ninguno", "ninguna", "nessuno", "nenhum", "nenhuma"
@@ -100,9 +102,26 @@ object SummaryResponseParser {
      * the model is still writing the OVERVIEW label; the whole text if it ignores the format.
      */
     fun streamingOverview(partial: String): String {
-        val text = partial.replace(MARKDOWN, "").trim()
-        if (text.lines().any { SECTION_LABEL.matches(it.trim()) }) return parse(text).overview
+        // Called for every streamed chunk on the engine thread: only look at the overview
+        // section, without the full parse (date resolution etc.)
+        val lines = partial.replace(MARKDOWN, "").lines()
+        var inOverview = false
+        var sawLabel = false
+        val overview = StringBuilder()
+        for (line in lines) {
+            val label = SECTION_LABEL.find(line.trim())
+            if (label != null) {
+                sawLabel = true
+                if (inOverview) break
+                inOverview = sectionFor(label.groupValues[1]) == Section.OVERVIEW
+                if (inOverview) overview.append(label.groupValues[2].ifEmpty { label.groupValues[3] })
+            } else if (inOverview) {
+                overview.append(' ').append(line.trim().replace(BULLET, ""))
+            }
+        }
+        if (sawLabel) return overview.toString().replace(WHITESPACE_RUN, " ").trim()
         // The reply may start with an unfinished label ("OVER")
+        val text = partial.replace(MARKDOWN, "").trim()
         return if ("OVERVIEW".startsWith(text.trim { !it.isLetter() }, ignoreCase = true)) "" else text
     }
 

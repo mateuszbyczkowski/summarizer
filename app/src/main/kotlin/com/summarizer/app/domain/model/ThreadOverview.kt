@@ -7,10 +7,14 @@ package com.summarizer.app.domain.model
  * @property newSinceSummary Messages newer than the latest summary's last message; all messages
  *           when the thread has no summary
  * @property openTasks Tasks of the latest summary that are not done
+ * @property lastMessageSender Sender of the most recent stored message, if any
+ * @property lastMessageText Text of the most recent stored message, if any
  */
 data class ThreadOverview(
     val thread: Thread,
     val latestSummary: Summary?,
     val newSinceSummary: Int,
-    val openTasks: Int
+    val openTasks: Int,
+    val lastMessageSender: String? = null,
+    val lastMessageText: String? = null
 )

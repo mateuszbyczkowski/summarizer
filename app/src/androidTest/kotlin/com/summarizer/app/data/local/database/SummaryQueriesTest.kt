@@ -73,6 +73,9 @@ class SummaryQueriesTest {
         assertNull(overviews[1].latestSummary)
         assertEquals(2, overviews[1].newSinceSummary)
         assertEquals(0, overviews[1].openTasks)
+        assertEquals("Anna", overviews[0].lastMessageSender)
+        assertEquals("m400", overviews[0].lastMessageText)
+        assertEquals("m300", overviews[1].lastMessageText)
     }
 
     @Test

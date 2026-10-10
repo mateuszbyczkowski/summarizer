@@ -27,7 +27,8 @@ class DatabaseKeyProviderTest {
     @After
     fun cleanUp() {
         context.deleteDatabase(databaseName)
-        context.getSharedPreferences("summarizer_database_key", Context.MODE_PRIVATE).edit().clear().commit()
+        // The provider keeps the key for this test database in "<name>_key", never the app's
+        context.getSharedPreferences("${databaseName}_key", Context.MODE_PRIVATE).edit().clear().commit()
     }
 
     @Test

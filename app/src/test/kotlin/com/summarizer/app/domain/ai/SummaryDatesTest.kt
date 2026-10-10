@@ -118,4 +118,27 @@ class SummaryDatesTest {
         assertNull(unresolved.due)
         assertTrue(!unresolved.done)
     }
+
+    @Test
+    fun `amounts, quantities and names are not dates`() {
+        assertNull(firstDate("Zapłacić \$2.10 za bilet"))
+        assertNull(firstDate("Kupić 1.5 kg mąki"))
+        assertNull(firstDate("Składka 2.10 zł"))
+        assertNull(firstDate("Jan 2 bilety kupi"))
+        assertEquals(LocalDate.of(2026, 10, 17), firstDate("October 17"))
+    }
+
+    @Test
+    fun `text next to the date is the event and a second date ends a range`() {
+        val withPlace = SummaryDates.parseKeyDate("17.10 Wycieczka | Kopernik", reference)!!
+        assertEquals("Wycieczka", withPlace.label)
+        assertEquals("2026-10-17", withPlace.date)
+        assertEquals("Kopernik", withPlace.detail)
+
+        val range = SummaryDates.parseKeyDate("17.10 - 18.10 | Ferie", reference)!!
+        assertEquals("Ferie", range.label)
+        assertEquals("2026-10-17", range.date)
+        assertEquals("– 18.10", range.detail)
+    }
 }
+

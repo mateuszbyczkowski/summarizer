@@ -61,7 +61,16 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
 }
 
 /** Every migration from a version that still has user data. Versions 1-3 predate releases. */
-val ALL_MIGRATIONS = arrayOf(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+/** Latest-summary-per-thread lookups (Home, agenda) scanned the whole summaries table. */
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_summaries_threadId_generatedAt` ON `summaries` (`threadId`, `generatedAt`)")
+    }
+}
+
+val ALL_MIGRATIONS = arrayOf(
+    MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11
+)
 
 /**
  * One-time cleanup of threads created under older naming rules: every conversation is moved,

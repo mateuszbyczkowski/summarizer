@@ -18,7 +18,13 @@ import java.security.MessageDigest
 class AuthRepositoryImplTest {
 
     private val context = ApplicationProvider.getApplicationContext<Context>()
-    private val securePreferences = SecurePreferences(context)
+    // A separate store: the test must never touch the app's real PIN and secrets
+    private val securePreferences = SecurePreferences(
+        context,
+        storeName = "auth_repository_test_store",
+        keyAlias = "auth_repository_test_key",
+        migrateLegacy = false
+    )
     private val repository = AuthRepositoryImpl(securePreferences)
 
     @Before

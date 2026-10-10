@@ -11,6 +11,7 @@ import android.os.PersistableBundle
 import android.widget.Toast
 import com.summarizer.app.R
 import com.summarizer.app.di.ApplicationScope
+import com.summarizer.app.domain.repository.PreferencesRepository
 import com.summarizer.app.domain.repository.SummaryRepository
 import com.summarizer.app.util.SummaryFormatter
 import dagger.hilt.android.AndroidEntryPoint
@@ -37,6 +38,9 @@ class CopySummaryReceiver : BroadcastReceiver() {
     lateinit var summaryRepository: SummaryRepository
 
     @Inject
+    lateinit var preferencesRepository: PreferencesRepository
+
+    @Inject
     @ApplicationScope
     lateinit var applicationScope: CoroutineScope
 
@@ -46,6 +50,8 @@ class CopySummaryReceiver : BroadcastReceiver() {
         val pending = goAsync()
         applicationScope.launch {
             try {
+                // A notification posted before the app lock was turned on must not bypass it
+                if (preferencesRepository.isAppLockEnabled()) return@launch
                 val summary = summaryRepository.getSummary(summaryId) ?: return@launch
                 val text = SummaryFormatter.toPlainText(context, summary)
                 withContext(Dispatchers.Main) {

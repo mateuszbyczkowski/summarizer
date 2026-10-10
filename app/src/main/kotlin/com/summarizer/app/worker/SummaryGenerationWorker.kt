@@ -20,6 +20,7 @@ import com.summarizer.app.MainActivity
 import com.summarizer.app.R
 import com.summarizer.app.domain.model.GenerationStage
 import com.summarizer.app.domain.model.Summary
+import com.summarizer.app.domain.repository.PreferencesRepository
 import com.summarizer.app.domain.repository.ThreadRepository
 import com.summarizer.app.domain.usecase.GenerateSummaryUseCase
 import com.summarizer.app.domain.usecase.NothingToSummarizeException
@@ -46,7 +47,8 @@ class SummaryGenerationWorker @AssistedInject constructor(
     @Assisted private val context: Context,
     @Assisted workerParams: WorkerParameters,
     private val generateSummaryUseCase: GenerateSummaryUseCase,
-    private val threadRepository: ThreadRepository
+    private val threadRepository: ThreadRepository,
+    private val preferencesRepository: PreferencesRepository
 ) : CoroutineWorker(context, workerParams) {
 
     companion object {
@@ -166,7 +168,11 @@ class SummaryGenerationWorker @AssistedInject constructor(
         return ForegroundInfo(progressNotificationId(), notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
     }
 
-    /** "Summary ready · 2 tasks" with the first open task, and actions to show or copy it. */
+    /**
+     * "Summary ready · 2 tasks" with the first open task, and actions to show or copy it. With the
+     * app lock on, the notification names only the chat: its content and the Copy action would
+     * let anyone holding the unlocked phone read the summary without passing the app lock.
+     */
     private suspend fun notifyReady(threadName: String?, summary: Summary) {
         val openTasks = summary.actionItems.filterNot { it.done }
         val title = if (openTasks.isEmpty()) {
@@ -174,9 +180,14 @@ class SummaryGenerationWorker @AssistedInject constructor(
         } else {
             context.resources.getQuantityString(R.plurals.summary_notification_ready_tasks, openTasks.size, openTasks.size)
         }
-        val text = openTasks.firstOrNull()?.task
-            ?: threadName?.let { context.getString(R.string.summary_notification_ready_text, it) }
-        notifyResult(threadName, title, text) {
+        val chatText = threadName?.let { context.getString(R.string.summary_notification_ready_text, it) }
+        if (preferencesRepository.isAppLockEnabled()) {
+            notifyResult(threadName, title, chatText) {
+                addAction(0, context.getString(R.string.summary_notification_show), openSummaryIntent())
+            }
+            return
+        }
+        notifyResult(threadName, title, openTasks.firstOrNull()?.task ?: chatText) {
             setSubText(threadName)
                 .addAction(0, context.getString(R.string.summary_notification_show), openSummaryIntent())
                 .addAction(0, context.getString(R.string.summary_notification_copy), copySummaryIntent(summary.id))

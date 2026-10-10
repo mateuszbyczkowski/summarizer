@@ -65,22 +65,28 @@ fun AppLockScreen(
     onSystemUnlocked: () -> Unit,
     onSystemLockUnavailable: () -> Unit
 ) {
-    // Fresh view models for every time the lock screen is shown (it lives outside navigation)
+    // The lock screen lives outside navigation, so its view models belong to the activity. Stable
+    // keys keep it at one of each; every time the lock screen is shown it starts a fresh session.
     val session = rememberSaveable { UUID.randomUUID().toString() }
     when (method) {
         LockMethod.SYSTEM -> SystemLockScreen(
             onUnlocked = onSystemUnlocked,
             onUnavailable = onSystemLockUnavailable
         )
-        LockMethod.PIN -> PinLockScreen(
-            onUnlocked = onUnlocked,
-            viewModel = hiltViewModel(key = "pin-lock-$session")
-        )
-        LockMethod.PIN_SETUP -> PinSetupScreen(
-            onPinSet = onUnlocked,
-            subtitle = stringResource(R.string.lock_pin_setup_required_subtitle),
-            viewModel = hiltViewModel(key = "pin-setup-$session")
-        )
+        LockMethod.PIN -> {
+            val viewModel: PinLockViewModel = hiltViewModel(key = "pin-lock")
+            LaunchedEffect(session) { viewModel.startSession() }
+            PinLockScreen(onUnlocked = onUnlocked, viewModel = viewModel)
+        }
+        LockMethod.PIN_SETUP -> {
+            val viewModel: PinSetupViewModel = hiltViewModel(key = "pin-setup")
+            LaunchedEffect(session) { viewModel.restart() }
+            PinSetupScreen(
+                onPinSet = onUnlocked,
+                subtitle = stringResource(R.string.lock_pin_setup_required_subtitle),
+                viewModel = viewModel
+            )
+        }
     }
 }
 
