@@ -5,6 +5,9 @@ import kotlinx.coroutines.flow.Flow
 
 interface ModelRepository {
     fun getAllModels(): Flow<List<AIModel>>
+
+    /** Mark models whose files no longer exist as not downloaded. */
+    suspend fun refreshDownloadState()
     suspend fun getModelById(modelId: String): AIModel?
     suspend fun getDownloadedModel(): AIModel?
     suspend fun insertModel(model: AIModel)

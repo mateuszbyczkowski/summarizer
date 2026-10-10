@@ -7,6 +7,8 @@ import com.summarizer.app.domain.repository.ModelRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -14,6 +16,8 @@ import javax.inject.Singleton
 class ModelRepositoryImpl @Inject constructor(
     private val aiModelDao: AIModelDao
 ) : ModelRepository {
+
+    override suspend fun refreshDownloadState() = forgetMissingFiles()
 
     override fun getAllModels(): Flow<List<AIModel>> {
         return aiModelDao.getAllModels().map { entities ->
@@ -26,7 +30,15 @@ class ModelRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getDownloadedModel(): AIModel? {
+        forgetMissingFiles()
         return aiModelDao.getDownloadedModel()?.toDomainModel()
+    }
+
+    /** Models whose file disappeared (deleted, SD card removed) are no longer "downloaded". */
+    private suspend fun forgetMissingFiles() = withContext(Dispatchers.IO) {
+        aiModelDao.getDownloadedModels()
+            .filter { it.localFilePath == null || !File(it.localFilePath).exists() }
+            .forEach { aiModelDao.updateDownloadStatus(it.id, false, null, null) }
     }
 
     override suspend fun insertModel(model: AIModel) {

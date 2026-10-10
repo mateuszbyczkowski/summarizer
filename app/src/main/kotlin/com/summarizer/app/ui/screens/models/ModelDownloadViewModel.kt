@@ -60,6 +60,7 @@ class ModelDownloadViewModel @Inject constructor(
      *    entries. Downloaded files for retired IDs are wiped via deleteModelFile().
      */
     private suspend fun reconcileCatalog() {
+        modelRepository.refreshDownloadState()
         val existing = modelRepository.getAllModels().first()
         val catalogIds = DEFAULT_MODELS.map { it.id }.toSet()
 
