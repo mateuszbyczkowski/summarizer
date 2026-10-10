@@ -128,13 +128,8 @@ fun NavGraph(
                 popUpTo(Screen.Home.route)
                 launchSingleTop = true
             }
-            is PendingNavigation.Summary -> {
-                navController.openThread(pendingNavigation.threadId) {
-                    popUpTo(Screen.Home.route)
-                }
-                navController.navigate(Screen.SummaryDisplay.createRoute(pendingNavigation.threadId)) {
-                    launchSingleTop = true
-                }
+            is PendingNavigation.Summary -> navController.openSummary(pendingNavigation.threadId) {
+                popUpTo(Screen.Home.route)
             }
             PendingNavigation.Threads -> navController.popBackStack(Screen.Home.route, inclusive = false)
         }
@@ -290,7 +285,8 @@ fun NavGraph(
                     },
                     onStorageClick = {
                         navController.navigate(Screen.StorageLocation.createRoute())
-                    }
+                    },
+                    onOpenThread = { threadId -> navController.openThread(threadId) }
                 )
             }
 
@@ -326,7 +322,8 @@ fun NavGraph(
             composable(Screen.Search.route) {
                 SearchScreen(
                     onBackPressed = { navController.popBackStack() },
-                    onThreadClick = { threadId -> navController.openThread(threadId) }
+                    onThreadClick = { threadId -> navController.openThread(threadId) },
+                    onSummaryClick = { threadId -> navController.openSummary(threadId) }
                 )
             }
 
@@ -362,6 +359,12 @@ fun NavGraph(
  */
 private fun NavHostController.openThread(threadId: String, builder: NavOptionsBuilder.() -> Unit = {}) {
     navigate(Screen.ThreadDetail.createRoute(threadId), builder)
+}
+
+/** Opens a thread's summary, with the thread underneath so Back returns to it. */
+private fun NavHostController.openSummary(threadId: String, builder: NavOptionsBuilder.() -> Unit = {}) {
+    openThread(threadId, builder)
+    navigate(Screen.SummaryDisplay.createRoute(threadId)) { launchSingleTop = true }
 }
 
 /** Switches tabs: one copy of each tab on the stack, each keeping its state, home at the bottom. */
