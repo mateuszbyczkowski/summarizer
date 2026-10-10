@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget picker preview colors: Material You system palette (dark), close to GlanceTheme -->
+<resources>
+    <color name="widget_preview_surface">@android:color/system_neutral1_900</color>
+    <color name="widget_preview_on_surface">@android:color/system_neutral1_100</color>
+    <color name="widget_preview_on_surface_variant">@android:color/system_neutral2_200</color>
+    <color name="widget_preview_badge">@android:color/system_accent2_700</color>
+    <color name="widget_preview_on_badge">@android:color/system_accent2_100</color>
+    <color name="widget_preview_urgent">#FF8C1D18</color>
+    <color name="widget_preview_on_urgent">#FFF9DEDC</color>
+</resources>

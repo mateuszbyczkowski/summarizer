@@ -11,6 +11,7 @@ import androidx.work.WorkManager
 import com.summarizer.app.domain.model.AIProvider
 import com.summarizer.app.domain.repository.PreferencesRepository
 import com.summarizer.app.domain.repository.ThreadSettingsRepository
+import com.summarizer.app.ui.widget.UpcomingWidgetMidnightWorker
 import dagger.hilt.android.qualifiers.ApplicationContext
 import timber.log.Timber
 import java.time.Duration
@@ -76,6 +77,27 @@ class WorkScheduler @Inject constructor(
 
     fun cancelAutoSummarization() {
         WorkManager.getInstance(context).cancelUniqueWork(AutoSummarizationWorker.WORK_NAME)
+    }
+
+    /**
+     * Re-renders the home-screen widget one minute after the next local midnight, so "today"
+     * and "this week" follow the date. The worker schedules the following run itself.
+     *
+     * @param policy KEEP when a widget is placed or the app starts, REPLACE after the clock or
+     *   time zone changed, APPEND_OR_REPLACE from the worker itself
+     */
+    fun scheduleWidgetMidnightRefresh(policy: ExistingWorkPolicy) {
+        val now = ZonedDateTime.now()
+        val nextRun = now.toLocalDate().plusDays(1).atStartOfDay(now.zone).plusMinutes(1)
+        val workRequest = OneTimeWorkRequestBuilder<UpcomingWidgetMidnightWorker>()
+            .setInitialDelay(Duration.between(now, nextRun).toMillis(), TimeUnit.MILLISECONDS)
+            .addTag("widget_refresh")
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork(UpcomingWidgetMidnightWorker.WORK_NAME, policy, workRequest)
+    }
+
+    fun cancelWidgetMidnightRefresh() {
+        WorkManager.getInstance(context).cancelUniqueWork(UpcomingWidgetMidnightWorker.WORK_NAME)
     }
 
     /**
