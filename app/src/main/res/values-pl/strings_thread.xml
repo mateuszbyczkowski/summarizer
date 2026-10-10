@@ -107,4 +107,10 @@
     <string name="thread_media_location">Lokalizacja</string>
     <string name="thread_media_contact">Kontakt</string>
     <string name="thread_media_sticker">Naklejka</string>
+    <string name="chat_description_menu">O tym czacie</string>
+    <string name="chat_description_menu_empty">Napisz, czego dotyczy ten czat</string>
+    <string name="chat_description_title">O tym czacie</string>
+    <string name="chat_description_body">Kilka słów o tym, czego dotyczy czat, pomaga w podsumowaniu wybrać to, co ważne. Działa od następnego podsumowania; zostaje na tym telefonie.</string>
+    <string name="chat_description_placeholder">np. Rodzice klasy 3B: wycieczki, wpłaty, zebrania</string>
+    <string name="chat_description_save">Zapisz</string>
 </resources>

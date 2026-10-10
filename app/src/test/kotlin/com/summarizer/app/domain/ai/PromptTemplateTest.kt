@@ -19,6 +19,22 @@ class PromptTemplateTest {
     )
 
     @Test
+    fun `the chat description comes before the messages`() {
+        val prompt = PromptTemplate.buildSummarizationPrompt(
+            listOf(message(1)), "Klasa 3B", maxTranscriptChars = 8_500, chatDescription = "Parents of class 3B"
+        )!!
+        val about = prompt.indexOf("About this chat (from the owner): Parents of class 3B")
+        assertTrue(about > prompt.indexOf("Chat: \"Klasa 3B\""))
+        assertTrue(about < prompt.indexOf(message(1).content))
+    }
+
+    @Test
+    fun `no description adds no line`() {
+        val prompt = PromptTemplate.buildSummarizationPrompt(listOf(message(1)), "Thread", maxTranscriptChars = 8_500)!!
+        assertFalse(prompt.contains("About this chat"))
+    }
+
+    @Test
     fun `long transcripts keep the newest messages`() {
         val messages = (1..2_000).map { message(it, "message number $it " + "x".repeat(40)) }
 

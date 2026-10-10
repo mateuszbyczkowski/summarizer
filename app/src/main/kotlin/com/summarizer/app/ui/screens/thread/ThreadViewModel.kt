@@ -48,6 +48,7 @@ sealed interface ThreadUiState {
      * @property newMessages Messages newer than the latest summary (0 without a summary)
      * @property generation The summary being generated or the failed attempt, if any
      * @property dayRange First and last day of the messages; null without messages
+     * @property description What the chat is about, in the user's words; null when not set
      */
     data class Ready(
         val thread: Thread?,
@@ -60,7 +61,8 @@ sealed interface ThreadUiState {
         val mode: SummarizationMode,
         val generation: SummaryGenerationCoordinator.State?,
         val today: LocalDate,
-        val dayRange: Pair<LocalDate, LocalDate>? = null
+        val dayRange: Pair<LocalDate, LocalDate>? = null,
+        val description: String? = null
     ) : ThreadUiState {
         val latest: Summary? get() = summaries.firstOrNull()
         val isGenerating: Boolean get() = generation is SummaryGenerationCoordinator.State.Running
@@ -109,6 +111,7 @@ class ThreadViewModel @Inject constructor(
         val summaries: List<Summary>,
         val newMessages: Int,
         val mode: SummarizationMode,
+        val description: String?,
         val dayRange: Pair<LocalDate, LocalDate>?
     )
 
@@ -116,8 +119,8 @@ class ThreadViewModel @Inject constructor(
         threadRepository.observeThread(threadId),
         messageRepository.getMessagesForThread(threadId),
         summaryRepository.getSummariesForThread(threadId),
-        threadSettingsRepository.getSettingsFlow(threadId).map { it?.summarizationMode ?: SummarizationMode.INCREMENTAL }
-    ) { thread, messages, summaries, mode ->
+        threadSettingsRepository.getSettingsFlow(threadId)
+    ) { thread, messages, summaries, settings ->
         val latest = summaries.firstOrNull()
         Content(
             thread = thread,
@@ -127,7 +130,8 @@ class ThreadViewModel @Inject constructor(
             },
             summaries = summaries,
             newMessages = ThreadSummaryRules.newMessageCount(messages, latest),
-            mode = mode,
+            mode = settings?.summarizationMode ?: SummarizationMode.INCREMENTAL,
+            description = settings?.description,
             dayRange = ThreadSummaryRules.dayRange(messages.map { it.timestamp })
         )
     }.flowOn(Dispatchers.Default) // grouping 30 days of messages stays off the main thread
@@ -149,7 +153,8 @@ class ThreadViewModel @Inject constructor(
             mode = content.mode,
             generation = generation,
             today = day,
-            dayRange = content.dayRange
+            dayRange = content.dayRange,
+            description = content.description
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ThreadUiState.Loading)
 
@@ -180,6 +185,11 @@ class ThreadViewModel @Inject constructor(
             threadSettingsRepository.getOrCreateSettings(threadId)
             threadSettingsRepository.updateSummarizationMode(threadId, mode)
         }
+    }
+
+    /** What the chat is about; used from the next summary on. Blank clears it. */
+    fun setDescription(description: String?) {
+        viewModelScope.launch { threadSettingsRepository.updateDescription(threadId, description) }
     }
 
     fun setFollowed(followed: Boolean) {

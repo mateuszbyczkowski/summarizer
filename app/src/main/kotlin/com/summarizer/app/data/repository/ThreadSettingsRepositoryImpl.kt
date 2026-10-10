@@ -43,6 +43,11 @@ class ThreadSettingsRepositoryImpl @Inject constructor(
         threadSettingsDao.updateSummarizationMode(threadId, mode.name)
     }
 
+    override suspend fun updateDescription(threadId: String, description: String?) {
+        getOrCreateSettings(threadId)
+        threadSettingsDao.updateDescription(threadId, ThreadSettings.normalizeDescription(description))
+    }
+
     override suspend fun getOrCreateSettings(threadId: String): ThreadSettings {
         return getSettings(threadId) ?: ThreadSettings(threadId = threadId).also {
             saveSettings(it)
@@ -58,7 +63,8 @@ class ThreadSettingsRepositoryImpl @Inject constructor(
         lastSummarizedMessageTimestamp = lastSummarizedMessageTimestamp,
         lastSummarizedAt = lastSummarizedAt,
         createdAt = createdAt,
-        updatedAt = updatedAt
+        updatedAt = updatedAt,
+        description = description
     )
 
     private fun ThreadSettings.toEntity() = ThreadSettingsEntity(
@@ -69,6 +75,7 @@ class ThreadSettingsRepositoryImpl @Inject constructor(
         lastSummarizedMessageTimestamp = lastSummarizedMessageTimestamp,
         lastSummarizedAt = lastSummarizedAt,
         createdAt = createdAt,
-        updatedAt = updatedAt
+        updatedAt = updatedAt,
+        description = description
     )
 }

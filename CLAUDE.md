@@ -28,7 +28,7 @@ Three steps (welcome, notification access, engine choice with on-device preselec
 ./gradlew installDebug     # Install on device
 ./gradlew clean && rm -rf app/build && ./gradlew assembleDebug  # Clean build (fixes Hilt/Room issues)
 ./gradlew testDebugUnitTest            # JVM unit tests (parsers, dates, prompts, agenda, onboarding, lock policy)
-./gradlew connectedDebugAndroidTest    # Instrumented tests (migrations, DB key, PIN); EMULATOR ONLY
+./gradlew connectedDebugAndroidTest    # Instrumented tests (migrations, DB key, PIN, parsers on ICU regex); EMULATOR ONLY
 ```
 
 `connectedDebugAndroidTest` uninstalls the app afterwards; never run it on a phone with real data. On a phone, install the test APK and use `adb shell am instrument` (see `benchmark/LocalModelBenchmark.kt`, `LiteRtBenchmark.kt`). Benchmarks and `LiteRtEngineTest` use the debug sample chat (`data/debug/DebugSampleData.kt`), never user data.
@@ -53,6 +53,7 @@ Use Cases → AIEngine (interface) ← AIEngineProvider (singleton)
 - `data/ai/RealAIEngine.kt`: Local Llamatik (llama.cpp wrapper) for `.gguf` models (CPU fallback: LFM2.5). LlamaBridge is one global, non-thread-safe context: every native call runs on the engine's single `llama-native` thread
 - The local engine is chosen by the model file extension; if the GPU cannot load a model, `AIEngineProvider` falls back to a downloaded GGUF model, or after repeated failures has `ModelSetupManager.startCpuFallback()` download one (a user cancel is remembered)
 - `domain/ai/ModelLoading.kt`: `ensureModelLoaded()` loads the active local model on demand (use cases never assume it is loaded)
+- `domain/ai/ModelGate.kt`: one job at a time uses the model. Summaries queue behind each other (stage `WAITING`), loading, switching or deleting a model waits for the running summary, and smart-notification scoring skips a busy model. Any new code that loads, unloads or generates goes through it
 - `data/ai/OpenAIEngine.kt`: Cloud API (Retrofit)
 
 **To add new provider:**
@@ -81,6 +82,10 @@ Secrets (PIN hash, OpenAI API key, lock state) live in `SecurePreferences`, also
 
 While the lock is on, notifications show no summary or message content, the widget shows only counts, and the notification Copy action is blocked. Notifications always have a public version without content for the lock screen. `MainActivity` sets `FLAG_SECURE` (skipped only on emulator debug builds, for screenshots).
 
+## Chat Description
+
+Per chat, the user can write a short note on what the chat is about ("About this chat" in the thread menu, `ThreadSettings.description`, max 150 chars, one line). `PromptTemplate` puts it before the transcript so the model knows what matters.
+
 ## Message Capture Architecture
 
 `service/WhatsAppNotificationListener.kt` turns each WhatsApp notification into a `NotificationSnapshot`; `service/WhatsAppNotificationParser.kt` (pure Kotlin, unit-tested) extracts messages from MessagingStyle with each message's own sender and timestamp. WhatsApp re-posts notifications with earlier messages, so deduplication relies on a SHA-256 of (thread, sender, content, timestamp); `MessageRepository.saveIncomingMessage` stores the message and updates thread stats in one transaction.
@@ -103,8 +108,10 @@ All use `@HiltWorker` for dependency injection.
 2. **Hilt caching** - On compile errors: `./gradlew clean && rm -rf app/build`
 3. **No cloud storage** - All data on-device only (privacy commitment)
 4. **APK size ~135MB debug / ~66MB release** - llama.cpp (Llamatik) and LiteRT-LM native libraries; only `arm64-v8a` is packaged (`abiFilters`)
-5. **Logs** - never log message or summary text (thread IDs are hashes)
+5. **Logs** - never log message or summary text (thread IDs are hashes). WorkManager logs and stores progress `Data`, so the streamed overview goes through `SummaryGenerationCoordinator.publishPartialText` (in memory), never `setProgress`
 6. **Model catalog** - `data/download/ModelCatalog.DEFAULT_MODELS` (the app picks one by RAM in onboarding, `ModelRecommendation`); URLs pinned to a Hugging Face commit with a SHA-256 `checksum` (look them up from the phone with `LiteRtModelProbe#fileHashes`; Hugging Face is blocked on the corporate network)
+7. **Regex on Android** - Android uses ICU regex, which rejects some patterns the JVM accepts (a class starting with `[:` is read as a POSIX class: write `[.:]`). JVM unit tests cannot catch this; parsers also run on the device in `ParsersOnDeviceTest`
+8. **No animations during generation** - on-device GPU generation stalls the UI's own frames for seconds; anything that animates on its own while a summary runs (spinners, ticking timers, indeterminate bars) freezes the app into an ANR
 
 ## Debug Tooling (debug builds only)
 

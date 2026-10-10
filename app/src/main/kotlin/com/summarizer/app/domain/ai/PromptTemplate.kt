@@ -40,22 +40,26 @@ object PromptTemplate {
      * @param threadName Name of the conversation thread
      * @param maxTranscriptChars Transcript budget; the oldest messages are dropped beyond it
      * @param languageName Language to write in (e.g. "Polish"); null keeps the chat's language
+     * @param chatDescription What the chat is about, in the owner's words ("Parents of class
+     *   3B"); helps the model tell what matters. One line (see ThreadSettings.normalizeDescription)
      * @return Formatted prompt string, or null if there are no summarizable messages
      */
     fun buildSummarizationPrompt(
         messages: List<Message>,
         threadName: String,
         maxTranscriptChars: Int,
-        languageName: String? = null
+        languageName: String? = null,
+        chatDescription: String? = null
     ): String? {
         val validMessages = summarizableMessages(messages)
         if (validMessages.isEmpty()) return null
 
         val transcript = buildConversationTranscript(validMessages, maxTranscriptChars)
         val language = languageName ?: "the language of the messages"
+        val about = chatDescription?.takeIf { it.isNotBlank() }?.let { "\nAbout this chat (from the owner): $it" }.orEmpty()
 
         return """
-            |Chat: "$threadName"
+            |Chat: "$threadName"$about
             |
             |$transcript
             |

@@ -42,6 +42,11 @@ interface ThreadSettingsRepository {
     suspend fun updateSummarizationMode(threadId: String, mode: SummarizationMode)
 
     /**
+     * Set what the chat is about (trimmed and shortened); blank clears it.
+     */
+    suspend fun updateDescription(threadId: String, description: String?)
+
+    /**
      * Get or create settings for a thread with default values.
      * Creates new settings with defaults if they don't exist.
      */

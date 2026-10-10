@@ -103,4 +103,13 @@
     <string name="thread_media_sticker">Sticker</string>
     <!-- Spoken for a message: "Anna, 17:02: text" -->
     <string name="thread_message_cd" translatable="false">%1$s, %2$s: %3$s</string>
+    <!-- About this chat: a short note the model reads before the messages -->
+    <string name="chat_description_menu">About this chat</string>
+    <string name="chat_description_menu_empty">Tell the summary what this chat is about</string>
+    <string name="chat_description_title">About this chat</string>
+    <string name="chat_description_body">A few words on what this chat is about help the summary pick what matters. Used from the next summary on; stays on this phone.</string>
+    <string name="chat_description_placeholder">e.g. Parents of class 3B: trips, payments, meetings</string>
+    <!-- "42 / 150" characters -->
+    <string name="chat_description_counter" translatable="false">%1$d / %2$d</string>
+    <string name="chat_description_save">Save</string>
 </resources>

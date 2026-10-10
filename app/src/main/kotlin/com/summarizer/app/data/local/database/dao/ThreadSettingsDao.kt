@@ -32,6 +32,9 @@ interface ThreadSettingsDao {
     @Query("UPDATE thread_settings SET lastSummarizedMessageTimestamp = :timestamp, lastSummarizedAt = :summarizedAt, updatedAt = :updatedAt WHERE threadId = :threadId")
     suspend fun updateLastSummarized(threadId: String, timestamp: Long, summarizedAt: Long, updatedAt: Long = System.currentTimeMillis())
 
+    @Query("UPDATE thread_settings SET description = :description, updatedAt = :updatedAt WHERE threadId = :threadId")
+    suspend fun updateDescription(threadId: String, description: String?, updatedAt: Long = System.currentTimeMillis())
+
     @Query("UPDATE thread_settings SET summarizationMode = :mode, updatedAt = :updatedAt WHERE threadId = :threadId")
     suspend fun updateSummarizationMode(threadId: String, mode: String, updatedAt: Long = System.currentTimeMillis())
 }

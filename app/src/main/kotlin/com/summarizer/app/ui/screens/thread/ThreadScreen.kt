@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.StarOutline
@@ -52,6 +53,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -112,6 +114,7 @@ fun ThreadScreen(
                 onCancel = viewModel::cancelGeneration,
                 onDismissError = viewModel::dismissError,
                 onSetMode = viewModel::setMode,
+                onSetDescription = viewModel::setDescription,
                 onSetFollowed = viewModel::setFollowed,
                 onSelectSummary = viewModel::selectSummary,
                 onSetTaskDone = viewModel::setTaskDone,
@@ -128,6 +131,7 @@ class ThreadActions(
     val onCancel: () -> Unit,
     val onDismissError: () -> Unit,
     val onSetMode: (SummarizationMode) -> Unit,
+    val onSetDescription: (String?) -> Unit,
     val onSetFollowed: (Boolean) -> Unit,
     val onSelectSummary: (Long) -> Unit,
     val onSetTaskDone: (summaryId: Long, index: Int, done: Boolean) -> Unit,
@@ -258,6 +262,7 @@ private fun ThreadContent(
                     onShare = state.shown?.let { shown -> { callbacks.onShare(shown) } },
                     onFullResummary = { startGeneration(true) },
                     onSetMode = actions.onSetMode,
+                    onSetDescription = actions.onSetDescription,
                     onSetFollowed = actions.onSetFollowed
                 )
                 ThreadTabs(
@@ -320,8 +325,20 @@ private fun ThreadTopBar(
     onShare: (() -> Unit)?,
     onFullResummary: () -> Unit,
     onSetMode: (SummarizationMode) -> Unit,
+    onSetDescription: (String?) -> Unit,
     onSetFollowed: (Boolean) -> Unit
 ) {
+    var editingDescription by rememberSaveable { mutableStateOf(false) }
+    if (editingDescription) {
+        ChatDescriptionDialog(
+            description = state.description,
+            onSave = { text ->
+                editingDescription = false
+                onSetDescription(text)
+            },
+            onDismiss = { editingDescription = false }
+        )
+    }
     val title = state.threadName.ifBlank { stringResource(R.string.thread_fallback_title) }
     val subtitle = if (state.isGenerating) {
         stringResource(R.string.thread_subtitle_summarizing)
@@ -356,6 +373,8 @@ private fun ThreadTopBar(
             }
             ThreadOverflowMenu(
                 mode = state.mode,
+                description = state.description,
+                onEditDescription = { editingDescription = true },
                 followed = state.thread?.isFollowed,
                 canResummarize = !state.isGenerating && state.messages.isNotEmpty(),
                 onFullResummary = onFullResummary,
@@ -382,6 +401,8 @@ private fun threadSubtitle(state: ThreadUiState.Ready): String? {
 @Composable
 private fun ThreadOverflowMenu(
     mode: SummarizationMode,
+    description: String?,
+    onEditDescription: () -> Unit,
     followed: Boolean?,
     canResummarize: Boolean,
     onFullResummary: () -> Unit,
@@ -394,6 +415,19 @@ private fun ThreadOverflowMenu(
             Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_more_options))
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = {
+                    MenuText(
+                        title = stringResource(R.string.chat_description_menu),
+                        description = description ?: stringResource(R.string.chat_description_menu_empty)
+                    )
+                },
+                leadingIcon = { Icon(Icons.Outlined.Info, contentDescription = null) },
+                onClick = {
+                    expanded = false
+                    onEditDescription()
+                }
+            )
             DropdownMenuItem(
                 text = {
                     MenuText(

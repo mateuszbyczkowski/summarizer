@@ -22,13 +22,29 @@ class MigrationTest {
     @Test
     fun allMigrationsFromVersion4ProduceTheCurrentSchema() {
         helper.createDatabase(databaseName, 4).close()
-        helper.runMigrationsAndValidate(databaseName, 11, true, *ALL_MIGRATIONS).close()
+        helper.runMigrationsAndValidate(databaseName, 12, true, *ALL_MIGRATIONS).close()
     }
 
     @Test
     fun migration10To11AddsSummaryIndex() {
         helper.createDatabase(databaseName, 10).close()
         helper.runMigrationsAndValidate(databaseName, 11, true, MIGRATION_10_11).close()
+    }
+
+    @Test
+    fun migration11To12AddsChatDescriptionAndKeepsSettings() {
+        helper.createDatabase(databaseName, 11).apply {
+            execSQL("INSERT INTO threads (threadId, threadName, messageCount, lastMessageTimestamp, createdAt, isFollowed) VALUES ('t1', 'Chat', 0, 0, 0, 1)")
+            execSQL("INSERT INTO thread_settings (threadId, summarizationMode, createdAt, updatedAt) VALUES ('t1', 'FULL', 1, 2)")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(databaseName, 12, true, MIGRATION_11_12)
+        db.query("SELECT summarizationMode, description FROM thread_settings WHERE threadId = 't1'").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("FULL", cursor.getString(0))
+            assertTrue(cursor.isNull(1))
+        }
+        db.close()
     }
 
     @Test

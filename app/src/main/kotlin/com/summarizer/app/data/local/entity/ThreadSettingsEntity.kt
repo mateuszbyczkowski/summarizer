@@ -26,5 +26,6 @@ data class ThreadSettingsEntity(
     val lastSummarizedMessageTimestamp: Long? = null,
     val lastSummarizedAt: Long? = null,
     val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis()
+    val updatedAt: Long = System.currentTimeMillis(),
+    val description: String? = null // what the chat is about, written by the user for the model
 )

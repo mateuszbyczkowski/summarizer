@@ -22,7 +22,7 @@ import com.summarizer.app.data.local.entity.ThreadSettingsEntity
         AIModelEntity::class,
         ThreadSettingsEntity::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

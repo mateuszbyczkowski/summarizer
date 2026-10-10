@@ -11,6 +11,8 @@ package com.summarizer.app.domain.model
  * @property lastSummarizedAt Timestamp when the last summary was generated
  * @property createdAt When these settings were first created
  * @property updatedAt When these settings were last modified
+ * @property description What the chat is about, in the user's words ("Parents of class 3B"),
+ *   given to the model as context; null when not set
  */
 data class ThreadSettings(
     val threadId: String,
@@ -20,5 +22,18 @@ data class ThreadSettings(
     val lastSummarizedMessageTimestamp: Long? = null,
     val lastSummarizedAt: Long? = null,
     val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis()
-)
+    val updatedAt: Long = System.currentTimeMillis(),
+    val description: String? = null
+) {
+    companion object {
+        /** A short note is enough for context, and keeps the prompt small. */
+        const val MAX_DESCRIPTION_LENGTH = 150
+
+        /**
+         * The description as stored: one line (it goes into the prompt), trimmed, at most
+         * [MAX_DESCRIPTION_LENGTH] characters; null when blank.
+         */
+        fun normalizeDescription(text: String?): String? =
+            text?.replace(Regex("\\s+"), " ")?.trim()?.take(MAX_DESCRIPTION_LENGTH)?.trim()?.ifEmpty { null }
+    }
+}

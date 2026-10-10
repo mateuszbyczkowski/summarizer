@@ -110,7 +110,8 @@ class GenerateSummaryUseCase @Inject constructor(
                     messages = summarizable,
                     threadName = thread.threadName,
                     maxTranscriptChars = aiEngine.maxPromptChars(),
-                    languageName = language
+                    languageName = language,
+                    chatDescription = settings.description
                 ) ?: throw NothingToSummarizeException("No messages to summarize")
             }
 
