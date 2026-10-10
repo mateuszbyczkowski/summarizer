@@ -42,11 +42,11 @@
     <string name="onboarding_engine_body">Możesz to później zmienić w Ustawieniach.</string>
     <string name="onboarding_engine_local_title">Na tym telefonie</string>
     <string name="onboarding_engine_local_body">Prywatnie i za darmo. Działa offline; nic nie opuszcza telefonu.</string>
-    <string name="onboarding_engine_local_model">Pobierze w tle %1$s (%2$s), dobrany do %3$d GB RAM Twojego telefonu.</string>
+    <string name="onboarding_engine_local_model">W tle pobierzemy %1$s (%2$s), dobrany do %3$d GB RAM Twojego telefonu.</string>
     <string name="onboarding_engine_local_no_model">Model wybierzesz później w Ustawieniach › Silnik AI.</string>
     <string name="onboarding_engine_recommended">Polecane</string>
     <string name="onboarding_engine_openai_body">Szybko na każdym telefonie. Wiadomości są wysyłane do OpenAI w celu podsumowania. Wymaga własnego klucza API, ok. 0,0006 USD za podsumowanie.</string>
-    <string name="onboarding_engine_start">Start</string>
+    <string name="onboarding_engine_start">Rozpocznij</string>
     <string name="onboarding_engine_continue">Dalej</string>
 
     <!-- Home: background download of the model picked in onboarding -->

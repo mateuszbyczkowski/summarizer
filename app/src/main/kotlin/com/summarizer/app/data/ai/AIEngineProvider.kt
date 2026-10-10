@@ -36,6 +36,10 @@ class AIEngineProvider @Inject constructor(
     private val modelSetupManager: Lazy<ModelSetupManager>
 ) : AIEngine {
 
+    /** GPU loads that failed in a row; a single failure may be transient (memory pressure). */
+    @Volatile
+    private var gpuLoadFailures = 0
+
     /** The local engine currently holding a model, if any. */
     @Volatile
     private var loadedLocalEngine: AIEngine? = null
@@ -69,6 +73,7 @@ class AIEngineProvider @Inject constructor(
         val result = engine.loadModel(modelPath)
         if (result.isSuccess) {
             loadedLocalEngine = engine
+            if (engine === liteRtEngine) gpuLoadFailures = 0
             return result
         }
 
@@ -86,10 +91,13 @@ class AIEngineProvider @Inject constructor(
                     modelRepository.markAsDownloaded(cpuModel.id, cpuModelPath, System.currentTimeMillis())
                 }
             }
-            // No CPU model yet: download one in the background (Home shows its progress); it
-            // becomes the active model when done, so the next summary works
-            Timber.w(result.exceptionOrNull(), "GPU model failed to load and no CPU model is downloaded; setting one up")
-            modelSetupManager.get().startCpuFallback()
+            // No CPU model yet: after repeated failures, download one in the background (Home
+            // shows its progress); it becomes the active model when done
+            gpuLoadFailures++
+            if (gpuLoadFailures >= GPU_FAILURES_BEFORE_FALLBACK) {
+                Timber.w(result.exceptionOrNull(), "GPU model failed to load again and no CPU model is downloaded; setting one up")
+                modelSetupManager.get().startCpuFallback()
+            }
         }
         loadedLocalEngine = null
         return result
@@ -136,5 +144,9 @@ class AIEngineProvider @Inject constructor(
         // Catalog names carry the backend in parentheses: "Gemma 4 E2B (GPU)"
         val name = catalogName?.substringBefore(" (")?.trim() ?: info.name
         return "$name · ${if (engine === liteRtEngine) "GPU" else "CPU"}"
+    }
+
+    private companion object {
+        const val GPU_FAILURES_BEFORE_FALLBACK = 2
     }
 }

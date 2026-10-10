@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -77,21 +78,22 @@ class HomeViewModel @Inject constructor(
     val modelSetup: StateFlow<ModelSetupState?> = modelSetupManager.state
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    private val engineConfigured = MutableStateFlow(true)
+    private val engineChecks = MutableStateFlow(0)
 
-    /** No engine can summarize and no model is on its way: Home points to the AI engine screen. */
-    val engineMissing: StateFlow<Boolean> = combine(engineConfigured, modelSetup) { configured, setup ->
-        !configured && setup == null
+    /**
+     * No engine can summarize and no model is on its way: Home points to the AI engine screen.
+     * Checked again whenever the setup download changes (e.g. finishes) and on [refreshEngine].
+     */
+    val engineMissing: StateFlow<Boolean> = combine(modelSetup, engineChecks) { setup, _ ->
+        setup == null && !isEngineConfigured()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     /** Re-checks the engine; the user may have set one up while away from Home. */
-    fun refreshEngine() {
-        viewModelScope.launch {
-            engineConfigured.value = when (preferencesRepository.getAIProvider()) {
-                AIProvider.LOCAL -> modelRepository.getDownloadedModel() != null
-                AIProvider.OPENAI -> !preferencesRepository.getOpenAIApiKey().isNullOrBlank()
-            }
-        }
+    fun refreshEngine() = engineChecks.update { it + 1 }
+
+    private suspend fun isEngineConfigured(): Boolean = when (preferencesRepository.getAIProvider()) {
+        AIProvider.LOCAL -> modelRepository.getDownloadedModel() != null
+        AIProvider.OPENAI -> !preferencesRepository.getOpenAIApiKey().isNullOrBlank()
     }
 
     fun retryModelSetup() = modelSetupManager.retry()

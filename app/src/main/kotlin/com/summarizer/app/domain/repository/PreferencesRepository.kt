@@ -18,6 +18,10 @@ interface PreferencesRepository {
     fun observeSetupModelId(): Flow<String?>
     suspend fun setSetupModelId(modelId: String?)
 
+    /** The user cancelled the automatic CPU-model download that replaces a failing GPU model. */
+    suspend fun isCpuFallbackDeclined(): Boolean
+    suspend fun setCpuFallbackDeclined(declined: Boolean)
+
     // AI Provider preferences (Week 8)
     suspend fun getAIProvider(): AIProvider
     suspend fun setAIProvider(provider: AIProvider)

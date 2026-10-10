@@ -59,6 +59,10 @@ class DateTimeFormats(
     /** Day and short month: "Oct 12" / "12 paź". */
     fun shortDate(date: LocalDate): String = formatter(SKELETON_DAY_MONTH).format(date)
 
+    /** A past day: "Oct 12" this year, "Oct 12, 2025" before (summaries are kept for good). */
+    fun pastDate(date: LocalDate, today: LocalDate): String =
+        if (date.year == today.year) shortDate(date) else formatter(SKELETON_DAY_MONTH_YEAR).format(date)
+
     /** Weekday, day and short month: "Fri, Oct 17" / "pt., 17 paź". Agenda rows, day headers, due dates. */
     fun weekdayDate(date: LocalDate): String = formatter(SKELETON_WEEKDAY_DAY_MONTH).format(date)
 
@@ -68,8 +72,12 @@ class DateTimeFormats(
     /** Short weekday name as the locale writes it: "Fri" / "pt.". */
     fun weekday(date: LocalDate): String = formatter(SKELETON_WEEKDAY).format(date)
 
-    /** Short weekday for date badges, upper case without a trailing dot: "FRI" / "PT". */
-    fun weekdayBadge(date: LocalDate): String = weekday(date).trimEnd('.').uppercase(locale)
+    /**
+     * Short weekday for date badges, upper case without a trailing dot and at most 3 letters, so
+     * it fits a 36 dp badge: "FRI" / "PT", and "NIE" for Polish "niedz.".
+     */
+    fun weekdayBadge(date: LocalDate): String =
+        weekday(date).trimEnd('.').take(MAX_BADGE_LETTERS).uppercase(locale)
 
     /**
      * A day range, compact: "Oct 13", "Oct 9–13", "Sep 28 – Oct 3", "Dec 28, 2025 – Jan 2, 2026"
@@ -118,5 +126,6 @@ class DateTimeFormats(
         const val SKELETON_WEEKDAY_DAY_MONTH = "MMMEd"
         const val SKELETON_WEEKDAY_NUMERIC = "MEd"
         const val SKELETON_WEEKDAY = "EEE"
+        private const val MAX_BADGE_LETTERS = 3
     }
 }

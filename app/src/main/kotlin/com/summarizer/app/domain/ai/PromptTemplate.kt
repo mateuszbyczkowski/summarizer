@@ -120,7 +120,7 @@ object PromptTemplate {
      */
     private fun formatMessageTime(timestamp: Long): String {
         val date = java.util.Date(timestamp)
-        val formatter = java.text.SimpleDateFormat("EEE d MMM HH:mm", java.util.Locale.getDefault())
+        val formatter = java.text.SimpleDateFormat("EEE d MMM HH:mm", java.util.Locale.ENGLISH)
         return formatter.format(date)
     }
 }

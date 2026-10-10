@@ -22,7 +22,7 @@
     <string name="api_key_how_to_title">Jak zdobyć klucz API:</string>
     <string name="api_key_how_to_steps">1. Wejdź na platform.openai.com\n2. Załóż konto lub zaloguj się\n3. Otwórz sekcję API Keys\n4. Utwórz nowy klucz (secret key)\n5. Skopiuj go i wklej tutaj</string>
     <string name="openai_privacy_title">Prywatność</string>
-    <string name="openai_privacy_body">Przy OpenAI Twoje wiadomości z WhatsAppa są wysyłane na serwery OpenAI. %1$s</string>
+    <string name="openai_privacy_body">Gdy używasz OpenAI, Twoje wiadomości z WhatsAppa trafiają na serwery OpenAI. %1$s</string>
     <string name="openai_privacy_suggestion_settings">Pełną prywatność daje silnik na urządzeniu.</string>
     <string name="openai_privacy_suggestion_onboarding">Jeśli wolisz pełną prywatność, wróć i wybierz „Na tym telefonie”.</string>
 
@@ -76,7 +76,10 @@
 
     <!-- Model download -->
     <string name="models_pause">Wstrzymaj pobieranie</string>
-    <string name="models_download_failed">Nie udało się pobrać: %1$s</string>
+    <string name="models_failed_wifi">Czekam na Wi-Fi. Wyłącz „Pobieraj tylko przez Wi-Fi”, aby pobrać teraz.</string>
+    <string name="models_failed_space">Za mało wolnego miejsca na ten model.</string>
+    <string name="models_failed_network">Nie udało się połączyć z serwerem. Sprawdź połączenie i spróbuj ponownie.</string>
+    <string name="models_failed_other">Nie udało się pobrać. Spróbuj ponownie.</string>
     <string name="models_paused">Wstrzymano przy %1$d%%</string>
 
     <!-- Search -->

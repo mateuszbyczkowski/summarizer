@@ -13,8 +13,8 @@
     <string name="thread_menu_full_resummary">Podsumuj od nowa</string>
     <string name="thread_menu_full_resummary_description">Jednorazowo, ze wszystkich wiadomości</string>
     <string name="thread_menu_mode">Tryb podsumowania</string>
-    <string name="thread_mode_incremental">Przyrostowy</string>
-    <string name="thread_mode_incremental_description">Tylko nowe wiadomości</string>
+    <string name="thread_mode_incremental">Tylko nowe</string>
+    <string name="thread_mode_incremental_description">Od ostatniego podsumowania</string>
     <string name="thread_mode_full">Pełny</string>
     <string name="thread_mode_full_description">Wszystkie wiadomości</string>
     <string name="thread_menu_follow">Obserwuj czat</string>
@@ -42,10 +42,10 @@
     <string name="thread_key_dates">Ważne daty</string>
     <string name="thread_todo">Do zrobienia</string>
     <plurals name="thread_todo_progress">
-        <item quantity="one">%1$d z %2$d zrobione</item>
-        <item quantity="few">%1$d z %2$d zrobione</item>
-        <item quantity="many">%1$d z %2$d zrobione</item>
-        <item quantity="other">%1$d z %2$d zrobione</item>
+        <item quantity="one">Zrobione: %1$d z %2$d</item>
+        <item quantity="few">Zrobione: %1$d z %2$d</item>
+        <item quantity="many">Zrobione: %1$d z %2$d</item>
+        <item quantity="other">Zrobione: %1$d z %2$d</item>
     </plurals>
     <string name="thread_task_due">do %1$s</string>
     <string name="thread_announcements">Ogłoszenia</string>

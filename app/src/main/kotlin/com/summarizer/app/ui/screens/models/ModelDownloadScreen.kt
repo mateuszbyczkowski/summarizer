@@ -87,6 +87,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.summarizer.app.R
 import com.summarizer.app.domain.model.AIModel
 import com.summarizer.app.domain.model.AIProvider
+import com.summarizer.app.domain.model.DownloadFailure
 import com.summarizer.app.domain.model.DownloadStatus
 import com.summarizer.app.domain.model.ModelDownloadState
 import com.summarizer.app.ui.components.SettingsGroup
@@ -605,7 +606,15 @@ private fun ModelRow(
             )
         } else if (!downloaded && downloadState.status == DownloadStatus.FAILED) {
             Text(
-                text = stringResource(R.string.models_download_failed, downloadState.error.orEmpty()),
+                // The downloader's own message is English and technical; say why in the UI language
+                text = stringResource(
+                    when (downloadState.failure) {
+                        DownloadFailure.WIFI_REQUIRED -> R.string.models_failed_wifi
+                        DownloadFailure.NO_SPACE -> R.string.models_failed_space
+                        DownloadFailure.NETWORK -> R.string.models_failed_network
+                        DownloadFailure.OTHER, null -> R.string.models_failed_other
+                    }
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(top = 4.dp, end = 8.dp)

@@ -129,6 +129,13 @@ fun NavGraph(
     // Handle navigation requests from notifications once the graph is ready
     LaunchedEffect(pendingNavigation, startDestination) {
         if (startDestination != Screen.Home.route || pendingNavigation == null) return@LaunchedEffect
+        // Onboarding again (after a reset): an old notification's chat no longer exists
+        val inOnboarding = navController.currentBackStackEntry?.destination?.hierarchy
+            ?.any { it.route == ONBOARDING_GRAPH } == true
+        if (inOnboarding) {
+            onPendingNavigationHandled()
+            return@LaunchedEffect
+        }
         when (pendingNavigation) {
             is PendingNavigation.Thread -> navController.openThread(pendingNavigation.threadId) {
                 popUpTo(Screen.Home.route)

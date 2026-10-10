@@ -1,5 +1,6 @@
 package com.summarizer.app.data.repository
 
+import android.app.NotificationManager
 import android.content.Context
 import com.summarizer.app.data.download.ModelDownloadManager
 import com.summarizer.app.data.local.database.AppDatabase
@@ -7,6 +8,7 @@ import com.summarizer.app.data.local.preferences.RecentSearchesStore
 import com.summarizer.app.domain.ai.AIEngine
 import com.summarizer.app.domain.repository.AuthRepository
 import com.summarizer.app.domain.repository.PreferencesRepository
+import com.summarizer.app.domain.usecase.SummaryGenerationCoordinator
 import com.summarizer.app.util.StorageHelper
 import com.summarizer.app.worker.WorkScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -28,11 +30,14 @@ class AppDataResetter @Inject constructor(
     private val authRepository: AuthRepository,
     private val workScheduler: WorkScheduler,
     private val recentSearchesStore: RecentSearchesStore,
-    private val modelDownloadManager: ModelDownloadManager
+    private val modelDownloadManager: ModelDownloadManager,
+    private val summaryGenerationCoordinator: SummaryGenerationCoordinator
 ) {
 
     suspend fun resetAll() = withContext(Dispatchers.IO) {
         workScheduler.cancelAutoSummarization()
+        // A summary in progress could reload the model and save into the cleared database
+        summaryGenerationCoordinator.cancelAllBlocking()
         aiEngine.unloadModel()
         // A running download would keep writing into the deleted folder and claim the next one
         modelDownloadManager.cancelAll()
@@ -43,5 +48,7 @@ class AppDataResetter @Inject constructor(
         preferencesRepository.clearAll()
         recentSearchesStore.clear()
         authRepository.clearPin()
+        // Their taps would open chats that no longer exist
+        context.getSystemService(NotificationManager::class.java).cancelAll()
     }
 }

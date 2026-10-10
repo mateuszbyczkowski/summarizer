@@ -40,7 +40,7 @@ fun relativeTimeAgo(timestamp: Long, now: Long): String {
         diff < HOUR -> (diff / MINUTE).toInt().let { pluralStringResource(R.plurals.rel_time_minutes_ago, it, it) }
         diff < DAY -> (diff / HOUR).toInt().let { pluralStringResource(R.plurals.rel_time_hours_ago, it, it) }
         diff < 7 * DAY -> (diff / DAY).toInt().let { pluralStringResource(R.plurals.rel_time_days_ago, it, it) }
-        else -> rememberDateTimeFormats().shortDate(toLocalDate(timestamp))
+        else -> rememberDateTimeFormats().pastDate(toLocalDate(timestamp), toLocalDate(now))
     }
 }
 
@@ -55,7 +55,7 @@ fun chatListTime(timestamp: Long, now: Long): String {
         days <= 0 -> formats.time(dateTime.toLocalTime())
         days == 1L -> stringResource(R.string.rel_time_yesterday)
         days < 7 -> formats.weekday(dateTime.toLocalDate())
-        else -> formats.shortDate(dateTime.toLocalDate())
+        else -> formats.pastDate(dateTime.toLocalDate(), toLocalDate(now))
     }
 }
 

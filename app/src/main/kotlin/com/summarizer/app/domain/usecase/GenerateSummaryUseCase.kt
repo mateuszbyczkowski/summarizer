@@ -108,18 +108,21 @@ class GenerateSummaryUseCase @Inject constructor(
             val language = languageDetector.detectLanguageName(
                 summarizable.filter { it.messageType == MessageType.TEXT }.joinToString("\n") { it.content }
             )
-            val prompt = PromptTemplate.buildSummarizationPrompt(
-                messages = summarizable,
-                threadName = thread.threadName,
-                maxTranscriptChars = aiEngine.maxPromptChars(),
-                languageName = language
-            ) ?: throw NothingToSummarizeException("No messages to summarize")
-
-            Timber.d("Summarizing ${messages.size} messages (mode: ${if (incremental) "incremental" else "full"}, language: $language, prompt: ${prompt.length} chars)")
+            // Built for the engine loaded right now: its prompt budget differs (GPU vs CPU model)
+            val buildPrompt = suspend {
+                PromptTemplate.buildSummarizationPrompt(
+                    messages = summarizable,
+                    threadName = thread.threadName,
+                    maxTranscriptChars = aiEngine.maxPromptChars(),
+                    languageName = language
+                ) ?: throw NothingToSummarizeException("No messages to summarize")
+            }
 
             // Step 5: Generate summary. Transient failures are retried by the engine itself.
             onProgress?.invoke(GenerationStage.READING, null)
             val generate = suspend {
+                val prompt = buildPrompt()
+                Timber.d("Summarizing ${messages.size} messages (mode: ${if (incremental) "incremental" else "full"}, language: $language, prompt: ${prompt.length} chars)")
                 aiEngine.generate(
                     prompt = prompt,
                     systemPrompt = PromptTemplate.systemPrompt(language),

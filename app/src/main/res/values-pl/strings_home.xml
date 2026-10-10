@@ -17,7 +17,7 @@
     <string name="home_this_week_all">Wszystkie</string>
     <string name="home_this_week_all_cd">Wszystkie zadania i terminy</string>
     <string name="home_followed">Obserwowane</string>
-    <string name="home_auto_summary">Auto-podsumowanie o %1$s</string>
+    <string name="home_auto_summary">Codzienne podsumowanie o %1$s</string>
     <string name="home_followed_empty">Obserwuj ważne dla Ciebie czaty, żeby dostawać podsumowania i widzieć tu ich terminy. Przytrzymaj czat, aby go obserwować.</string>
     <string name="home_other_chats">Pozostałe czaty · %1$d</string>
     <string name="home_other_chats_hint">Obserwuj, aby dostawać podsumowania</string>

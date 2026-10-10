@@ -125,6 +125,11 @@ class SummaryGenerationCoordinator @Inject constructor(
         workManager.cancelUniqueWork(SummaryGenerationWorker.uniqueWorkName(threadId))
     }
 
+    /** Cancels every summary job; blocks until WorkManager has recorded it (call off the main thread). */
+    fun cancelAllBlocking() {
+        workManager.cancelAllWorkByTag(TAG).result.get()
+    }
+
     fun dismissError(threadId: String) {
         val latest = workManager
             .getWorkInfosForUniqueWork(SummaryGenerationWorker.uniqueWorkName(threadId))

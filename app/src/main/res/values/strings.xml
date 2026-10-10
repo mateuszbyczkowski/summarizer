@@ -78,7 +78,10 @@
 
     <!-- Model download -->
     <string name="models_pause">Pause download</string>
-    <string name="models_download_failed">Download failed: %1$s</string>
+    <string name="models_failed_wifi">Waiting for Wi-Fi. Turn off \"Download only over Wi-Fi\" to download now.</string>
+    <string name="models_failed_space">Not enough free storage for this model.</string>
+    <string name="models_failed_network">Couldn\'t reach the download server. Check your connection and try again.</string>
+    <string name="models_failed_other">The download failed. Try again.</string>
     <string name="models_paused">Paused at %1$d%%</string>
 
     <!-- Search -->

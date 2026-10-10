@@ -1,6 +1,7 @@
 package com.summarizer.app.util
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalTime
@@ -65,6 +66,15 @@ class DateTimeFormatsTest {
         assertEquals("FRI", english().weekdayBadge(friday))
         assertEquals("PT", polish().weekdayBadge(friday))
         assertEquals("ŚR", polish().weekdayBadge(day("2026-10-14")))
+        assertEquals("NIE", polish().weekdayBadge(day("2026-10-18"))) // "niedz." fits the badge
+    }
+
+    @Test
+    fun `past dates show the year only when it differs`() {
+        val today = day("2026-10-20")
+        assertEquals(english().shortDate(day("2026-03-02")), english().pastDate(day("2026-03-02"), today))
+        assertTrue(english().pastDate(day("2025-03-02"), today).contains("2025"))
+        assertTrue(polish().pastDate(day("2025-03-02"), today).contains("2025"))
     }
 
     @Test

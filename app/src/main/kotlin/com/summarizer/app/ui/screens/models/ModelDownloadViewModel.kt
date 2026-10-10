@@ -196,13 +196,15 @@ class ModelDownloadViewModel @Inject constructor(
         }
 
         applicationScope.launch {
+            val alreadyActive = modelRepository.getDownloadedModel()?.id == model.id
             modelRepository.markAsDownloaded(
                 modelId = model.id,
                 filePath = model.localFilePath,
                 timestamp = System.currentTimeMillis()
             )
-            // The onboarding download must not take over from the model chosen here
-            modelSetupManager.onModelChosen(model.id)
+            // A newly chosen model must not be taken over by the onboarding download; re-using
+            // the active one changes nothing, so that download keeps its progress
+            if (!alreadyActive) modelSetupManager.onModelChosen(model.id)
             // Choosing an on-device model means using the on-device engine
             if (preferencesRepository.getAIProvider() != AIProvider.LOCAL) {
                 preferencesRepository.setAIProvider(AIProvider.LOCAL)

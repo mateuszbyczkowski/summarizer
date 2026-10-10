@@ -55,7 +55,10 @@ class ModelDownloadManager @Inject constructor(
 
     private val activeDownloads = ConcurrentHashMap<String, Job>()
 
-    /** Paused transfers that may still be finishing a write; a resume waits for them. */
+    /**
+     * Paused or cancelled transfers (and a cancel's file cleanup) that may still be running; a
+     * new start for the same model waits for them, so two jobs never share the file.
+     */
     private val pausedDownloads = ConcurrentHashMap<String, Job>()
 
     private class DownloadException(
@@ -119,23 +122,26 @@ class ModelDownloadManager @Inject constructor(
 
     /** Stop the transfer and discard the partial file. */
     fun cancelDownload(modelId: String) {
-        applicationScope.launch(Dispatchers.IO) {
-            listOfNotNull(activeDownloads.remove(modelId), pausedDownloads.remove(modelId)).forEach { job ->
-                job.cancel()
-                job.join()
-            }
+        val stopping = listOfNotNull(activeDownloads.remove(modelId), pausedDownloads.remove(modelId))
+        stopping.forEach { it.cancel() }
+        val cleanup = applicationScope.launch(Dispatchers.IO) {
+            stopping.forEach { it.join() }
             StorageHelper.StorageLocation.entries.forEach { location ->
                 File(StorageHelper.getModelStorageDirectory(context, location), "$modelId.tmp").delete()
             }
-            updateState(modelId, DownloadStatus.NOT_STARTED)
+            // A download started again meanwhile keeps its own state
+            if (activeDownloads[modelId] == null) updateState(modelId, DownloadStatus.NOT_STARTED)
         }
+        pausedDownloads[modelId] = cleanup
+        cleanup.invokeOnCompletion { pausedDownloads.remove(modelId, cleanup) }
     }
 
     /** Stops every transfer and waits until none writes any more (before model files are wiped). */
     suspend fun cancelAll() {
-        val jobs = activeDownloads.values + pausedDownloads.values
-        activeDownloads.clear()
-        pausedDownloads.clear()
+        // Removed one by one, so a download started meanwhile is either cancelled here or kept
+        val jobs = (activeDownloads.keys + pausedDownloads.keys).flatMap { id ->
+            listOfNotNull(activeDownloads.remove(id), pausedDownloads.remove(id))
+        }
         jobs.forEach { it.cancel() }
         jobs.forEach { it.join() }
         _downloadStates.value = emptyMap()

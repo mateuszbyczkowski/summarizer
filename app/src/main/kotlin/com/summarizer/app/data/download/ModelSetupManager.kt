@@ -16,7 +16,6 @@ import com.summarizer.app.util.NetworkHelper
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -91,9 +90,8 @@ class ModelSetupManager @Inject constructor(
                 .distinctUntilChanged()
                 .collectLatest { waiting ->
                     if (!waiting) return@collectLatest
-                    NetworkHelper.wifiConnections(context).first()
-                    // A new Wi-Fi network is reported before it becomes the default one
-                    delay(WIFI_SETTLE_MS)
+                    // The same condition the download checks, so a retry cannot fail again at once
+                    NetworkHelper.defaultWifiConnections(context).first()
                     Timber.i("Wi-Fi connected; resuming the model setup download")
                     retry()
                 }
@@ -105,13 +103,23 @@ class ModelSetupManager @Inject constructor(
         ModelRecommendation.pick(ModelCatalog.DEFAULT_MODELS, DeviceMemory.totalRamGb(context))
 
     /** Starts downloading the recommended model; keeps running after the caller is gone. */
-    fun start() = setUp(ModelRecommendation::pick)
+    fun start() = setUp(ModelRecommendation::pick) { fallbackModelId = null }
 
     /**
      * The GPU could not load the active model and no CPU model is downloaded: set up the small
      * CPU model, which then becomes active, so summaries work again without the user's help.
      */
-    fun startCpuFallback() = setUp(ModelRecommendation::cpuFallback)
+    fun startCpuFallback() {
+        scope.launch {
+            // Cancelled once by the user: do not download it again behind their back
+            if (preferencesRepository.isCpuFallbackDeclined()) return@launch
+            setUp(ModelRecommendation::cpuFallback) { fallbackModelId = it }
+        }
+    }
+
+    /** The model a running [startCpuFallback] downloads, so its cancel can be remembered. */
+    @Volatile
+    private var fallbackModelId: String? = null
 
     /**
      * The user made a model active in the model manager: their choice wins, so the automatic
@@ -124,7 +132,7 @@ class ModelSetupManager @Inject constructor(
         }
     }
 
-    private fun setUp(pick: (List<AIModel>, Int) -> AIModel?) {
+    private fun setUp(pick: (List<AIModel>, Int) -> AIModel?, onPicked: (String) -> Unit = {}) {
         scope.launch {
             // The model rows may not exist yet: the model manager has never been opened
             catalogSync.reconcile()
@@ -135,6 +143,7 @@ class ModelSetupManager @Inject constructor(
                 return@launch
             }
             Timber.i("Setting up ${model.id} for $ramGb GB RAM")
+            onPicked(model.id)
             val path = model.localFilePath
             if (model.isDownloaded && path != null) {
                 modelRepository.markAsDownloaded(model.id, path, System.currentTimeMillis())
@@ -159,6 +168,7 @@ class ModelSetupManager @Inject constructor(
     fun cancel() {
         scope.launch {
             val id = preferencesRepository.observeSetupModelId().first() ?: return@launch
+            if (id == fallbackModelId) preferencesRepository.setCpuFallbackDeclined(true)
             downloadManager.cancelDownload(id)
             forget()
         }
@@ -177,7 +187,4 @@ class ModelSetupManager @Inject constructor(
 
     private suspend fun forget() = preferencesRepository.setSetupModelId(null)
 
-    private companion object {
-        const val WIFI_SETTLE_MS = 3_000L
-    }
 }

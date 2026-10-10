@@ -34,6 +34,7 @@ class PreferencesRepositoryImpl @Inject constructor(
         val STORAGE_LOCATION = stringPreferencesKey("storage_location")
         val WIFI_ONLY_DOWNLOAD = booleanPreferencesKey("wifi_only_download")
         val SETUP_MODEL_ID = stringPreferencesKey("setup_model_id")
+        val CPU_FALLBACK_DECLINED = booleanPreferencesKey("cpu_fallback_declined")
         val AI_PROVIDER = stringPreferencesKey("ai_provider")
         val AUTO_SUMMARIZATION_ENABLED = booleanPreferencesKey("auto_summarization_enabled")
         val AUTO_SUMMARIZATION_HOUR = stringPreferencesKey("auto_summarization_hour")
@@ -89,6 +90,13 @@ class PreferencesRepositoryImpl @Inject constructor(
 
     override fun observeSetupModelId(): Flow<String?> =
         context.dataStore.data.map { preferences -> preferences[PreferencesKeys.SETUP_MODEL_ID] }.distinctUntilChanged()
+
+    override suspend fun isCpuFallbackDeclined(): Boolean =
+        context.dataStore.data.first()[PreferencesKeys.CPU_FALLBACK_DECLINED] ?: false
+
+    override suspend fun setCpuFallbackDeclined(declined: Boolean) {
+        context.dataStore.edit { it[PreferencesKeys.CPU_FALLBACK_DECLINED] = declined }
+    }
 
     override suspend fun setSetupModelId(modelId: String?) {
         context.dataStore.edit { preferences ->

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Lock screen: phone's own lock -->
-    <string name="lock_system_subtitle">Zablokowane. Odblokuj blokadą ekranu telefonu.</string>
+    <string name="lock_system_subtitle">Aplikacja jest zablokowana. Odblokuj ją tak jak telefon.</string>
     <string name="lock_system_unlock">Odblokuj</string>
     <string name="lock_system_unavailable">Blokada ekranu telefonu jest niedostępna.</string>
     <string name="lock_prompt_title">Odblokuj aplikację %1$s</string>
