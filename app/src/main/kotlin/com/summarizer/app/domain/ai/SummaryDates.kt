@@ -67,14 +67,14 @@ object SummaryDates {
     private val MERIDIEM = Regex("^\\s*($MERIDIEM_TEXT)", RegexOption.IGNORE_CASE)
     // The end of a range right after its start: "–21:00", " - 21", " do 21.00", " to 9 pm", "-21h"
     private val RANGE_END = Regex(
-        "^\\s*(?:[-–—]|(?:do|to|till|until)(?!\\p{L}))\\s*(?:godz\\.?\\s*)?([01]?\\d|2[0-4])(?:([:.])([0-5]\\d))?(?![\\d.:])" +
+        "^\\s*(?:[-–—]|(?:do|to|till|until)(?!\\p{L}))\\s*(?:godz\\.?\\s*)?([01]?\\d|2[0-4])(?:([.:])([0-5]\\d))?(?![\\d.:])" +
             "(?:\\s*($MERIDIEM_TEXT)|h(?!\\p{L}))?",
         RegexOption.IGNORE_CASE
     )
     private val WORD_AFTER = Regex("^\\s+\\p{L}")
     // A separate part holding only the end of a range: "18.10 19:30 - 21:00 | Mecz" splits off "21:00"
     private val RANGE_END_PART = Regex(
-        "^(?:(?:do|to|till|until)\\s*)?([01]?\\d|2[0-4])(?:[:.]([0-5]\\d))?\\s*(?:$MERIDIEM_TEXT|h)?$",
+        "^(?:(?:do|to|till|until)\\s*)?([01]?\\d|2[0-4])(?:[.:]([0-5]\\d))?\\s*(?:$MERIDIEM_TEXT|h)?$",
         RegexOption.IGNORE_CASE
     )
 
