@@ -36,9 +36,9 @@ interface PreferencesRepository {
     suspend fun getDataRetentionDays(): Int // Default 30 days
     suspend fun setDataRetentionDays(days: Int)
 
-    // Biometric authentication preferences
-    suspend fun isBiometricEnabled(): Boolean
-    suspend fun setBiometricEnabled(enabled: Boolean)
+    // App lock (phone's screen lock, or the app PIN on phones without one); default on
+    suspend fun isAppLockEnabled(): Boolean
+    suspend fun setAppLockEnabled(enabled: Boolean)
 
     // Smart notification preferences
     suspend fun isSmartNotificationsEnabled(): Boolean

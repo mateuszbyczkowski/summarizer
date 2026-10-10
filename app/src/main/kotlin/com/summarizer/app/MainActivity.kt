@@ -1,6 +1,7 @@
 package com.summarizer.app
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.compose.setContent
@@ -15,9 +16,10 @@ import androidx.compose.ui.Modifier
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.summarizer.app.ui.lock.AppLockManager
+import com.summarizer.app.ui.lock.AppLockState
 import com.summarizer.app.ui.navigation.NavGraph
 import com.summarizer.app.ui.navigation.PendingNavigation
-import com.summarizer.app.ui.screens.auth.PinLockScreen
+import com.summarizer.app.ui.screens.auth.AppLockScreen
 import com.summarizer.app.ui.theme.SummarizerTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -41,8 +43,11 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        // Keep message content out of screenshots, screen recordings and the recents thumbnail
-        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        // Keep message content out of screenshots, screen recordings and the recents thumbnail.
+        // Only debug builds on the emulator allow screenshots, for validating the UI.
+        if (!isEmulatorDebugBuild()) {
+            window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        }
 
         if (savedInstanceState == null) {
             pendingNavigation.value = intent.toPendingNavigation()
@@ -54,14 +59,19 @@ class MainActivity : FragmentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val isLocked by appLockManager.isLocked.collectAsStateWithLifecycle()
+                    val lockState by appLockManager.state.collectAsStateWithLifecycle()
                     // Keeps the navigation state while the lock screen replaces it
                     val stateHolder = rememberSaveableStateHolder()
 
-                    when (isLocked) {
-                        null -> Unit
-                        true -> PinLockScreen(onUnlocked = appLockManager::unlock)
-                        false -> stateHolder.SaveableStateProvider("app") {
+                    when (val state = lockState) {
+                        AppLockState.Unknown -> Unit
+                        is AppLockState.Locked -> AppLockScreen(
+                            method = state.method,
+                            onUnlocked = appLockManager::unlock,
+                            onSystemUnlocked = appLockManager::unlockWithSystemLock,
+                            onSystemLockUnavailable = appLockManager::refresh
+                        )
+                        AppLockState.Unlocked -> stateHolder.SaveableStateProvider("app") {
                             NavGraph(
                                 pendingNavigation = pendingNavigation.value,
                                 onPendingNavigationHandled = { pendingNavigation.value = null }
@@ -78,6 +88,9 @@ class MainActivity : FragmentActivity() {
         setIntent(intent)
         intent.toPendingNavigation()?.let { pendingNavigation.value = it }
     }
+
+    private fun isEmulatorDebugBuild(): Boolean =
+        BuildConfig.DEBUG && Build.HARDWARE in setOf("ranchu", "goldfish")
 
     private fun Intent.toPendingNavigation(): PendingNavigation? {
         val threadId = getStringExtra(EXTRA_THREAD_ID)

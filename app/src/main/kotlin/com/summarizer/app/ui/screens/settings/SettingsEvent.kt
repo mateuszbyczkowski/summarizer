@@ -13,7 +13,11 @@ sealed interface SettingsEvent {
     data class SetAutoSummarizationEnabled(val enabled: Boolean) : SettingsEvent
     data class SetAutoSummarizationHour(val hour: Int) : SettingsEvent
     data class SetDataRetentionDays(val days: Int) : SettingsEvent
-    data class SetBiometricEnabled(val enabled: Boolean) : SettingsEvent
+    data class SetAppLockEnabled(val enabled: Boolean) : SettingsEvent
+
+    /** The app PIN asked for when turning the app lock on was created, or the user backed out. */
+    data object AppLockPinCreated : SettingsEvent
+    data object AppLockPinCancelled : SettingsEvent
     data class SetSmartNotificationsEnabled(val enabled: Boolean) : SettingsEvent
     data class SetSmartNotificationThreshold(val threshold: Float) : SettingsEvent
 

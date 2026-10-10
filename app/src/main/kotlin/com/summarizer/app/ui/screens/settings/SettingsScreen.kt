@@ -157,7 +157,8 @@ private fun SettingsContent(
         )
 
         SecuritySection(
-            biometricEnabled = state.biometricEnabled,
+            appLockEnabled = state.appLockEnabled,
+            showPinSetup = state.showAppLockPinSetup,
             onEvent = onEvent
         )
 

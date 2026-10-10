@@ -77,9 +77,6 @@
     <string name="settings_retention_info">Messages older than the retention period are deleted automatically once a day. Summaries are never deleted.</string>
 
     <string name="settings_security_title">Security</string>
-    <string name="settings_security_description">Unlock the app using biometric authentication</string>
-    <string name="settings_security_enable_biometric">Enable biometric unlock</string>
-    <string name="settings_security_biometric_enabled_info">Biometric unlock is enabled. You can use fingerprint or face recognition to unlock the app.</string>
 
     <string name="settings_permissions_title">Permissions</string>
     <string name="settings_permissions_granted">All required permissions are granted</string>
@@ -168,28 +165,6 @@
     <string name="provider_choice_openai_benefit_requirements">🌐 Requires Internet &amp; API Key</string>
     <string name="provider_choice_openai_benefit_privacy">⚠️ Messages sent to OpenAI servers</string>
     <string name="provider_choice_use_openai">Use OpenAI</string>
-
-    <!-- PIN -->
-    <string name="pin_label">PIN</string>
-    <string name="pin_setup_title">Set Your PIN</string>
-    <string name="pin_setup_subtitle">Create a 6-digit PIN to secure your app</string>
-    <string name="pin_setup_enter">Enter PIN</string>
-    <string name="pin_setup_confirm">Confirm PIN</string>
-    <string name="pin_setup_error_length">PIN must be 6 digits</string>
-    <string name="pin_setup_error_mismatch">PINs do not match</string>
-    <string name="pin_setup_button">Set PIN</string>
-    <string name="pin_lock_title">Enter PIN</string>
-    <string name="pin_lock_subtitle">Enter your PIN to unlock the app</string>
-    <string name="pin_lock_hint">Enter 6 digits</string>
-    <string name="pin_lock_incorrect">Incorrect PIN. Try again.</string>
-    <plurals name="pin_lock_locked_out">
-        <item quantity="one">Too many attempts. Try again in %1$d second.</item>
-        <item quantity="other">Too many attempts. Try again in %1$d seconds.</item>
-    </plurals>
-    <string name="pin_lock_biometric_title">Unlock App</string>
-    <string name="pin_lock_biometric_subtitle">Use biometric to unlock</string>
-    <string name="pin_lock_biometric_unavailable">Biometric unlock is unavailable</string>
-    <string name="pin_lock_use_biometric">Use Biometric</string>
 
     <!-- Storage location -->
     <string name="storage_title">Choose Storage Location</string>

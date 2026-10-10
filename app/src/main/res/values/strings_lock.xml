@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Lock screen: phone's own lock -->
+    <string name="lock_system_subtitle">Locked. Unlock with your phone\'s screen lock.</string>
+    <string name="lock_system_unlock">Unlock</string>
+    <string name="lock_system_unavailable">Your phone\'s screen lock is not available.</string>
+    <string name="lock_prompt_title">Unlock %1$s</string>
+
+    <!-- Lock screen: app PIN -->
+    <string name="lock_pin_title">Enter your PIN</string>
+    <string name="lock_pin_wrong">Wrong PIN</string>
+    <plurals name="lock_pin_attempts_left">
+        <item quantity="one">Wrong PIN. %1$d attempt left before a short pause.</item>
+        <item quantity="other">Wrong PIN. %1$d attempts left before a short pause.</item>
+    </plurals>
+    <string name="lock_pin_locked_out">Too many attempts. Try again in %1$s.</string>
+    <string name="lock_pin_progress">%1$d of %2$d digits entered</string>
+    <string name="lock_fingerprint_use_pin">Use PIN</string>
+    <string name="lock_key_delete">Delete</string>
+    <string name="lock_key_fingerprint">Unlock with fingerprint</string>
+
+    <!-- Creating the app PIN -->
+    <string name="lock_pin_setup_title">Create an app PIN</string>
+    <string name="lock_pin_setup_subtitle">Your phone has no screen lock, so the app keeps your chats private with its own 6-digit PIN.</string>
+    <string name="lock_pin_setup_required_subtitle">Your phone no longer has a screen lock. Create an app PIN to keep your chats private.</string>
+    <string name="lock_pin_setup_confirm_title">Confirm your PIN</string>
+    <string name="lock_pin_setup_confirm_subtitle">Enter the same 6 digits again.</string>
+    <string name="lock_pin_setup_mismatch">The PINs did not match. Try again.</string>
+    <string name="lock_pin_setup_save_failed">Could not save the PIN. Try again.</string>
+    <string name="lock_pin_setup_cancel">Cancel</string>
+
+    <!-- Settings -->
+    <string name="lock_settings_description">Keep your chats and summaries private</string>
+    <string name="lock_settings_app_lock">App lock</string>
+    <string name="lock_settings_system_info">Asks for your phone\'s screen lock (fingerprint, face, PIN or pattern) when the app has not been used for 24 hours.</string>
+    <string name="lock_settings_pin_info">Your phone has no screen lock, so the app asks for its own PIN when it has not been used for 24 hours.</string>
+    <string name="lock_settings_off_info">The app never locks. Anyone who can open your phone can read your chats and summaries.</string>
+</resources>
