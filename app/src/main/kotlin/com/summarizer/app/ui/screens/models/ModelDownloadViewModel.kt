@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.summarizer.app.BuildConfig
 import com.summarizer.app.data.debug.DebugSampleData
 import com.summarizer.app.data.download.ModelCatalogSync
+import com.summarizer.app.data.download.ModelSetupManager
 import com.summarizer.app.data.download.ModelDownloadManager
 import com.summarizer.app.di.ApplicationScope
 import com.summarizer.app.domain.ai.AIEngine
@@ -45,6 +46,7 @@ class ModelDownloadViewModel @Inject constructor(
     private val modelRepository: ModelRepository,
     private val downloadManager: ModelDownloadManager,
     private val catalogSync: ModelCatalogSync,
+    private val modelSetupManager: ModelSetupManager,
     private val preferencesRepository: PreferencesRepository,
     private val workScheduler: WorkScheduler,
     private val aiEngine: AIEngine,
@@ -199,6 +201,8 @@ class ModelDownloadViewModel @Inject constructor(
                 filePath = model.localFilePath,
                 timestamp = System.currentTimeMillis()
             )
+            // The onboarding download must not take over from the model chosen here
+            modelSetupManager.onModelChosen(model.id)
             // Choosing an on-device model means using the on-device engine
             if (preferencesRepository.getAIProvider() != AIProvider.LOCAL) {
                 preferencesRepository.setAIProvider(AIProvider.LOCAL)

@@ -50,9 +50,14 @@ class DataRetentionWorker @AssistedInject constructor(
             Timber.i("Data retention cleanup: $messagesDeleted messages, $threadsDeleted threads deleted")
             if (messagesDeleted > 0) {
                 createNotificationChannel()
+                val resources = context.resources
                 showNotification(
-                    "Data Retention Cleanup",
-                    "Removed $messagesDeleted messages older than $retentionDays days"
+                    context.getString(R.string.retention_notification_title),
+                    context.getString(
+                        R.string.retention_notification_text,
+                        resources.getQuantityString(R.plurals.retention_notification_messages, messagesDeleted, messagesDeleted),
+                        resources.getQuantityString(R.plurals.days, retentionDays, retentionDays)
+                    )
                 )
             }
             Result.success()
@@ -65,10 +70,10 @@ class DataRetentionWorker @AssistedInject constructor(
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
             NOTIFICATION_CHANNEL_ID,
-            "Data Retention",
+            context.getString(R.string.retention_channel_name),
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "Notifications for data retention cleanup"
+            description = context.getString(R.string.retention_channel_description)
         }
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

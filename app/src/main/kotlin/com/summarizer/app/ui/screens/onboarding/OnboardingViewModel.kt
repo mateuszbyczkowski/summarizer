@@ -53,6 +53,9 @@ class OnboardingViewModel @Inject constructor(
                     preferencesRepository.setAIProvider(AIProvider.LOCAL)
                     workScheduler.refreshAutoSummarization()
                     modelSetupManager.start()
+                } else {
+                    // Back from a later step after choosing "On this phone": stop that download
+                    modelSetupManager.cancel()
                 }
                 // OpenAI becomes the engine once its key is saved
                 _next.value = OnboardingFlow.afterEngine(provider, needsPin())

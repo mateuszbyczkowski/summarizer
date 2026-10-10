@@ -29,6 +29,33 @@
     <string name="summary_text_announcements">Announcements</string>
     <string name="summary_text_topics">Topics</string>
     <string name="summary_text_due">by %1$s</string>
-    <!-- java.time pattern for a day in copied summaries, e.g. "Fri 17.10" -->
-    <string name="summary_text_date_pattern">EEE d.MM</string>
+
+    <!-- Daily auto-summary notification -->
+    <string name="auto_summary_channel_name">Daily summaries</string>
+    <string name="auto_summary_channel_description">When the daily summaries of followed chats are done</string>
+    <string name="auto_summary_notification_title">Daily summaries done</string>
+    <plurals name="auto_summary_notification_done">
+        <item quantity="one">Summarized %1$d chat</item>
+        <item quantity="other">Summarized %1$d chats</item>
+    </plurals>
+    <plurals name="auto_summary_notification_failed">
+        <item quantity="one">Couldn\'t summarize %1$d chat</item>
+        <item quantity="other">Couldn\'t summarize %1$d chats</item>
+    </plurals>
+    <!-- "Summarized 2 chats · Couldn't summarize 1 chat" -->
+    <string name="auto_summary_notification_mixed" translatable="false">%1$s · %2$s</string>
+
+    <!-- Message retention notification. Text: "Deleted 120 messages older than 30 days" -->
+    <string name="retention_channel_name">Message clean-up</string>
+    <string name="retention_channel_description">When old messages are deleted</string>
+    <string name="retention_notification_title">Old messages deleted</string>
+    <string name="retention_notification_text">Deleted %1$s older than %2$s</string>
+    <plurals name="retention_notification_messages">
+        <item quantity="one">%1$d message</item>
+        <item quantity="other">%1$d messages</item>
+    </plurals>
+
+    <!-- Smart notifications channel -->
+    <string name="smart_channel_name">Important messages</string>
+    <string name="smart_channel_description">Important WhatsApp messages picked out by AI</string>
 </resources>

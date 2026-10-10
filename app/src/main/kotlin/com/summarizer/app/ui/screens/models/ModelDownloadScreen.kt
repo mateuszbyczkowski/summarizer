@@ -255,7 +255,7 @@ private fun EngineHub(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
-                        text = state.message,
+                        text = stringResource(state.messageRes),
                         color = MaterialTheme.colorScheme.error,
                         textAlign = TextAlign.Center
                     )

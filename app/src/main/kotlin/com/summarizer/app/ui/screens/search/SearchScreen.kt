@@ -1,7 +1,5 @@
 package com.summarizer.app.ui.screens.search
 
-import android.content.Context
-import android.text.format.DateUtils
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -52,7 +50,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -70,10 +67,10 @@ import com.summarizer.app.domain.model.Message
 import com.summarizer.app.domain.model.Summary
 import com.summarizer.app.ui.components.EmptyState
 import com.summarizer.app.ui.components.SettingsRowIcon
+import com.summarizer.app.ui.components.chatListTime
+import com.summarizer.app.ui.components.rememberDateTimeFormats
 import com.summarizer.app.util.ThreadNaming
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 /**
  * Search across summaries, their tasks and messages, as a full-screen Material 3 search view:
@@ -177,10 +174,10 @@ fun SearchScreen(
                 body = stringResource(R.string.search_no_results_body, state.query)
             )
 
-            is SearchUiState.Error -> EmptyState(
+            SearchUiState.Error -> EmptyState(
                 icon = Icons.Outlined.ErrorOutline,
                 title = stringResource(R.string.search_error_title),
-                body = state.message,
+                body = stringResource(R.string.search_error_body),
                 iconTint = MaterialTheme.colorScheme.error
             )
         }
@@ -294,7 +291,6 @@ private fun SearchResultsList(
     onSummaryClick: (threadId: String, summaryId: Long) -> Unit,
     onMessageClick: (String) -> Unit
 ) {
-    val context = LocalContext.current
     val query = state.query
     // Section headers only help when several kinds of results are mixed
     val showHeaders = state.filter.type == null
@@ -310,7 +306,7 @@ private fun SearchResultsList(
                 SectionHeader(stringResource(R.string.search_section_summaries, state.summaries.size))
             }
             items(state.summaries, key = { "s-${it.id}" }) { summary ->
-                SummaryResult(summary, query, context) { onSummaryClick(summary.threadId, summary.id) }
+                SummaryResult(summary, query) { onSummaryClick(summary.threadId, summary.id) }
             }
         }
         if (state.tasks.isNotEmpty()) {
@@ -326,7 +322,7 @@ private fun SearchResultsList(
                 SectionHeader(stringResource(R.string.search_section_messages, state.messages.size))
             }
             items(state.messages, key = { "m-${it.id}-${it.messageHash}" }) { message ->
-                MessageResult(message, query, context) { onMessageClick(message.threadId) }
+                MessageResult(message, query) { onMessageClick(message.threadId) }
             }
         }
         item(key = "bottom") { Spacer(modifier = Modifier.height(8.dp)) }
@@ -344,12 +340,12 @@ private fun SectionHeader(text: String) {
 }
 
 @Composable
-private fun SummaryResult(summary: Summary, query: String, context: Context, onClick: () -> Unit) {
+private fun SummaryResult(summary: Summary, query: String, onClick: () -> Unit) {
     ResultItem(
         icon = Icons.Default.AutoAwesome,
         headline = highlighted(ThreadNaming.displayName(summary.threadName), query),
         supporting = highlighted(SearchText.summarySnippet(summary, query), query),
-        trailing = formatWhen(context, summary.generatedAt),
+        trailing = resultTime(summary.generatedAt),
         onClick = onClick
     )
 }
@@ -357,7 +353,7 @@ private fun SummaryResult(summary: Summary, query: String, context: Context, onC
 @Composable
 private fun TaskResult(hit: TaskHit, query: String, onClick: () -> Unit) {
     val chat = ThreadNaming.displayName(hit.summary.threadName)
-    val due = hit.item.due?.let(::formatIsoDate)
+    val due = hit.item.due?.let { formatIsoDate(it) }
     ResultItem(
         icon = Icons.Outlined.TaskAlt,
         headline = highlighted(hit.item.task, query),
@@ -371,7 +367,7 @@ private fun TaskResult(hit: TaskHit, query: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun MessageResult(message: Message, query: String, context: Context, onClick: () -> Unit) {
+private fun MessageResult(message: Message, query: String, onClick: () -> Unit) {
     ResultItem(
         icon = Icons.AutoMirrored.Outlined.Chat,
         headline = highlighted(ThreadNaming.displayName(message.threadName), query),
@@ -379,7 +375,7 @@ private fun MessageResult(message: Message, query: String, context: Context, onC
             stringResource(R.string.search_message_line, message.sender, SearchText.snippet(message.content, query)),
             query
         ),
-        trailing = formatWhen(context, message.timestamp),
+        trailing = resultTime(message.timestamp),
         onClick = onClick
     )
 }
@@ -439,15 +435,12 @@ private fun highlighted(text: String, query: String): AnnotatedString {
     }
 }
 
-/** Time for today, otherwise the date, in the phone's locale. */
-private fun formatWhen(context: Context, timestamp: Long): String {
-    val flags = if (DateUtils.isToday(timestamp)) {
-        DateUtils.FORMAT_SHOW_TIME
-    } else {
-        DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_MONTH
-    }
-    return DateUtils.formatDateTime(context, timestamp, flags)
-}
+/** When a result was written, chat-list style: "17:42" today, "Yesterday", "Mon", then "Oct 12". */
+@Composable
+private fun resultTime(timestamp: Long): String = chatListTime(timestamp, System.currentTimeMillis())
 
-private fun formatIsoDate(isoDate: String): String? =
-    runCatching { LocalDate.parse(isoDate).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)) }.getOrNull()
+@Composable
+private fun formatIsoDate(isoDate: String): String? {
+    val date = runCatching { LocalDate.parse(isoDate) }.getOrNull() ?: return null
+    return rememberDateTimeFormats().weekdayDate(date)
+}

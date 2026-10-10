@@ -44,7 +44,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -70,14 +69,14 @@ import com.summarizer.app.ui.components.agendaDate
 import com.summarizer.app.ui.components.agendaTime
 import com.summarizer.app.ui.components.rememberNotificationPermissionRequest
 import com.summarizer.app.ui.components.relativeDay
+import com.summarizer.app.ui.components.rememberDateTimeFormats
 import com.summarizer.app.util.PermissionHelper
 import java.time.LocalDate
 import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 private const val KEY_PERMISSION = "permission"
 private const val KEY_MODEL_SETUP = "model_setup"
+private const val KEY_ENGINE_MISSING = "engine_missing"
 private const val KEY_THIS_WEEK = "this_week"
 private const val KEY_FOLLOWED_HEADER = "followed_header"
 private const val KEY_FOLLOWED_EMPTY = "followed_empty"
@@ -92,11 +91,13 @@ fun HomeScreen(
     onThreadClick: (String) -> Unit,
     onSearchClick: () -> Unit,
     onAllTasksClick: () -> Unit,
+    onChooseEngine: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val autoSummaryHour by viewModel.autoSummaryHour.collectAsStateWithLifecycle()
     val modelSetup by viewModel.modelSetup.collectAsStateWithLifecycle()
+    val engineMissing by viewModel.engineMissing.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var hasPermission by remember { mutableStateOf(PermissionHelper.hasNotificationListenerPermission(context)) }
 
@@ -108,6 +109,7 @@ fun HomeScreen(
     LifecycleResumeEffect(Unit) {
         hasPermission = PermissionHelper.hasNotificationListenerPermission(context)
         viewModel.refreshAutoSummary()
+        viewModel.refreshEngine()
         onPauseOrDispose { }
     }
 
@@ -116,6 +118,8 @@ fun HomeScreen(
         hasPermission = hasPermission,
         autoSummaryHour = autoSummaryHour,
         modelSetup = modelSetup,
+        engineMissing = engineMissing,
+        onChooseEngine = onChooseEngine,
         onRetryModelSetup = viewModel::retryModelSetup,
         onCancelModelSetup = viewModel::cancelModelSetup,
         onSearchClick = onSearchClick,
@@ -132,6 +136,8 @@ private fun HomeContent(
     hasPermission: Boolean,
     autoSummaryHour: Int?,
     modelSetup: ModelSetupState?,
+    engineMissing: Boolean,
+    onChooseEngine: () -> Unit,
     onRetryModelSetup: () -> Unit,
     onCancelModelSetup: () -> Unit,
     onSearchClick: () -> Unit,
@@ -185,6 +191,16 @@ private fun HomeContent(
                             state = modelSetup,
                             onRetry = onRetryModelSetup,
                             onCancel = onCancelModelSetup,
+                            modifier = Modifier
+                                .animateItem()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+                if (engineMissing) {
+                    item(key = KEY_ENGINE_MISSING) {
+                        EngineMissingCard(
+                            onChooseEngine = onChooseEngine,
                             modifier = Modifier
                                 .animateItem()
                                 .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -319,10 +335,7 @@ private fun SectionHeader(title: String, trailing: String?) {
 }
 
 @Composable
-private fun formatHour(hour: Int): String =
-    DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
-        .withLocale(LocalConfiguration.current.locales[0])
-        .format(LocalTime.of(hour.coerceIn(0, 23), 0))
+private fun formatHour(hour: Int): String = rememberDateTimeFormats().time(LocalTime.of(hour.coerceIn(0, 23), 0))
 
 @Composable
 private fun ThisWeekCard(

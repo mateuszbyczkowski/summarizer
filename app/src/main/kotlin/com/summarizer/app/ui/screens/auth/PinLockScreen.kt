@@ -1,5 +1,6 @@
 package com.summarizer.app.ui.screens.auth
 
+import android.text.format.DateUtils
 import androidx.compose.animation.core.Animatable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,7 +51,7 @@ fun PinLockScreen(
     val message = when {
         state.lockoutSeconds > 0 -> stringResource(
             R.string.lock_pin_locked_out,
-            "%d:%02d".format(state.lockoutSeconds / 60, state.lockoutSeconds % 60)
+            DateUtils.formatElapsedTime(state.lockoutSeconds.toLong())
         )
         attempts != null && attempts <= ATTEMPTS_WARNING_THRESHOLD ->
             pluralStringResource(R.plurals.lock_pin_attempts_left, attempts, attempts)

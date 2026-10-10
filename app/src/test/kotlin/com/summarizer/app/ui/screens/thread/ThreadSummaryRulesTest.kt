@@ -60,15 +60,6 @@ class ThreadSummaryRulesTest {
     }
 
     @Test
-    fun `day ranges are compact`() {
-        fun range(start: String, end: String) = ThreadSummaryRules.formatDayRange(LocalDate.parse(start), LocalDate.parse(end))
-        assertEquals("13.10", range("2026-10-13", "2026-10-13"))
-        assertEquals("10–13.10", range("2026-10-10", "2026-10-13"))
-        assertEquals("28.09–3.10", range("2026-09-28", "2026-10-03"))
-        assertEquals("28.12.2025–2.01.2026", range("2025-12-28", "2026-01-02"))
-    }
-
-    @Test
     fun `day range of timestamps`() {
         val start = LocalDate.of(2026, 10, 10).atTime(23, 0).toInstant(ZoneOffset.UTC).toEpochMilli()
         val end = LocalDate.of(2026, 10, 13).atTime(1, 0).toInstant(ZoneOffset.UTC).toEpochMilli()

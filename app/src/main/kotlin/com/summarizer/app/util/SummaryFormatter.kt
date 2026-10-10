@@ -5,13 +5,11 @@ import com.summarizer.app.R
 import com.summarizer.app.domain.model.KeyDate
 import com.summarizer.app.domain.model.Summary
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
-import java.util.Locale
 
 /**
  * A summary as plain text for copying and sharing (e.g. into WhatsApp): overview, dates,
- * tasks, announcements and topics, with dates written for people ("pt. 17.10").
+ * tasks, announcements and topics, with dates in the phone's locale ("Fri, 10/17" / "pt., 17.10").
  */
 object SummaryFormatter {
 
@@ -22,9 +20,7 @@ object SummaryFormatter {
         val announcements: String,
         val topics: String,
         /** Format with one argument, the date: "by %1$s" */
-        val due: String,
-        /** [DateTimeFormatter] pattern for a day, e.g. "EEE d.MM" */
-        val datePattern: String
+        val due: String
     ) {
         companion object {
             fun from(context: Context) = Labels(
@@ -32,20 +28,18 @@ object SummaryFormatter {
                 tasks = context.getString(R.string.summary_text_tasks),
                 announcements = context.getString(R.string.summary_text_announcements),
                 topics = context.getString(R.string.summary_text_topics),
-                due = context.getString(R.string.summary_text_due),
-                datePattern = context.getString(R.string.summary_text_date_pattern)
+                due = context.getString(R.string.summary_text_due)
             )
         }
     }
 
     fun toPlainText(context: Context, summary: Summary): String =
-        toPlainText(summary, Labels.from(context), context.resources.configuration.locales[0])
+        toPlainText(summary, Labels.from(context), dateTimeFormats(context))
 
-    fun toPlainText(summary: Summary, labels: Labels, locale: Locale = Locale.getDefault()): String {
-        val dateFormat = DateTimeFormatter.ofPattern(labels.datePattern, locale)
+    fun toPlainText(summary: Summary, labels: Labels, formats: DateTimeFormats): String {
         fun day(iso: String?): String? = iso?.let {
             try {
-                LocalDate.parse(it).format(dateFormat)
+                formats.weekdayNumericDate(LocalDate.parse(it))
             } catch (e: DateTimeParseException) {
                 it
             }
@@ -55,7 +49,7 @@ object SummaryFormatter {
             appendLine(summary.threadName)
             if (summary.overview.isNotBlank()) appendLine(summary.overview)
 
-            section(labels.dates, summary.keyDates) { "• ${keyDateLine(it, day(it.date))}" }
+            section(labels.dates, summary.keyDates) { "• ${keyDateLine(it, day(it.date), it.time?.let(formats::time))}" }
             section(labels.tasks, summary.actionItems) { item ->
                 val due = day(item.due)?.let { " (${labels.due.format(it)})" }.orEmpty()
                 "${if (item.done) "☑" else "☐"} ${item.task}$due"
@@ -68,8 +62,8 @@ object SummaryFormatter {
         }.trimEnd()
     }
 
-    private fun keyDateLine(keyDate: KeyDate, day: String?): String {
-        val whenText = listOfNotNull(day, keyDate.time).joinToString(", ")
+    private fun keyDateLine(keyDate: KeyDate, day: String?, time: String?): String {
+        val whenText = listOfNotNull(day, time).joinToString(", ")
         val what = keyDate.label + (keyDate.detail?.let { " ($it)" } ?: "")
         return if (whenText.isEmpty()) what else "$whenText – $what"
     }

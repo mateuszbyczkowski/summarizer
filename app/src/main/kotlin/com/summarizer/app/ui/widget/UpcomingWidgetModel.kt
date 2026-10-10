@@ -3,11 +3,6 @@ package com.summarizer.app.ui.widget
 import com.summarizer.app.domain.model.AgendaItem
 import com.summarizer.app.domain.usecase.AgendaSchedule
 import java.time.LocalDate
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import java.time.format.DateTimeParseException
-import java.time.format.FormatStyle
-import java.util.Locale
 
 /** One line of the widget: a date or a task of the coming week. */
 data class UpcomingWidgetRow(
@@ -64,18 +59,6 @@ object UpcomingWidgetModel {
     /** How many rows fit into a widget [heightDp] tall: at least one, at most [MAX_ROWS]. */
     fun rowsThatFit(heightDp: Float): Int =
         ((heightDp - CHROME_HEIGHT_DP) / ROW_PITCH_DP).toInt().coerceIn(1, MAX_ROWS)
-
-    /** Short weekday for the date badge, upper case without a trailing dot: "FRI", "PT". */
-    fun weekdayShort(date: LocalDate, locale: Locale, pattern: String = "EEE"): String =
-        DateTimeFormatter.ofPattern(pattern, locale).format(date).trimEnd('.').uppercase(locale)
-
-    /** An HH:mm time in the locale's short format; the text itself if it does not parse. */
-    fun timeText(time: String, locale: Locale): String =
-        try {
-            DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale).format(LocalTime.parse(time))
-        } catch (e: DateTimeParseException) {
-            time
-        }
 
     private fun toRow(item: AgendaItem, today: LocalDate): UpcomingWidgetRow? {
         val date = AgendaSchedule.dateOf(item) ?: return null

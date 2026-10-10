@@ -1,19 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Summarizer</string>
+    <string name="app_name" translatable="false">Summarizer</string>
 
     <!-- Common -->
     <string name="back">Back</string>
     <string name="cancel">Cancel</string>
     <string name="retry">Retry</string>
     <string name="continue_button">Continue</string>
-    <string name="cd_expand">Expand</string>
-    <string name="cd_collapse">Collapse</string>
     <string name="dismiss">Dismiss</string>
     <string name="cd_more_options">More options</string>
-    <string name="cd_search">Search</string>
-    <string name="size_mb">%1$d MB</string>
-    <string name="size_gb">%1$.1f GB</string>
+    <string name="size_mb" translatable="false">%1$d MB</string>
+    <string name="size_gb" translatable="false">%1$.1f GB</string>
 
     <plurals name="days">
         <item quantity="one">%1$d day</item>
@@ -22,14 +19,14 @@
 
     <!-- OpenAI API key (shared by onboarding and settings) -->
     <string name="api_key_label">OpenAI API Key</string>
-    <string name="api_key_placeholder">sk-…</string>
+    <string name="api_key_placeholder" translatable="false">sk-…</string>
     <string name="cd_show_api_key">Show API key</string>
     <string name="cd_hide_api_key">Hide API key</string>
     <string name="api_key_how_to_title">How to get an API key:</string>
     <string name="api_key_how_to_steps">1. Visit platform.openai.com\n2. Sign up or log in\n3. Go to API Keys section\n4. Create new secret key\n5. Copy and paste here</string>
     <string name="openai_privacy_title">Privacy Notice</string>
     <string name="openai_privacy_body">OpenAI provider sends your WhatsApp messages to OpenAI servers for processing. %1$s</string>
-    <string name="openai_privacy_suggestion_settings">Use the Local provider for complete privacy.</string>
+    <string name="openai_privacy_suggestion_settings">For complete privacy, use the on-device engine.</string>
     <string name="openai_privacy_suggestion_onboarding">If you prefer complete privacy, go back and choose On this phone instead.</string>
 
     <!-- Onboarding: OpenAI setup -->
@@ -42,76 +39,26 @@
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
-
-    <string name="settings_smart_notifications_title">Smart Notifications</string>
-    <string name="settings_smart_notifications_description">AI-powered filtering to only notify you of important messages</string>
-    <string name="settings_smart_notifications_enable">Enable smart notifications</string>
-    <string name="settings_smart_notifications_threshold">Importance threshold: %1$s</string>
     <string name="settings_smart_notifications_info">Smart notifications use AI to analyze message content and only notify you when messages are likely important. Lower threshold = more notifications.</string>
-    <string name="threshold_low">Low (more notifications)</string>
-    <string name="threshold_medium">Medium</string>
-    <string name="threshold_high">High (fewer notifications)</string>
-    <string name="threshold_very_high">Very High (only critical)</string>
     <string name="threshold_low_description">You\'ll receive notifications for most messages, including casual conversation.</string>
     <string name="threshold_medium_description">You\'ll receive notifications for questions, requests, and important updates.</string>
     <string name="threshold_high_description">You\'ll receive notifications only for urgent matters and direct questions.</string>
     <string name="threshold_very_high_description">You\'ll receive notifications only for critical and time-sensitive messages.</string>
 
-    <string name="settings_auto_summary_title">Daily Auto-Summarization</string>
-    <string name="settings_auto_summary_description">Automatically summarize followed threads at a scheduled time</string>
-    <string name="settings_auto_summary_enable">Enable auto-summarization</string>
-    <string name="settings_auto_summary_time">Summary time</string>
-    <string name="settings_hour_format">%1$s (%2$s)</string>
-    <string name="settings_auto_summary_info">Only followed threads will be summarized. Use the star icon on threads to follow them.</string>
-
-    <string name="settings_retention_title">Data Retention</string>
-    <string name="settings_retention_description">Automatically delete old messages. Summaries are always kept.</string>
-    <string name="settings_retention_keep_for">Keep messages for</string>
     <string name="settings_retention_info">Messages older than the retention period are deleted automatically once a day. Summaries are never deleted.</string>
 
-    <string name="settings_security_title">Security</string>
-
-    <string name="settings_permissions_title">Permissions</string>
-    <string name="settings_permissions_granted">All required permissions are granted</string>
-    <string name="settings_permissions_missing">Notification access is required for the app to work</string>
-    <string name="settings_permissions_manage_access">Manage Notification Access</string>
-    <string name="settings_permissions_grant_access">Grant Notification Access</string>
-    <string name="settings_permissions_manage_autostart">Manage %1$s AutoStart</string>
     <string name="settings_permissions_autostart_info">%1$s requires AutoStart permission for background functionality</string>
 
-    <string name="settings_provider_title">AI Provider</string>
-    <string name="settings_provider_description">Choose how WhatsApp messages are summarized</string>
-    <string name="settings_provider_local_description">Privacy-first • Offline • Free • Requires storage</string>
-    <string name="settings_provider_openai_description">Fast • High-quality • Requires API key • ~$0.0006 per summary</string>
-
-    <string name="settings_local_model_title">Local Model Configuration</string>
-    <string name="settings_local_model_description">Download and manage AI models for on-device processing</string>
-    <string name="settings_local_model_manage">Manage Models</string>
-    <string name="settings_local_model_info">Local models provide complete privacy - all processing happens on your device. No internet connection required after download.</string>
-
-    <string name="settings_openai_title">OpenAI Configuration</string>
-    <string name="settings_openai_key_configured">API Key (configured)</string>
-    <string name="settings_openai_clear_key">Clear API key</string>
-    <string name="settings_openai_validate_key">Validate API Key</string>
-    <string name="settings_openai_save_key">Save API Key</string>
-    <string name="settings_openai_model_title">Model Selection</string>
-    <string name="settings_openai_model_description">Choose which OpenAI model to use for summaries</string>
-    <string name="settings_openai_model_recommendation">Recommended: GPT-4o Mini offers the best balance of quality and cost for most users.</string>
     <string name="settings_openai_cost_title">Cost Estimation</string>
     <string name="settings_openai_cost_body">Using %1$s:\n• %2$s\n• Input: $%3$.2f per 1M tokens\n• Output: $%4$.2f per 1M tokens</string>
 
-    <string name="settings_about_title">About</string>
     <string name="settings_about_app_name">WhatsApp Thread Summarizer</string>
     <string name="settings_about_version">Version %1$s</string>
     <string name="settings_about_features_title">Features:</string>
     <string name="settings_about_features">• On-device AI summarization\n• OpenAI integration\n• Thread following\n• Daily auto-summarization\n• Encrypted on-device storage</string>
 
-    <string name="settings_danger_zone_title">Danger Zone</string>
-    <string name="settings_danger_zone_description">Advanced reset options</string>
-    <string name="settings_reset_description">Reset application to factory defaults</string>
     <string name="settings_reset_consequences_title">This will:</string>
     <string name="settings_reset_consequences">• Delete all downloaded AI models\n• Remove all captured messages\n• Clear all generated summaries\n• Reset all settings to defaults\n• Restart the onboarding process</string>
-    <string name="settings_reset_button">Reset Application</string>
     <string name="settings_reset_dialog_title">Reset Application?</string>
     <string name="settings_reset_dialog_message">This action cannot be undone. All your data, including downloaded models, messages, and summaries will be permanently deleted.\n\nAre you sure you want to continue?</string>
     <string name="settings_reset_dialog_confirm">Reset Everything</string>
@@ -130,32 +77,11 @@
     <string name="storage_low">Low storage space (%1$d MB available). You can continue, but consider freeing up space for larger models.</string>
 
     <!-- Model download -->
-    <string name="models_title">Download AI Model</string>
-    <string name="models_storage_settings">Storage Settings</string>
-    <string name="models_heading">Choose Your AI Model</string>
-    <string name="models_wifi_only">WiFi Only</string>
-    <string name="models_any_network">Any Network</string>
-    <string name="models_subtitle">Select and download an AI model to power your summaries. All processing happens on your device.</string>
-    <string name="models_device_ram">This device: %1$d GB RAM</string>
-    <string name="models_ram_spec">%1$d GB RAM</string>
-    <string name="models_badge_needs_ram">Needs %1$d GB RAM</string>
-    <string name="models_speed_fast">Fast</string>
-    <string name="models_speed_medium">Medium</string>
-    <string name="models_speed_slow">Slow</string>
-    <string name="models_downloaded">Downloaded</string>
-    <string name="models_use">Use This Model</string>
-    <string name="models_delete">Delete Model</string>
-    <string name="models_download">Download (%1$s)</string>
-    <string name="models_downloading">Downloading… %1$s / %2$s</string>
-    <string name="models_percent">%1$d%%</string>
     <string name="models_pause">Pause download</string>
     <string name="models_download_failed">Download failed: %1$s</string>
-    <string name="models_retry_download">Retry Download</string>
     <string name="models_paused">Paused at %1$d%%</string>
-    <string name="models_resume">Resume Download</string>
 
     <!-- Search -->
-    <string name="search_placeholder">Search summaries and messages…</string>
     <string name="search_clear">Clear search</string>
     <string name="search_empty_title">Search your summaries and messages</string>
     <string name="search_empty_body">Type in the search box to find specific information</string>
@@ -164,12 +90,6 @@
     <string name="search_error_title">Search failed</string>
     <string name="search_section_summaries">Summaries (%1$d)</string>
     <string name="search_section_messages">Messages (%1$d)</string>
-    <string name="search_result_topics">Topics: %1$s</string>
-    <string name="search_result_actions">Actions: %1$s</string>
-    <plurals name="search_result_actions_more">
-        <item quantity="one">Actions: %1$s (+%2$d more)</item>
-        <item quantity="other">Actions: %1$s (+%2$d more)</item>
-    </plurals>
 
     <!-- Summary -->
     <string name="summary_channel_progress">Summary in progress</string>
@@ -180,4 +100,7 @@
     <string name="summary_notification_failed_title">Summary failed</string>
     <string name="summary_notification_failed_text">Could not generate the summary</string>
     <string name="summary_notification_nothing_new_title">Nothing new to summarize</string>
+    <string name="smart_notification_public_title">Important message</string>
+    <string name="smart_notification_hidden_text">Open the app to read it</string>
+    <string name="smart_notification_text" translatable="false">%1$s: %2$s</string>
 </resources>

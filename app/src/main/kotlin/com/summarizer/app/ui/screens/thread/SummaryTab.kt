@@ -393,7 +393,7 @@ private fun HistoryChip(
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             summaries.forEachIndexed { index, summary ->
-                val range = ThreadSummaryRules.formatDayRange(localDate(summary.startTimestamp), localDate(summary.endTimestamp))
+                val range = dayRange(localDate(summary.startTimestamp), localDate(summary.endTimestamp))
                 DropdownMenuItem(
                     text = {
                         Column {
@@ -580,7 +580,7 @@ private fun TasksSection(
         SectionHeader(
             icon = Icons.Outlined.TaskAlt,
             title = stringResource(R.string.thread_todo),
-            trailing = stringResource(R.string.thread_todo_progress, done, summary.actionItems.size)
+            trailing = pluralStringResource(R.plurals.thread_todo_progress, summary.actionItems.size, done, summary.actionItems.size)
         )
         Surface(shape = SectionShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
             Column(modifier = Modifier.padding(vertical = 4.dp)) {
@@ -719,7 +719,7 @@ private fun SummaryFooter(
     onCopy: () -> Unit,
     onShare: () -> Unit
 ) {
-    val range = ThreadSummaryRules.formatDayRange(localDate(summary.startTimestamp), localDate(summary.endTimestamp))
+    val range = dayRange(localDate(summary.startTimestamp), localDate(summary.endTimestamp))
     val meta = listOfNotNull(
         pluralStringResource(R.plurals.thread_message_count, summary.messageCount, summary.messageCount),
         range,
@@ -832,8 +832,12 @@ private fun FailedCard(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.semantics { heading() }
                     )
-                    if (failed.message.isNotBlank()) {
-                        Text(text = failed.message, style = MaterialTheme.typography.bodyMedium)
+                    if (!failed.nothingNew) {
+                        Text(text = stringResource(R.string.thread_failed_body), style = MaterialTheme.typography.bodyMedium)
+                    }
+                    // The error itself is technical English, useful only while developing
+                    if (BuildConfig.DEBUG && failed.message.isNotBlank()) {
+                        Text(text = failed.message, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }

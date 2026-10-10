@@ -29,6 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptionsBuilder
+import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -143,6 +144,10 @@ fun NavGraph(
     fun finishOnboarding() {
         scope.launch {
             preferencesRepository.setOnboardingComplete()
+            // A second "finish" (a double tap) must not push a second Home
+            val inOnboarding = navController.currentBackStackEntry?.destination?.hierarchy
+                ?.any { it.route == ONBOARDING_GRAPH } == true
+            if (!inOnboarding) return@launch
             navController.navigate(Screen.Home.route) {
                 popUpTo(ONBOARDING_GRAPH) { inclusive = true }
             }
@@ -280,7 +285,8 @@ fun NavGraph(
                 HomeScreen(
                     onThreadClick = { threadId -> navController.openThread(threadId) },
                     onSearchClick = { navController.navigate(Screen.Search.route) },
-                    onAllTasksClick = { navController.navigateToTopLevel(TopLevelDestination.TASKS) }
+                    onAllTasksClick = { navController.navigateToTopLevel(TopLevelDestination.TASKS) },
+                    onChooseEngine = { navController.navigate(Screen.ModelDownload.route) }
                 )
             }
 

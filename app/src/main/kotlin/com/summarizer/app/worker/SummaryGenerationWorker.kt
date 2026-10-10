@@ -108,14 +108,15 @@ class SummaryGenerationWorker @AssistedInject constructor(
             },
             onFailure = { error ->
                 val nothingNew = error is NothingToSummarizeException
-                val message = error.message ?: context.getString(R.string.summary_notification_failed_text)
+                // The error text is technical English: shown only in debug builds, never in notifications
+                val message = error.message.orEmpty()
                 notifyResult(
                     threadName,
                     title = context.getString(
                         if (nothingNew) R.string.summary_notification_nothing_new_title
                         else R.string.summary_notification_failed_title
                     ),
-                    text = message
+                    text = if (nothingNew) null else context.getString(R.string.summary_notification_failed_text)
                 )
                 Result.failure(workDataOf(KEY_ERROR to message, KEY_NOTHING_NEW to nothingNew))
             }

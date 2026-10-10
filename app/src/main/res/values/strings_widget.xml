@@ -5,7 +5,7 @@
     <string name="widget_upcoming_description">Dates and tasks from your chats for the coming week</string>
     <string name="widget_upcoming_title">This week</string>
     <!-- Header, when more items are coming up than fit: "+2" -->
-    <string name="widget_upcoming_more">+%1$d</string>
+    <string name="widget_upcoming_more" translatable="false">+%1$d</string>
     <string name="widget_upcoming_empty">Nothing coming up</string>
     <!-- Shown instead of details while the app lock is on -->
     <plurals name="widget_upcoming_count">
@@ -22,10 +22,10 @@
     <string name="widget_preview_item_2_detail">Class 3B parents</string>
     <string name="widget_preview_item_3">Football practice moved</string>
     <string name="widget_preview_item_3_detail">17:00 · Football club</string>
-    <string name="widget_preview_day_1">14</string>
+    <string name="widget_preview_day_1" translatable="false">14</string>
     <string name="widget_preview_weekday_1">TUE</string>
-    <string name="widget_preview_day_2">15</string>
+    <string name="widget_preview_day_2" translatable="false">15</string>
     <string name="widget_preview_weekday_2">WED</string>
-    <string name="widget_preview_day_3">18</string>
+    <string name="widget_preview_day_3" translatable="false">18</string>
     <string name="widget_preview_weekday_3">SAT</string>
 </resources>

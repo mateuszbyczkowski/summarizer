@@ -1,11 +1,13 @@
 package com.summarizer.app.data.ai
 
 import com.summarizer.app.BuildConfig
+import com.summarizer.app.data.download.ModelSetupManager
 import com.summarizer.app.domain.ai.AIEngine
 import com.summarizer.app.domain.ai.ModelInfo
 import com.summarizer.app.domain.model.AIProvider
 import com.summarizer.app.domain.repository.ModelRepository
 import com.summarizer.app.domain.repository.PreferencesRepository
+import dagger.Lazy
 import timber.log.Timber
 import java.io.File
 import javax.inject.Inject
@@ -29,7 +31,9 @@ class AIEngineProvider @Inject constructor(
     private val openAIEngine: OpenAIEngine,
     private val demoEngine: DemoEngine,
     private val preferencesRepository: PreferencesRepository,
-    private val modelRepository: ModelRepository
+    private val modelRepository: ModelRepository,
+    // Lazy: the setup manager itself depends on the active engine
+    private val modelSetupManager: Lazy<ModelSetupManager>
 ) : AIEngine {
 
     /** The local engine currently holding a model, if any. */
@@ -82,6 +86,10 @@ class AIEngineProvider @Inject constructor(
                     modelRepository.markAsDownloaded(cpuModel.id, cpuModelPath, System.currentTimeMillis())
                 }
             }
+            // No CPU model yet: download one in the background (Home shows its progress); it
+            // becomes the active model when done, so the next summary works
+            Timber.w(result.exceptionOrNull(), "GPU model failed to load and no CPU model is downloaded; setting one up")
+            modelSetupManager.get().startCpuFallback()
         }
         loadedLocalEngine = null
         return result

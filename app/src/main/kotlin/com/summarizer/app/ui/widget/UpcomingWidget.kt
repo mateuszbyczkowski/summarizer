@@ -43,6 +43,7 @@ import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import com.summarizer.app.MainActivity
 import com.summarizer.app.R
+import com.summarizer.app.util.dateTimeFormats
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.mapLatest
@@ -168,8 +169,9 @@ private fun Header(more: Int, onClick: Action) {
 private fun AgendaRow(row: UpcomingWidgetRow) {
     val context = LocalContext.current
     val locale = context.locale()
-    val weekday = UpcomingWidgetModel.weekdayShort(row.date, locale, context.getString(R.string.pattern_weekday))
-    val time = row.time?.let { UpcomingWidgetModel.timeText(it, locale) }
+    val formats = dateTimeFormats(context, locale)
+    val weekday = formats.weekdayBadge(row.date)
+    val time = row.time?.let(formats::time)
     val secondary = listOfNotNull(time, row.threadName).joinToString(" · ")
     val spokenDate = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).withLocale(locale).format(row.date)
 

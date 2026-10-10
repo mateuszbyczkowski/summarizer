@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Common -->
+    <string name="back">Wstecz</string>
+    <string name="cancel">Anuluj</string>
+    <string name="retry">Spróbuj ponownie</string>
+    <string name="continue_button">Dalej</string>
+    <string name="dismiss">Zamknij</string>
+    <string name="cd_more_options">Więcej opcji</string>
+
+    <plurals name="days">
+        <item quantity="one">%1$d dzień</item>
+        <item quantity="few">%1$d dni</item>
+        <item quantity="many">%1$d dni</item>
+        <item quantity="other">%1$d dnia</item>
+    </plurals>
+
+    <!-- OpenAI API key (shared by onboarding and settings) -->
+    <string name="api_key_label">Klucz API OpenAI</string>
+    <string name="cd_show_api_key">Pokaż klucz API</string>
+    <string name="cd_hide_api_key">Ukryj klucz API</string>
+    <string name="api_key_how_to_title">Jak zdobyć klucz API:</string>
+    <string name="api_key_how_to_steps">1. Wejdź na platform.openai.com\n2. Załóż konto lub zaloguj się\n3. Otwórz sekcję API Keys\n4. Utwórz nowy klucz (secret key)\n5. Skopiuj go i wklej tutaj</string>
+    <string name="openai_privacy_title">Prywatność</string>
+    <string name="openai_privacy_body">Przy OpenAI Twoje wiadomości z WhatsAppa są wysyłane na serwery OpenAI. %1$s</string>
+    <string name="openai_privacy_suggestion_settings">Pełną prywatność daje silnik na urządzeniu.</string>
+    <string name="openai_privacy_suggestion_onboarding">Jeśli wolisz pełną prywatność, wróć i wybierz „Na tym telefonie”.</string>
+
+    <!-- Onboarding: OpenAI setup -->
+    <string name="openai_setup_title">Konfiguracja OpenAI</string>
+    <string name="openai_setup_heading">Wpisz swój klucz API OpenAI</string>
+    <string name="openai_setup_subtitle">Klucz zostanie bezpiecznie zapisany na telefonie i będzie używany tylko do tworzenia podsumowań.</string>
+    <string name="openai_setup_cost_title">Szacowany koszt</string>
+    <string name="openai_setup_cost_body">Z modelem gpt-4o-mini:\n• ok. 0,0006 USD za podsumowanie\n• ok. 10 000 podsumowań za 1 USD\n• Bardzo tanio przy użyciu prywatnym</string>
+    <string name="openai_setup_skip">Pomiń (klucz dodasz później w Ustawieniach)</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Ustawienia</string>
+    <string name="settings_smart_notifications_info">Inteligentne powiadomienia analizują treść wiadomości za pomocą AI i powiadamiają Cię tylko o tych, które są prawdopodobnie ważne. Niższy próg = więcej powiadomień.</string>
+    <string name="threshold_low_description">Dostaniesz powiadomienia o większości wiadomości, także o luźnych rozmowach.</string>
+    <string name="threshold_medium_description">Dostaniesz powiadomienia o pytaniach, prośbach i ważnych informacjach.</string>
+    <string name="threshold_high_description">Dostaniesz powiadomienia tylko o pilnych sprawach i pytaniach do Ciebie.</string>
+    <string name="threshold_very_high_description">Dostaniesz powiadomienia tylko o krytycznych sprawach, które nie mogą czekać.</string>
+
+    <string name="settings_retention_info">Wiadomości starsze niż wybrany okres są usuwane automatycznie raz dziennie. Podsumowania nigdy nie są usuwane.</string>
+
+    <string name="settings_permissions_autostart_info">%1$s wymaga zgody na autostart, żeby aplikacja działała w tle</string>
+
+    <string name="settings_openai_cost_title">Szacowany koszt</string>
+    <string name="settings_openai_cost_body">Model %1$s:\n• %2$s\n• Wejście: %3$.2f USD za 1 mln tokenów\n• Wyjście: %4$.2f USD za 1 mln tokenów</string>
+
+    <string name="settings_about_app_name">Podsumowania czatów WhatsApp</string>
+    <string name="settings_about_version">Wersja %1$s</string>
+    <string name="settings_about_features_title">Funkcje:</string>
+    <string name="settings_about_features">• Podsumowania AI na urządzeniu\n• Integracja z OpenAI\n• Obserwowanie czatów\n• Codzienne automatyczne podsumowania\n• Zaszyfrowane dane na telefonie</string>
+
+    <string name="settings_reset_consequences_title">Spowoduje to:</string>
+    <string name="settings_reset_consequences">• Usunięcie wszystkich pobranych modeli AI\n• Usunięcie wszystkich zebranych wiadomości\n• Usunięcie wszystkich podsumowań\n• Przywrócenie domyślnych ustawień\n• Ponowne uruchomienie konfiguracji początkowej</string>
+    <string name="settings_reset_dialog_title">Zresetować aplikację?</string>
+    <string name="settings_reset_dialog_message">Tej operacji nie można cofnąć. Wszystkie dane, w tym pobrane modele, wiadomości i podsumowania, zostaną trwale usunięte.\n\nCzy na pewno chcesz kontynuować?</string>
+    <string name="settings_reset_dialog_confirm">Usuń wszystko</string>
+    <string name="settings_resetting_title">Resetowanie…</string>
+    <string name="settings_resetting_message">Usuwam modele, wiadomości i ustawienia. To może chwilę potrwać.</string>
+
+    <!-- Storage location -->
+    <string name="storage_title">Wybierz miejsce zapisu</string>
+    <string name="storage_heading">Gdzie zapisywać modele AI?</string>
+    <string name="storage_subtitle">Modele AI to duże pliki (%1$s–%2$s). Wybierz miejsce z wystarczającą ilością wolnej pamięci.</string>
+    <string name="storage_internal">Pamięć wewnętrzna</string>
+    <string name="storage_external">Pamięć zewnętrzna</string>
+    <string name="storage_external_unavailable">Pamięć zewnętrzna (niedostępna)</string>
+    <string name="storage_available">Wolne: %1$s</string>
+    <string name="storage_used_percent">Zajęte: %1$d%%</string>
+    <string name="storage_insufficient">Za mało miejsca (wolne: %1$d MB, potrzeba co najmniej %2$d MB). Zwolnij miejsce lub wybierz inną lokalizację.</string>
+    <string name="storage_low">Mało miejsca (wolne: %1$d MB). Możesz kontynuować, ale przy większych modelach warto zwolnić miejsce.</string>
+
+    <!-- Model download -->
+    <string name="models_pause">Wstrzymaj pobieranie</string>
+    <string name="models_download_failed">Nie udało się pobrać: %1$s</string>
+    <string name="models_paused">Wstrzymano przy %1$d%%</string>
+
+    <!-- Search -->
+    <string name="search_clear">Wyczyść wyszukiwanie</string>
+    <string name="search_empty_title">Szukaj w podsumowaniach i wiadomościach</string>
+    <string name="search_empty_body">Wpisz, czego szukasz, w polu wyszukiwania</string>
+    <string name="search_no_results_title">Brak wyników</string>
+    <string name="search_no_results_body">Żadne podsumowanie ani wiadomość nie pasuje do „%1$s”</string>
+    <string name="search_error_title">Wyszukiwanie nie powiodło się</string>
+    <string name="search_section_summaries">Podsumowania (%1$d)</string>
+    <string name="search_section_messages">Wiadomości (%1$d)</string>
+
+    <!-- Summary -->
+    <string name="summary_channel_progress">Podsumowanie w toku</string>
+    <string name="summary_channel_result">Podsumowanie gotowe</string>
+    <string name="summary_notification_progress_title">Podsumowuję…</string>
+    <string name="summary_notification_ready_title">Podsumowanie gotowe</string>
+    <string name="summary_notification_ready_text">Dotknij, aby przeczytać podsumowanie: %1$s</string>
+    <string name="summary_notification_failed_title">Nie udało się podsumować</string>
+    <string name="summary_notification_failed_text">Nie udało się utworzyć podsumowania</string>
+    <string name="summary_notification_nothing_new_title">Brak nowych wiadomości do podsumowania</string>
+    <string name="smart_notification_public_title">Ważna wiadomość</string>
+    <string name="smart_notification_hidden_text">Otwórz aplikację, aby ją przeczytać</string>
+</resources>

@@ -14,7 +14,10 @@
         <item quantity="other">Wrong PIN. %1$d attempts left before a short pause.</item>
     </plurals>
     <string name="lock_pin_locked_out">Too many attempts. Try again in %1$s.</string>
-    <string name="lock_pin_progress">%1$d of %2$d digits entered</string>
+    <plurals name="lock_pin_progress">
+        <item quantity="one">%1$d of %2$d digit entered</item>
+        <item quantity="other">%1$d of %2$d digits entered</item>
+    </plurals>
     <string name="lock_fingerprint_use_pin">Use PIN</string>
     <string name="lock_key_delete">Delete</string>
     <string name="lock_key_fingerprint">Unlock with fingerprint</string>
@@ -30,9 +33,5 @@
     <string name="lock_pin_setup_cancel">Cancel</string>
 
     <!-- Settings -->
-    <string name="lock_settings_description">Keep your chats and summaries private</string>
     <string name="lock_settings_app_lock">App lock</string>
-    <string name="lock_settings_system_info">Asks for your phone\'s screen lock (fingerprint, face, PIN or pattern) when the app has not been used for 24 hours.</string>
-    <string name="lock_settings_pin_info">Your phone has no screen lock, so the app asks for its own PIN when it has not been used for 24 hours.</string>
-    <string name="lock_settings_off_info">The app never locks. Anyone who can open your phone can read your chats and summaries.</string>
 </resources>

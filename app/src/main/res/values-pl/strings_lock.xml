@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Lock screen: phone's own lock -->
+    <string name="lock_system_subtitle">Zablokowane. Odblokuj blokadą ekranu telefonu.</string>
+    <string name="lock_system_unlock">Odblokuj</string>
+    <string name="lock_system_unavailable">Blokada ekranu telefonu jest niedostępna.</string>
+    <string name="lock_prompt_title">Odblokuj aplikację %1$s</string>
+
+    <!-- Lock screen: app PIN -->
+    <string name="lock_pin_title">Wpisz PIN</string>
+    <string name="lock_pin_wrong">Nieprawidłowy PIN</string>
+    <plurals name="lock_pin_attempts_left">
+        <item quantity="one">Nieprawidłowy PIN. Została %1$d próba przed krótką przerwą.</item>
+        <item quantity="few">Nieprawidłowy PIN. Zostały %1$d próby przed krótką przerwą.</item>
+        <item quantity="many">Nieprawidłowy PIN. Zostało %1$d prób przed krótką przerwą.</item>
+        <item quantity="other">Nieprawidłowy PIN. Zostało %1$d próby przed krótką przerwą.</item>
+    </plurals>
+    <string name="lock_pin_locked_out">Za dużo prób. Spróbuj ponownie za %1$s.</string>
+    <plurals name="lock_pin_progress">
+        <item quantity="one">Wpisano %1$d z %2$d cyfry</item>
+        <item quantity="few">Wpisano %1$d z %2$d cyfr</item>
+        <item quantity="many">Wpisano %1$d z %2$d cyfr</item>
+        <item quantity="other">Wpisano %1$d z %2$d cyfry</item>
+    </plurals>
+    <string name="lock_fingerprint_use_pin">Użyj PIN-u</string>
+    <string name="lock_key_delete">Usuń</string>
+    <string name="lock_key_fingerprint">Odblokuj odciskiem palca</string>
+
+    <!-- Creating the app PIN -->
+    <string name="lock_pin_setup_title">Utwórz PIN aplikacji</string>
+    <string name="lock_pin_setup_subtitle">Twój telefon nie ma blokady ekranu, więc aplikacja chroni Twoje czaty własnym 6-cyfrowym PIN-em.</string>
+    <string name="lock_pin_setup_required_subtitle">Twój telefon nie ma już blokady ekranu. Utwórz PIN aplikacji, żeby chronić swoje czaty.</string>
+    <string name="lock_pin_setup_confirm_title">Potwierdź PIN</string>
+    <string name="lock_pin_setup_confirm_subtitle">Wpisz jeszcze raz te same 6 cyfr.</string>
+    <string name="lock_pin_setup_mismatch">PIN-y się różnią. Spróbuj ponownie.</string>
+    <string name="lock_pin_setup_save_failed">Nie udało się zapisać PIN-u. Spróbuj ponownie.</string>
+    <string name="lock_pin_setup_cancel">Anuluj</string>
+
+    <!-- Settings -->
+    <string name="lock_settings_app_lock">Blokada aplikacji</string>
+</resources>

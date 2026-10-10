@@ -28,6 +28,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -59,13 +60,20 @@ fun OpenAISetupScreen(
     // Deliberately not saveable: the key must not end up in the saved instance state
     var apiKeyInput by remember { mutableStateOf("") }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val errorMessage = (uiState as? SettingsUiState.Error)?.message
+    val errorMessage = (uiState as? SettingsUiState.Error)?.messageRes?.let { stringResource(it) }
     val canSave = apiKeyInput.isNotBlank() && errorMessage == null
-    val saveKey = { if (canSave) viewModel.saveApiKey(apiKeyInput.trim(), activate = true) }
+    // Navigate once per save: coming back here (Back from the PIN step) must not move on again
+    var saveRequested by rememberSaveable { mutableStateOf(false) }
+    val saveKey = {
+        if (canSave) {
+            saveRequested = true
+            viewModel.saveApiKey(apiKeyInput.trim(), activate = true)
+        }
+    }
 
-    // Auto-navigate when API key is saved
-    LaunchedEffect(uiState) {
-        if ((uiState as? SettingsUiState.Success)?.hasApiKey == true) {
+    LaunchedEffect(uiState, saveRequested) {
+        if (saveRequested && (uiState as? SettingsUiState.Success)?.hasApiKey == true) {
+            saveRequested = false
             onSetupComplete()
         }
     }

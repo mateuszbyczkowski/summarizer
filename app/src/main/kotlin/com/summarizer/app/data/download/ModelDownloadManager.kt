@@ -55,6 +55,9 @@ class ModelDownloadManager @Inject constructor(
 
     private val activeDownloads = ConcurrentHashMap<String, Job>()
 
+    /** Paused transfers that may still be finishing a write; a resume waits for them. */
+    private val pausedDownloads = ConcurrentHashMap<String, Job>()
+
     private class DownloadException(
         message: String,
         val failure: DownloadFailure = DownloadFailure.OTHER
@@ -62,8 +65,9 @@ class ModelDownloadManager @Inject constructor(
 
     /** Start or resume downloading [model]; a running download for the same model is left alone. */
     fun startDownload(model: AIModel) {
-        val previous = activeDownloads[model.id]
-        if (previous != null && previous.isActive && !previous.isCancelled) return
+        val running = activeDownloads[model.id]
+        if (running != null && running.isActive && !running.isCancelled) return
+        val previous = pausedDownloads.remove(model.id) ?: running
         // Show the download as running right away (keeping its progress), not once it connects
         _downloadStates.update { states ->
             val current = states[model.id]?.copy(status = DownloadStatus.DOWNLOADING, error = null, failure = null)
@@ -102,7 +106,11 @@ class ModelDownloadManager @Inject constructor(
 
     /** Stop the transfer but keep the partial file so [startDownload] can resume it. */
     fun pauseDownload(modelId: String) {
-        activeDownloads.remove(modelId)?.cancel()
+        activeDownloads.remove(modelId)?.let { job ->
+            job.cancel()
+            pausedDownloads[modelId] = job
+            job.invokeOnCompletion { pausedDownloads.remove(modelId, job) }
+        }
         _downloadStates.update { states ->
             val current = states[modelId] ?: return@update states
             states + (modelId to current.copy(status = DownloadStatus.PAUSED))
@@ -112,7 +120,7 @@ class ModelDownloadManager @Inject constructor(
     /** Stop the transfer and discard the partial file. */
     fun cancelDownload(modelId: String) {
         applicationScope.launch(Dispatchers.IO) {
-            activeDownloads.remove(modelId)?.let { job ->
+            listOfNotNull(activeDownloads.remove(modelId), pausedDownloads.remove(modelId)).forEach { job ->
                 job.cancel()
                 job.join()
             }
@@ -121,6 +129,16 @@ class ModelDownloadManager @Inject constructor(
             }
             updateState(modelId, DownloadStatus.NOT_STARTED)
         }
+    }
+
+    /** Stops every transfer and waits until none writes any more (before model files are wiped). */
+    suspend fun cancelAll() {
+        val jobs = activeDownloads.values + pausedDownloads.values
+        activeDownloads.clear()
+        pausedDownloads.clear()
+        jobs.forEach { it.cancel() }
+        jobs.forEach { it.join() }
+        _downloadStates.value = emptyMap()
     }
 
     private suspend fun download(model: AIModel): File = withContext(Dispatchers.IO) {

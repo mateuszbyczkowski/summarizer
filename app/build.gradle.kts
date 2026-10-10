@@ -35,6 +35,12 @@ android {
         }
     }
 
+    // English (default) and Polish only, so library strings (e.g. system dialogs from AndroidX)
+    // never appear in a third language next to the app's own
+    androidResources {
+        localeFilters += listOf("en", "pl")
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true

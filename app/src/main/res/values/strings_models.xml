@@ -3,12 +3,12 @@
     <!-- AI engine / model manager (stage 2E) -->
     <string name="engine_title">AI engine</string>
     <string name="engine_tab_on_device">On device</string>
-    <string name="engine_tab_openai">OpenAI</string>
+    <string name="engine_tab_openai" translatable="false">OpenAI</string>
 
     <!-- Active model -->
     <string name="engine_active_label">Active model</string>
     <string name="engine_ready">Ready</string>
-    <string name="engine_hero_subtitle">%1$s · %2$s</string>
+    <string name="engine_hero_subtitle" translatable="false">%1$s · %2$s</string>
     <string name="engine_try_example">Try on example</string>
     <string name="engine_try_started">Summarizing the test chat. You will get a notification when it is ready.</string>
     <string name="engine_none_title">No model downloaded yet</string>
@@ -24,11 +24,11 @@
     <string name="engine_language_demo">Canned Polish summary of the test chat</string>
 
     <!-- Specs -->
-    <string name="engine_time_seconds">~%1$d s</string>
-    <string name="engine_time_minutes">~%1$d min</string>
+    <string name="engine_time_seconds" translatable="false">~%1$d s</string>
+    <string name="engine_time_minutes" translatable="false">~%1$d min</string>
     <string name="engine_time_per_summary">%1$s per summary</string>
-    <string name="engine_backend_gpu">GPU</string>
-    <string name="engine_backend_cpu">CPU</string>
+    <string name="engine_backend_gpu" translatable="false">GPU</string>
+    <string name="engine_backend_cpu" translatable="false">CPU</string>
     <string name="engine_no_download">No download</string>
     <string name="engine_needs_ram">Needs %1$d GB RAM; this phone has %2$d GB</string>
 
@@ -68,4 +68,13 @@
     <string name="engine_openai_save_use">Save and use OpenAI</string>
     <string name="engine_openai_use">Use OpenAI</string>
     <string name="engine_openai_model_group">Model</string>
+    <string name="engine_openai_key_valid">The API key works.</string>
+    <string name="engine_openai_key_invalid">The API key didn\'t work.</string>
+    <!-- The error comes from OpenAI and is in English -->
+    <string name="engine_openai_key_invalid_detail">The API key didn\'t work: %1$s</string>
+    <string name="openai_model_gpt_4o_mini_description">Smallest and cheapest; best value for most people</string>
+    <string name="openai_model_gpt_4o_description">Better quality, costs more</string>
+    <string name="openai_model_o1_mini_description">Reasoning model for complex chats; the most expensive</string>
+    <!-- "~$0.0006 per summary" -->
+    <string name="openai_cost_per_summary">~$%1$s per summary</string>
 </resources>

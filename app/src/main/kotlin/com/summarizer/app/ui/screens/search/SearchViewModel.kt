@@ -137,7 +137,7 @@ class SearchViewModel @Inject constructor(
         throw e
     } catch (e: Exception) {
         Timber.e(e, "Search failed")
-        SearchUiState.Error("Search failed: ${e.message}")
+        SearchUiState.Error
     }
 
     private companion object {
@@ -173,5 +173,5 @@ sealed class SearchUiState {
     }
 
     data class NoResults(val query: String) : SearchUiState()
-    data class Error(val message: String) : SearchUiState()
+    data object Error : SearchUiState()
 }

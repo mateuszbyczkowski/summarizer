@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Name of the home-screen widget in the launcher's widget picker -->
+    <string name="widget_upcoming_label">Nadchodzące</string>
+    <string name="widget_upcoming_description">Terminy i zadania z Twoich czatów na najbliższy tydzień</string>
+    <string name="widget_upcoming_title">Ten tydzień</string>
+    <string name="widget_upcoming_empty">Nic się nie zbliża</string>
+    <!-- Shown instead of details while the app lock is on -->
+    <plurals name="widget_upcoming_count">
+        <item quantity="one">%1$d sprawa w tym tygodniu</item>
+        <item quantity="few">%1$d sprawy w tym tygodniu</item>
+        <item quantity="many">%1$d spraw w tym tygodniu</item>
+        <item quantity="other">%1$d sprawy w tym tygodniu</item>
+    </plurals>
+    <string name="widget_upcoming_hidden">Szczegóły są ukryte, gdy blokada aplikacji jest włączona</string>
+    <string name="widget_upcoming_unavailable">Otwórz aplikację, żeby zobaczyć, co się zbliża</string>
+
+    <!-- Sample content of the widget picker preview -->
+    <string name="widget_preview_item_1">Wycieczka, autobus spod szkoły</string>
+    <string name="widget_preview_item_1_detail">7:30 · Rodzice klasy 3B</string>
+    <string name="widget_preview_item_2">Zapłać za bilety do teatru</string>
+    <string name="widget_preview_item_2_detail">Rodzice klasy 3B</string>
+    <string name="widget_preview_item_3">Zmiana godziny treningu piłki</string>
+    <string name="widget_preview_item_3_detail">17:00 · Klub piłkarski</string>
+    <string name="widget_preview_weekday_1">WT</string>
+    <string name="widget_preview_weekday_2">ŚR</string>
+    <string name="widget_preview_weekday_3">SOB</string>
+</resources>

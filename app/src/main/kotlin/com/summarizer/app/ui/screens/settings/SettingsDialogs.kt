@@ -4,11 +4,13 @@ import android.text.format.DateFormat
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -81,13 +83,20 @@ fun DailyTimeDialog(
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         }
     ) {
-        TimePicker(state = state)
-        Text(
-            text = stringResource(R.string.settings_daily_time_note),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 8.dp)
-        )
+        // As wide as the picker, so the note wraps instead of stretching the dialog
+        Column(
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .width(IntrinsicSize.Min),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            TimePicker(state = state)
+            Text(
+                text = stringResource(R.string.settings_daily_time_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 

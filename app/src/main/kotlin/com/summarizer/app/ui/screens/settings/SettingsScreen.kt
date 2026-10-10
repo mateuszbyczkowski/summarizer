@@ -1,7 +1,6 @@
 package com.summarizer.app.ui.screens.settings
 
 import android.content.Context
-import android.text.format.DateFormat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -67,8 +66,8 @@ import com.summarizer.app.ui.components.SettingsRowTrailing
 import com.summarizer.app.ui.components.settingsPageColor
 import com.summarizer.app.ui.screens.models.ModelProfiles
 import com.summarizer.app.util.PermissionHelper
+import com.summarizer.app.util.dateTimeFormats
 import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 
 /**
  * Settings as a grouped list (Summaries / Notifications / Privacy & security / About). Each row
@@ -167,7 +166,7 @@ fun SettingsScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Text(
-                            text = state.message,
+                            text = stringResource(state.messageRes),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.error,
                             textAlign = TextAlign.Center
@@ -372,11 +371,7 @@ private fun engineValue(state: SettingsUiState.Success): String = when (state.ai
 }
 
 /** A full hour in the phone's 12/24-hour style, e.g. "20:00" or "8:00 PM". */
-private fun formatHour(context: Context, hour: Int): String {
-    val locale = context.resources.configuration.locales[0]
-    val pattern = DateFormat.getBestDateTimePattern(locale, if (DateFormat.is24HourFormat(context)) "Hm" else "hm")
-    return LocalTime.of(hour, 0).format(DateTimeFormatter.ofPattern(pattern, locale))
-}
+private fun formatHour(context: Context, hour: Int): String = dateTimeFormats(context).time(LocalTime.of(hour, 0))
 
 /** Problems that keep the app from working, each with a fix. Nothing is shown when all is well. */
 @Composable

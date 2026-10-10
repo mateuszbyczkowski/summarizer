@@ -50,25 +50,10 @@ object ThreadSummaryRules {
         return days <= AgendaSchedule.URGENT_DAYS
     }
 
-    /** First and last day of a set of messages, for "10–13.10"; null without messages. */
+    /** First and last day of a set of messages, for "Oct 10–13"; null without messages. */
     fun dayRange(timestamps: List<Long>, zone: ZoneId = ZoneId.systemDefault()): Pair<LocalDate, LocalDate>? {
         if (timestamps.isEmpty()) return null
         fun day(millis: Long) = Instant.ofEpochMilli(millis).atZone(zone).toLocalDate()
         return day(timestamps.min()) to day(timestamps.max())
-    }
-
-    /**
-     * A day range written compactly with numeric days: "13.10", "10–13.10", "28.09–3.10",
-     * "28.12.2025–2.01.2026". Days are "d", months "MM", as in the mockups; the year only when
-     * the range crosses one.
-     */
-    fun formatDayRange(start: LocalDate, end: LocalDate): String {
-        fun dm(date: LocalDate) = "${date.dayOfMonth}.${date.monthValue.toString().padStart(2, '0')}"
-        return when {
-            start == end -> dm(start)
-            start.year != end.year -> "${dm(start)}.${start.year}–${dm(end)}.${end.year}"
-            start.month == end.month -> "${start.dayOfMonth}–${dm(end)}"
-            else -> "${dm(start)}–${dm(end)}"
-        }
     }
 }

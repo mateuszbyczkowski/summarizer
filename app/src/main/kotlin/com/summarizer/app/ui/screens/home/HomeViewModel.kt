@@ -3,9 +3,11 @@ package com.summarizer.app.ui.screens.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.summarizer.app.data.download.ModelSetupManager
+import com.summarizer.app.domain.model.AIProvider
 import com.summarizer.app.domain.model.AgendaItem
 import com.summarizer.app.domain.model.ModelSetupState
 import com.summarizer.app.domain.model.ThreadOverview
+import com.summarizer.app.domain.repository.ModelRepository
 import com.summarizer.app.domain.repository.PreferencesRepository
 import com.summarizer.app.domain.repository.ThreadRepository
 import com.summarizer.app.domain.usecase.AgendaSchedule
@@ -67,12 +69,30 @@ class HomeViewModel @Inject constructor(
     private val threadRepository: ThreadRepository,
     private val preferencesRepository: PreferencesRepository,
     private val coordinator: SummaryGenerationCoordinator,
-    private val modelSetupManager: ModelSetupManager
+    private val modelSetupManager: ModelSetupManager,
+    private val modelRepository: ModelRepository
 ) : ViewModel() {
 
     /** The model onboarding is downloading, for the progress card; null when there is none. */
     val modelSetup: StateFlow<ModelSetupState?> = modelSetupManager.state
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    private val engineConfigured = MutableStateFlow(true)
+
+    /** No engine can summarize and no model is on its way: Home points to the AI engine screen. */
+    val engineMissing: StateFlow<Boolean> = combine(engineConfigured, modelSetup) { configured, setup ->
+        !configured && setup == null
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    /** Re-checks the engine; the user may have set one up while away from Home. */
+    fun refreshEngine() {
+        viewModelScope.launch {
+            engineConfigured.value = when (preferencesRepository.getAIProvider()) {
+                AIProvider.LOCAL -> modelRepository.getDownloadedModel() != null
+                AIProvider.OPENAI -> !preferencesRepository.getOpenAIApiKey().isNullOrBlank()
+            }
+        }
+    }
 
     fun retryModelSetup() = modelSetupManager.retry()
 

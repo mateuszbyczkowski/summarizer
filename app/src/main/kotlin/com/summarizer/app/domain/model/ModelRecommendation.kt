@@ -22,4 +22,13 @@ object ModelRecommendation {
         val fitting = catalog.filter { it.downloadUrl.isNotBlank() && it.minimumRAM <= deviceRamGb }
         return fitting.firstOrNull { it.isRecommended } ?: fitting.minByOrNull { it.minimumRAM }
     }
+
+    /**
+     * The CPU (llama.cpp, `.gguf`) model to fall back to when the GPU cannot run a model: the
+     * one that needs the least RAM, if any fits.
+     */
+    fun cpuFallback(catalog: List<AIModel>, deviceRamGb: Int): AIModel? =
+        catalog
+            .filter { it.downloadUrl.endsWith(".gguf") && it.minimumRAM <= deviceRamGb }
+            .minByOrNull { it.minimumRAM }
 }

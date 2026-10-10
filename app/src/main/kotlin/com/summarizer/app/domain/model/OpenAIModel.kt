@@ -9,7 +9,6 @@ package com.summarizer.app.domain.model
 enum class OpenAIModel(
     val modelId: String,
     val displayName: String,
-    val description: String,
     val contextWindow: Int, // Maximum context length in tokens
     val inputPricePer1MTokens: Double, // USD per 1M input tokens
     val outputPricePer1MTokens: Double, // USD per 1M output tokens
@@ -18,7 +17,6 @@ enum class OpenAIModel(
     GPT_4O_MINI(
         modelId = "gpt-4o-mini",
         displayName = "GPT-4o Mini",
-        description = "Smallest and most affordable - best value for most users",
         contextWindow = 128_000,
         inputPricePer1MTokens = 0.15, // $0.15 per 1M input tokens
         outputPricePer1MTokens = 0.60, // $0.60 per 1M output tokens
@@ -28,7 +26,6 @@ enum class OpenAIModel(
     GPT_4O(
         modelId = "gpt-4o",
         displayName = "GPT-4o",
-        description = "Balanced quality and speed - high-performance model",
         contextWindow = 128_000,
         inputPricePer1MTokens = 2.50, // $2.50 per 1M input tokens
         outputPricePer1MTokens = 10.00, // $10.00 per 1M output tokens
@@ -38,7 +35,6 @@ enum class OpenAIModel(
     O1_MINI(
         modelId = "o1-mini",
         displayName = "o1-mini",
-        description = "Advanced reasoning model - best for complex analysis",
         contextWindow = 128_000,
         inputPricePer1MTokens = 3.00, // $3.00 per 1M input tokens
         outputPricePer1MTokens = 12.00, // $12.00 per 1M output tokens
@@ -57,23 +53,5 @@ enum class OpenAIModel(
          * Default recommended model.
          */
         val DEFAULT = GPT_4O_MINI
-    }
-
-    /**
-     * Format pricing for display.
-     */
-    fun formatPricing(): String {
-        return "~$${String.format("%.4f", estimatedCostPerSummary)} per summary"
-    }
-
-    /**
-     * Format detailed pricing breakdown.
-     */
-    fun formatDetailedPricing(): String {
-        return """
-            Input: $${String.format("%.2f", inputPricePer1MTokens)} / 1M tokens
-            Output: $${String.format("%.2f", outputPricePer1MTokens)} / 1M tokens
-            Estimated: ~$${String.format("%.4f", estimatedCostPerSummary)} per summary
-        """.trimIndent()
     }
 }

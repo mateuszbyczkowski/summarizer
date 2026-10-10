@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Search (stage 2E) -->
+    <string name="search_bar_placeholder">Szukaj w czatach i podsumowaniach</string>
+    <string name="search_recent_title">Ostatnie wyszukiwania</string>
+    <string name="search_recent_clear">Wyczyść wszystko</string>
+    <string name="search_recent_remove_cd">Usuń „%1$s” z ostatnich wyszukiwań</string>
+    <string name="search_filter_summaries">Podsumowania</string>
+    <string name="search_filter_tasks">Zadania</string>
+    <string name="search_filter_messages">Wiadomości</string>
+    <string name="search_section_tasks">Zadania (%1$d)</string>
+    <string name="search_error_body">Coś poszło nie tak. Spróbuj ponownie.</string>
+    <string name="search_filter_empty">Nic tu nie pasuje. Spróbuj innego filtra.</string>
+    <string name="search_task_due">%1$s · do %2$s</string>
+    <string name="search_task_done">Zrobione</string>
+</resources>

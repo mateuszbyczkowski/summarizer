@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Thread screen: top bar. Subtitle: "48 messages · 10–13.10" -->
+    <!-- Thread screen: top bar. Subtitle: "48 messages · Oct 10–13" -->
     <string name="thread_fallback_title">Chat</string>
     <plurals name="thread_message_count">
         <item quantity="one">%1$d message</item>
         <item quantity="other">%1$d messages</item>
     </plurals>
-    <string name="thread_subtitle">%1$s · %2$s</string>
+    <string name="thread_subtitle" translatable="false">%1$s · %2$s</string>
     <string name="thread_subtitle_summarizing">Updating summary…</string>
     <string name="thread_share">Share summary</string>
     <string name="thread_menu_full_resummary">Full re-summary</string>
@@ -30,22 +30,25 @@
     <!-- Summary tab: history chip ("Today, 17:02") and engine chip -->
     <string name="thread_history_today">Today, %1$s</string>
     <string name="thread_history_yesterday">Yesterday, %1$s</string>
-    <string name="thread_history_date">%1$s, %2$s</string>
+    <string name="thread_history_date" translatable="false">%1$s, %2$s</string>
     <string name="thread_history_cd">Summary from %1$s. Show earlier summaries</string>
     <string name="thread_history_latest">Latest</string>
     <string name="thread_engine_on_device">On device</string>
-    <string name="thread_engine_openai">OpenAI</string>
+    <string name="thread_engine_openai" translatable="false">OpenAI</string>
 
     <!-- Summary tab: sections -->
     <string name="thread_in_short">In short</string>
     <string name="thread_key_dates">Key dates</string>
     <string name="thread_todo">To do</string>
-    <string name="thread_todo_progress">%1$d of %2$d done</string>
+    <plurals name="thread_todo_progress">
+        <item quantity="one">%1$d of %2$d done</item>
+        <item quantity="other">%1$d of %2$d done</item>
+    </plurals>
     <string name="thread_task_due">by %1$s</string>
     <string name="thread_announcements">Announcements</string>
     <string name="thread_topics">Topics</string>
     <string name="thread_date_unknown">Date to confirm</string>
-    <!-- Footer: "30 messages · 13–14.10 · Demo" -->
+    <!-- Footer: "30 messages · Oct 13–14 · Demo" -->
     <string name="thread_rate_up">Helpful</string>
     <string name="thread_rate_down">Not helpful</string>
     <string name="thread_copy">Copy</string>
@@ -80,6 +83,7 @@
     <string name="thread_leave_app">You can leave the app — we\'ll notify you when it\'s ready.</string>
     <string name="thread_previous_summary">Previous summary · %1$s</string>
     <string name="thread_failed_title">Couldn\'t summarize</string>
+    <string name="thread_failed_body">Something went wrong while writing the summary. Try again.</string>
     <string name="thread_nothing_new_title">Nothing new to summarize</string>
 
     <!-- Messages tab -->
@@ -97,5 +101,5 @@
     <string name="thread_media_contact">Contact</string>
     <string name="thread_media_sticker">Sticker</string>
     <!-- Spoken for a message: "Anna, 17:02: text" -->
-    <string name="thread_message_cd">%1$s, %2$s: %3$s</string>
+    <string name="thread_message_cd" translatable="false">%1$s, %2$s: %3$s</string>
 </resources>

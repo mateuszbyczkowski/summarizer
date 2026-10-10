@@ -8,13 +8,17 @@ import com.summarizer.app.domain.model.DownloadStatus
 import com.summarizer.app.domain.model.ModelDownloadState
 import com.summarizer.app.domain.model.ModelRecommendation
 import com.summarizer.app.domain.model.ModelSetupState
+import com.summarizer.app.domain.model.SetupStopReason
 import com.summarizer.app.domain.repository.ModelRepository
 import com.summarizer.app.domain.repository.PreferencesRepository
 import com.summarizer.app.util.DeviceMemory
+import com.summarizer.app.util.NetworkHelper
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -30,6 +34,10 @@ import javax.inject.Singleton
  * The on-device model onboarding sets up: picked by the phone's RAM, downloaded in the
  * background by [ModelDownloadManager] while the user is already in the app, and made the
  * active model once it is there. Home shows [state] as a progress card.
+ *
+ * Also sets up the small CPU model when the phone's GPU cannot run the chosen one
+ * ([startCpuFallback]), resumes a download that waits for Wi-Fi once Wi-Fi connects, and steps
+ * aside when the user picks a model themselves ([onModelChosen]).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
@@ -76,6 +84,20 @@ class ModelSetupManager @Inject constructor(
                 }
             }
         }
+        // "Wi-Fi only" stopped the download: carry on by itself once Wi-Fi is back
+        scope.launch {
+            state
+                .map { (it as? ModelSetupState.Stopped)?.reason == SetupStopReason.WIFI_REQUIRED }
+                .distinctUntilChanged()
+                .collectLatest { waiting ->
+                    if (!waiting) return@collectLatest
+                    NetworkHelper.wifiConnections(context).first()
+                    // A new Wi-Fi network is reported before it becomes the default one
+                    delay(WIFI_SETTLE_MS)
+                    Timber.i("Wi-Fi connected; resuming the model setup download")
+                    retry()
+                }
+        }
     }
 
     /** The model onboarding would download on this phone, or null when none fits its RAM. */
@@ -83,12 +105,31 @@ class ModelSetupManager @Inject constructor(
         ModelRecommendation.pick(ModelCatalog.DEFAULT_MODELS, DeviceMemory.totalRamGb(context))
 
     /** Starts downloading the recommended model; keeps running after the caller is gone. */
-    fun start() {
+    fun start() = setUp(ModelRecommendation::pick)
+
+    /**
+     * The GPU could not load the active model and no CPU model is downloaded: set up the small
+     * CPU model, which then becomes active, so summaries work again without the user's help.
+     */
+    fun startCpuFallback() = setUp(ModelRecommendation::cpuFallback)
+
+    /**
+     * The user made a model active in the model manager: their choice wins, so the automatic
+     * download stops instead of taking over (and unloading their model) when it finishes.
+     */
+    fun onModelChosen(modelId: String) {
+        scope.launch {
+            val setupId = preferencesRepository.observeSetupModelId().first() ?: return@launch
+            if (setupId != modelId) cancel()
+        }
+    }
+
+    private fun setUp(pick: (List<AIModel>, Int) -> AIModel?) {
         scope.launch {
             // The model rows may not exist yet: the model manager has never been opened
             catalogSync.reconcile()
             val ramGb = DeviceMemory.totalRamGb(context)
-            val model = ModelRecommendation.pick(modelRepository.getAllModels().first(), ramGb)
+            val model = pick(modelRepository.getAllModels().first(), ramGb)
             if (model == null) {
                 Timber.i("No on-device model fits ${ramGb} GB RAM; leaving the choice to the model manager")
                 return@launch
@@ -135,4 +176,8 @@ class ModelSetupManager @Inject constructor(
     }
 
     private suspend fun forget() = preferencesRepository.setSetupModelId(null)
+
+    private companion object {
+        const val WIFI_SETTLE_MS = 3_000L
+    }
 }

@@ -28,7 +28,7 @@
     <string name="onboarding_access_body">Summarizer sees your group chats through WhatsApp\'s message notifications. It never opens WhatsApp and never sends anything.</string>
     <string name="onboarding_access_only_whatsapp">Only WhatsApp and WhatsApp Business. Notifications from other apps are ignored.</string>
     <string name="onboarding_access_on_device">Messages are stored encrypted on this phone and nowhere else.</string>
-    <string name="onboarding_access_setting">Summarizer</string>
+    <string name="onboarding_access_setting" translatable="false">Summarizer</string>
     <string name="onboarding_access_setting_hint">Notification access</string>
     <string name="onboarding_access_open">Open settings</string>
     <string name="onboarding_access_granted">Notification access is on</string>
@@ -46,7 +46,7 @@
     <string name="onboarding_engine_local_model">Downloads %1$s (%2$s) in the background, picked for your phone\'s %3$d GB of RAM.</string>
     <string name="onboarding_engine_local_no_model">Choose a model later in Settings › AI engine.</string>
     <string name="onboarding_engine_recommended">Recommended</string>
-    <string name="onboarding_engine_openai_title">OpenAI</string>
+    <string name="onboarding_engine_openai_title" translatable="false">OpenAI</string>
     <string name="onboarding_engine_openai_body">Fast on any phone. Messages are sent to OpenAI to be summarized. Needs your own API key, about $0.0006 per summary.</string>
     <string name="onboarding_engine_start">Start</string>
     <string name="onboarding_engine_continue">Continue</string>
@@ -59,7 +59,10 @@
     <string name="model_setup_paused_title">Download of %1$s paused</string>
     <string name="model_setup_failed_title">Couldn\'t download %1$s</string>
     <string name="model_setup_failed_body">The download failed. Check your connection and try again.</string>
-    <string name="model_setup_wifi_body">Waiting for Wi-Fi. Connect to Wi-Fi, or allow mobile data in Settings › AI engine.</string>
+    <string name="model_setup_wifi_body">Waiting for Wi-Fi: the download carries on by itself once you are connected. Or allow mobile data in Settings › AI engine.</string>
+    <string name="engine_missing_title">Choose how to summarize</string>
+    <string name="engine_missing_body">Summaries need a model on this phone or an OpenAI key.</string>
+    <string name="engine_missing_action">Set up</string>
     <string name="model_setup_space_body">Not enough free storage. Free up %1$s and try again.</string>
     <string name="model_setup_interrupted_body">The download stopped when the app was closed.</string>
     <string name="model_setup_paused_body">The download is paused.</string>

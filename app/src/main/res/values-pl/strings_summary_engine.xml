@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Summary generation: progress, notifications, copying a summary as text -->
+
+    <!-- Ongoing notification -->
+    <string name="summary_notification_cancel">Anuluj</string>
+    <string name="summary_notification_progress_public">Podsumowuję czat…</string>
+
+    <!-- Ready notification. Title: "Podsumowanie gotowe · 2 zadania"; text: the first open task -->
+    <plurals name="summary_notification_ready_tasks">
+        <item quantity="one">Podsumowanie gotowe · %d zadanie</item>
+        <item quantity="few">Podsumowanie gotowe · %d zadania</item>
+        <item quantity="many">Podsumowanie gotowe · %d zadań</item>
+        <item quantity="other">Podsumowanie gotowe · %d zadania</item>
+    </plurals>
+    <string name="summary_notification_show">Pokaż</string>
+    <string name="summary_notification_copy">Kopiuj</string>
+    <string name="summary_copied">Skopiowano podsumowanie</string>
+    <string name="summary_copy_label">Podsumowanie czatu</string>
+
+    <!-- Generation stages -->
+    <string name="summary_stage_preparing">Przygotowuję wiadomości…</string>
+    <string name="summary_stage_loading_model">Wczytuję model…</string>
+    <string name="summary_stage_reading">Czytam rozmowę…</string>
+    <string name="summary_stage_writing">Piszę podsumowanie…</string>
+    <string name="summary_cancel_generation">Anuluj</string>
+
+    <!-- Summary as plain text (copy / share) -->
+    <string name="summary_text_dates">Ważne daty</string>
+    <string name="summary_text_tasks">Do zrobienia</string>
+    <string name="summary_text_announcements">Ogłoszenia</string>
+    <string name="summary_text_topics">Tematy</string>
+    <string name="summary_text_due">do %1$s</string>
+
+    <!-- Daily auto-summary notification -->
+    <string name="auto_summary_channel_name">Codzienne podsumowania</string>
+    <string name="auto_summary_channel_description">Gdy codzienne podsumowania obserwowanych czatów są gotowe</string>
+    <string name="auto_summary_notification_title">Codzienne podsumowania gotowe</string>
+    <plurals name="auto_summary_notification_done">
+        <item quantity="one">Podsumowano %1$d czat</item>
+        <item quantity="few">Podsumowano %1$d czaty</item>
+        <item quantity="many">Podsumowano %1$d czatów</item>
+        <item quantity="other">Podsumowano %1$d czatu</item>
+    </plurals>
+    <plurals name="auto_summary_notification_failed">
+        <item quantity="one">Nie udało się podsumować %1$d czatu</item>
+        <item quantity="few">Nie udało się podsumować %1$d czatów</item>
+        <item quantity="many">Nie udało się podsumować %1$d czatów</item>
+        <item quantity="other">Nie udało się podsumować %1$d czatu</item>
+    </plurals>
+
+    <!-- Message retention notification. Text: "Usunięto 120 wiadomości sprzed ponad 30 dni" -->
+    <string name="retention_channel_name">Czyszczenie wiadomości</string>
+    <string name="retention_channel_description">Gdy stare wiadomości zostają usunięte</string>
+    <string name="retention_notification_title">Usunięto stare wiadomości</string>
+    <string name="retention_notification_text">Usunięto %1$s sprzed ponad %2$s</string>
+    <plurals name="retention_notification_messages">
+        <item quantity="one">%1$d wiadomość</item>
+        <item quantity="few">%1$d wiadomości</item>
+        <item quantity="many">%1$d wiadomości</item>
+        <item quantity="other">%1$d wiadomości</item>
+    </plurals>
+
+    <!-- Smart notifications channel -->
+    <string name="smart_channel_name">Ważne wiadomości</string>
+    <string name="smart_channel_description">Ważne wiadomości z WhatsAppa wybrane przez AI</string>
+</resources>

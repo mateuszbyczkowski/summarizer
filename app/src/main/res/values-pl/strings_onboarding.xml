@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Step indicator, read out by TalkBack -->
+    <string name="onboarding_step">Krok %1$d z %2$d</string>
+
+    <!-- Step 1: welcome. The picture shows an example chat turned into a summary. -->
+    <string name="onboarding_welcome_title">148 wiadomości.\n3 rzeczy do zapamiętania.</string>
+    <string name="onboarding_welcome_body">Summarizer czyta powiadomienia z grup WhatsApp i robi z nich krótkie podsumowania z terminami, wpłatami i ogłoszeniami.</string>
+    <string name="onboarding_welcome_privacy">Wiadomości zostają na Twoim telefonie, zaszyfrowane. Podsumowania tworzy AI na urządzeniu.</string>
+    <string name="onboarding_welcome_start">Zaczynamy</string>
+    <string name="onboarding_welcome_hint">3 kroki · ok. minuty</string>
+    <string name="onboarding_example_cd">Przykład: ruchliwy czat grupowy zamieniony w krótkie podsumowanie z wpłatą, wycieczką i zebraniem</string>
+    <string name="onboarding_example_more">+145 wiadomości</string>
+    <string name="onboarding_example_sender_1">Ania</string>
+    <string name="onboarding_example_message_1">Czy ktoś wie, o której autobus?</string>
+    <string name="onboarding_example_sender_2">Pani Kasia</string>
+    <string name="onboarding_example_message_2">Zebranie we wtorek o 18:00</string>
+    <string name="onboarding_example_sender_3">Marek</string>
+    <string name="onboarding_example_message_3">Wpłaty do środy, 85 zł!</string>
+    <string name="onboarding_example_chat">Rodzice klasy 3B</string>
+    <string name="onboarding_example_summary">Podsumowanie</string>
+    <string name="onboarding_example_task">Wpłać 85 zł do śr 15.10</string>
+    <string name="onboarding_example_trip">Wycieczka pt 17.10 · autobus 7:30</string>
+    <string name="onboarding_example_meeting">Zebranie wt 21.10, 18:00</string>
+
+    <!-- Step 2: notification access -->
+    <string name="onboarding_access_title">Zezwól na dostęp do powiadomień</string>
+    <string name="onboarding_access_body">Summarizer widzi Twoje czaty grupowe dzięki powiadomieniom o wiadomościach z WhatsAppa. Nigdy nie otwiera WhatsAppa i niczego nie wysyła.</string>
+    <string name="onboarding_access_only_whatsapp">Tylko WhatsApp i WhatsApp Business. Powiadomienia z innych aplikacji są pomijane.</string>
+    <string name="onboarding_access_on_device">Wiadomości są przechowywane w postaci zaszyfrowanej na tym telefonie i nigdzie indziej.</string>
+    <string name="onboarding_access_setting_hint">Dostęp do powiadomień</string>
+    <string name="onboarding_access_open">Otwórz ustawienia</string>
+    <string name="onboarding_access_granted">Dostęp do powiadomień jest włączony</string>
+    <string name="onboarding_access_hint">Znajdź Summarizer na liście, włącz go i wróć tutaj.</string>
+    <string name="onboarding_access_later">Nie teraz</string>
+    <string name="onboarding_access_rom_title">%1$s: jeszcze jedno ustawienie</string>
+    <string name="onboarding_access_rom_body">Ten telefon zatrzymuje aplikacje działające w tle. Zezwól też na autostart Summarizera, inaczej nowe wiadomości mogą przepaść.</string>
+    <string name="onboarding_access_rom_open">Otwórz ustawienia autostartu</string>
+
+    <!-- Step 3: engine -->
+    <string name="onboarding_engine_title">Gdzie tworzyć podsumowania?</string>
+    <string name="onboarding_engine_body">Możesz to później zmienić w Ustawieniach.</string>
+    <string name="onboarding_engine_local_title">Na tym telefonie</string>
+    <string name="onboarding_engine_local_body">Prywatnie i za darmo. Działa offline; nic nie opuszcza telefonu.</string>
+    <string name="onboarding_engine_local_model">Pobierze w tle %1$s (%2$s), dobrany do %3$d GB RAM Twojego telefonu.</string>
+    <string name="onboarding_engine_local_no_model">Model wybierzesz później w Ustawieniach › Silnik AI.</string>
+    <string name="onboarding_engine_recommended">Polecane</string>
+    <string name="onboarding_engine_openai_body">Szybko na każdym telefonie. Wiadomości są wysyłane do OpenAI w celu podsumowania. Wymaga własnego klucza API, ok. 0,0006 USD za podsumowanie.</string>
+    <string name="onboarding_engine_start">Start</string>
+    <string name="onboarding_engine_continue">Dalej</string>
+
+    <!-- Home: background download of the model picked in onboarding -->
+    <string name="model_setup_downloading_title">Pobieram %1$s</string>
+    <string name="model_setup_downloading_body">Podsumowania ruszą, gdy model będzie gotowy. Możesz dalej korzystać z aplikacji.</string>
+    <string name="model_setup_progress">%1$d%% · %2$s z %3$s</string>
+    <string name="model_setup_progress_cd">Pobrano %1$d%%</string>
+    <string name="model_setup_paused_title">Wstrzymano pobieranie: %1$s</string>
+    <string name="model_setup_failed_title">Nie udało się pobrać: %1$s</string>
+    <string name="model_setup_failed_body">Pobieranie nie powiodło się. Sprawdź połączenie i spróbuj ponownie.</string>
+    <string name="model_setup_wifi_body">Czekam na Wi-Fi: pobieranie ruszy samo, gdy się połączysz. Możesz też zezwolić na dane komórkowe w Ustawieniach › Silnik AI.</string>
+    <string name="engine_missing_title">Wybierz, jak tworzyć podsumowania</string>
+    <string name="engine_missing_body">Podsumowania wymagają modelu na tym telefonie albo klucza OpenAI.</string>
+    <string name="engine_missing_action">Skonfiguruj</string>
+    <string name="model_setup_space_body">Za mało wolnego miejsca. Zwolnij %1$s i spróbuj ponownie.</string>
+    <string name="model_setup_interrupted_body">Pobieranie zatrzymało się po zamknięciu aplikacji.</string>
+    <string name="model_setup_paused_body">Pobieranie jest wstrzymane.</string>
+    <string name="model_setup_cancel">Anuluj</string>
+    <string name="model_setup_retry">Spróbuj ponownie</string>
+    <string name="model_setup_resume">Wznów</string>
+</resources>

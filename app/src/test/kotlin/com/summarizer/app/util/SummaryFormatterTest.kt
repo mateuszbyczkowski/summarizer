@@ -14,9 +14,16 @@ class SummaryFormatterTest {
         tasks = "Do zrobienia",
         announcements = "Ogłoszenia",
         topics = "Tematy",
-        due = "do %1\$s",
-        datePattern = "EEE d.MM"
+        due = "do %1\$s"
     )
+
+    private val polish = DateTimeFormats(Locale.forLanguageTag("pl-PL"), is24Hour = true) { skeleton ->
+        when (skeleton) {
+            "MEd" -> "EEE, d.MM"
+            "Hm" -> "HH:mm"
+            else -> error(skeleton)
+        }
+    }
 
     @Test
     fun `summary becomes plain text with formatted dates`() {
@@ -40,7 +47,7 @@ class SummaryFormatterTest {
             )
         )
 
-        val text = SummaryFormatter.toPlainText(summary, labels, Locale.forLanguageTag("pl-PL"))
+        val text = SummaryFormatter.toPlainText(summary, labels, polish)
 
         assertEquals(
             """
@@ -48,11 +55,11 @@ class SummaryFormatterTest {
             Wycieczka w piątek.
 
             Ważne daty:
-            • pt. 17.10, 07:30 – Wycieczka (autobus)
+            • pt., 17.10, 07:30 – Wycieczka (autobus)
             • Basen (w środę)
 
             Do zrobienia:
-            ☐ Przelew 85 zł (do śr. 15.10)
+            ☐ Przelew 85 zł (do śr., 15.10)
             ☑ Bluza
 
             Ogłoszenia:

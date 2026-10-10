@@ -41,6 +41,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
@@ -164,7 +165,7 @@ fun PinDots(
     modifier: Modifier = Modifier,
     length: Int = Constants.PIN_LENGTH
 ) {
-    val description = stringResource(R.string.lock_pin_progress, enteredCount, length)
+    val description = pluralStringResource(R.plurals.lock_pin_progress, length, enteredCount, length)
     Row(
         modifier = modifier.semantics { contentDescription = description },
         horizontalArrangement = Arrangement.spacedBy(16.dp)

@@ -1,6 +1,7 @@
 package com.summarizer.app.domain.usecase
 
 import com.summarizer.app.domain.ai.AIEngine
+import com.summarizer.app.domain.ai.AIEngineError
 import com.summarizer.app.domain.ai.LanguageDetector
 import com.summarizer.app.domain.ai.PromptTemplate
 import com.summarizer.app.domain.ai.SummaryResponseParser
@@ -118,15 +119,26 @@ class GenerateSummaryUseCase @Inject constructor(
 
             // Step 5: Generate summary. Transient failures are retried by the engine itself.
             onProgress?.invoke(GenerationStage.READING, null)
-            val rawResponse = aiEngine.generate(
-                prompt = prompt,
-                systemPrompt = PromptTemplate.systemPrompt(language),
-                maxTokens = SUMMARY_MAX_TOKENS,
-                temperature = 0.2f, // Low temperature: factual, consistent wording
-                onPartial = onProgress?.let { report ->
-                    { partial -> report(GenerationStage.WRITING, SummaryResponseParser.streamingOverview(partial)) }
-                }
-            ).getOrElse { error ->
+            val generate = suspend {
+                aiEngine.generate(
+                    prompt = prompt,
+                    systemPrompt = PromptTemplate.systemPrompt(language),
+                    maxTokens = SUMMARY_MAX_TOKENS,
+                    temperature = 0.2f, // Low temperature: factual, consistent wording
+                    onPartial = onProgress?.let { report ->
+                        { partial -> report(GenerationStage.WRITING, SummaryResponseParser.streamingOverview(partial)) }
+                    }
+                )
+            }
+            var generated = generate()
+            // The model was swapped while this summary waited for another one (a model chosen in
+            // the model manager, or one that just finished downloading): load it and try again
+            if (generated.exceptionOrNull() is AIEngineError.ModelNotLoaded &&
+                aiEngine.ensureModelLoaded(modelRepository).isSuccess
+            ) {
+                generated = generate()
+            }
+            val rawResponse = generated.getOrElse { error ->
                 throw IllegalStateException("Failed to generate summary: ${error.message ?: "AI generation error"}", error)
             }
 

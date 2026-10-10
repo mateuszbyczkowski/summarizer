@@ -56,7 +56,6 @@ class WhatsAppNotificationListener : NotificationListenerService() {
         // Older messages (e.g. history re-sent in a notification) never trigger a smart notification
         private const val SMART_NOTIFICATION_MAX_AGE_MS = 15 * 60_000L
         private const val NOTIFICATION_CHANNEL_ID = "smart_whatsapp_notifications"
-        private const val NOTIFICATION_CHANNEL_NAME = "WhatsApp Important Messages"
     }
 
     override fun onListenerConnected() {
@@ -171,7 +170,7 @@ class WhatsAppNotificationListener : NotificationListenerService() {
 
             val importanceScore = analyzeMessageImportanceUseCase.execute(messageContent, senderName)
             if (analyzeMessageImportanceUseCase.meetsThreshold(importanceScore)) {
-                showSmartNotification(threadId, threadName, senderName, messageContent, importanceScore)
+                showSmartNotification(threadId, threadName, senderName, messageContent, importanceScore, hideContent())
                 Timber.tag(TAG).i("Showed notification for important message (score: $importanceScore)")
             } else {
                 Timber.tag(TAG).d("⏭️ Message not important enough, notification suppressed")
@@ -179,19 +178,26 @@ class WhatsAppNotificationListener : NotificationListenerService() {
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Error in smart notification handling, showing notification as fallback")
             // Fallback: show notification on error to avoid missing important messages
-            showSmartNotification(threadId, threadName, senderName, messageContent, 0.7f)
+            showSmartNotification(threadId, threadName, senderName, messageContent, 0.7f, hideContent())
         }
     }
 
+    /** With the app lock on, notifications must not let anyone read messages without passing it. */
+    private suspend fun hideContent(): Boolean =
+        runCatching { preferencesRepository.isAppLockEnabled() }.getOrDefault(true)
+
     /**
-     * Show a smart notification with appropriate priority based on importance score.
+     * Show a smart notification with appropriate priority based on importance score. The lock
+     * screen shows a public version without chat or message; with [hideContent] (app lock on)
+     * the notification names only the chat.
      */
     private fun showSmartNotification(
         threadId: String,
         threadName: String,
         senderName: String,
         messageContent: String,
-        importanceScore: Float
+        importanceScore: Float,
+        hideContent: Boolean
     ) {
         try {
             val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
@@ -221,12 +227,22 @@ class WhatsAppNotificationListener : NotificationListenerService() {
                 else -> NotificationCompat.PRIORITY_DEFAULT
             }
 
+            val text = if (hideContent) {
+                getString(R.string.smart_notification_hidden_text)
+            } else {
+                getString(R.string.smart_notification_text, senderName, messageContent)
+            }
+            val publicVersion = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentTitle(getString(R.string.smart_notification_public_title))
+                .build()
             val notification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setContentTitle(threadName)
-                .setContentText("$senderName: $messageContent")
-                .setStyle(NotificationCompat.BigTextStyle()
-                    .bigText("$senderName: $messageContent"))
+                .setContentText(text)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+                .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+                .setPublicVersion(publicVersion)
                 .setPriority(priority)
                 .setAutoCancel(true)
                 .setCategory(NotificationCompat.CATEGORY_MESSAGE)
@@ -248,10 +264,10 @@ class WhatsAppNotificationListener : NotificationListenerService() {
     private fun createNotificationChannel(notificationManager: NotificationManager) {
         val channel = NotificationChannel(
             NOTIFICATION_CHANNEL_ID,
-            NOTIFICATION_CHANNEL_NAME,
+            getString(R.string.smart_channel_name),
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = "Important WhatsApp messages filtered by AI"
+            description = getString(R.string.smart_channel_description)
             enableVibration(true)
             enableLights(true)
         }

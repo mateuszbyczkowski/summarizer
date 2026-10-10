@@ -1,5 +1,6 @@
 package com.summarizer.app.ui.screens.models
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -35,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -50,8 +52,10 @@ import com.summarizer.app.ui.components.OpenAIPrivacyNoticeCard
 import com.summarizer.app.ui.components.SettingsGroup
 import com.summarizer.app.ui.components.SettingsRowIcon
 import com.summarizer.app.ui.components.settingsGroupItem
+import com.summarizer.app.ui.screens.settings.ApiKeyCheck
 import com.summarizer.app.ui.screens.settings.SettingsEvent
 import com.summarizer.app.ui.screens.settings.SettingsUiState
+import java.text.NumberFormat
 
 /**
  * The OpenAI side of the AI engine screen: whether OpenAI is in use, the API key (add, check,
@@ -102,7 +106,7 @@ fun OpenAIEngineTab(
             text = stringResource(
                 R.string.settings_openai_cost_body,
                 state.selectedModel.displayName,
-                state.selectedModel.formatPricing(),
+                costPerSummary(state.selectedModel),
                 state.selectedModel.inputPricePer1MTokens,
                 state.selectedModel.outputPricePer1MTokens
             ),
@@ -197,15 +201,16 @@ private fun SavedKey(
         }
     }
 
-    state.validationMessage?.let { message ->
+    state.keyCheck?.let { check ->
         Text(
-            text = message,
+            text = when (check) {
+                ApiKeyCheck.Valid -> stringResource(R.string.engine_openai_key_valid)
+                is ApiKeyCheck.Invalid -> check.detail?.takeIf { it.isNotBlank() }
+                    ?.let { stringResource(R.string.engine_openai_key_invalid_detail, it) }
+                    ?: stringResource(R.string.engine_openai_key_invalid)
+            },
             style = MaterialTheme.typography.bodyMedium,
-            color = if (message.startsWith("✓")) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.error
-            }
+            color = if (check == ApiKeyCheck.Valid) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
         )
     }
 }
@@ -264,16 +269,34 @@ private fun ModelOption(
         Column(modifier = Modifier.weight(1f)) {
             Text(text = model.displayName, style = MaterialTheme.typography.bodyLarge)
             Text(
-                text = model.description,
+                text = stringResource(model.descriptionRes()),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = model.formatPricing(),
+                text = costPerSummary(model),
                 style = MaterialTheme.typography.labelMedium,
                 color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.SemiBold
             )
         }
     }
+}
+
+@StringRes
+private fun OpenAIModel.descriptionRes(): Int = when (this) {
+    OpenAIModel.GPT_4O_MINI -> R.string.openai_model_gpt_4o_mini_description
+    OpenAIModel.GPT_4O -> R.string.openai_model_gpt_4o_description
+    OpenAIModel.O1_MINI -> R.string.openai_model_o1_mini_description
+}
+
+/** "~$0.0006 per summary", with the number written for the locale. */
+@Composable
+private fun costPerSummary(model: OpenAIModel): String {
+    val locale = LocalConfiguration.current.locales[0]
+    val amount = NumberFormat.getNumberInstance(locale).apply {
+        minimumFractionDigits = 2
+        maximumFractionDigits = 4
+    }.format(model.estimatedCostPerSummary)
+    return stringResource(R.string.openai_cost_per_summary, amount)
 }

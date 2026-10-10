@@ -44,4 +44,12 @@ class ModelRecommendationTest {
         assertEquals(ModelProfiles.LFM_ID, ModelRecommendation.pick(demoFirst, 4)?.id)
         assertNull(ModelRecommendation.pick(listOf(DemoEngine.MODEL), 16))
     }
+
+    @Test
+    fun `the CPU fallback is the small GGUF model, also on phones with plenty of RAM`() {
+        assertEquals(ModelProfiles.LFM_ID, ModelRecommendation.cpuFallback(catalog, 12)?.id)
+        assertEquals(ModelProfiles.LFM_ID, ModelRecommendation.cpuFallback(catalog, 3)?.id)
+        assertNull(ModelRecommendation.cpuFallback(catalog, 2))
+        assertNull(ModelRecommendation.cpuFallback(listOf(DemoEngine.MODEL), 16))
+    }
 }

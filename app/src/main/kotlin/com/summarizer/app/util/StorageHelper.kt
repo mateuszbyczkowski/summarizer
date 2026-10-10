@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Environment
 import android.os.StatFs
 import java.io.File
+import java.util.Locale
 
 object StorageHelper {
 
@@ -105,11 +106,11 @@ object StorageHelper {
     fun formatStorageSize(mb: Long): String {
         return when {
             mb < 1024 -> "${mb} MB"
-            else -> String.format("%.1f GB", mb / 1024.0)
+            else -> String.format(Locale.getDefault(), "%.1f GB", mb / 1024.0)
         }
     }
 
     fun formatStorageSizeGB(gb: Double): String {
-        return String.format("%.1f GB", gb)
+        return String.format(Locale.getDefault(), "%.1f GB", gb)
     }
 }

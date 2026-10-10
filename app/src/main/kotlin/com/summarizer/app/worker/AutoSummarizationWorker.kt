@@ -71,12 +71,19 @@ class AutoSummarizationWorker @AssistedInject constructor(
 
             if (successCount > 0 || failureCount > 0) {
                 createNotificationChannel()
+                val resources = context.resources
                 showNotification(
-                    "Auto-summarization complete",
+                    context.getString(R.string.auto_summary_notification_title),
                     when {
-                        failureCount == 0 -> "Summarized $successCount thread(s)"
-                        successCount == 0 -> "Failed to summarize $failureCount thread(s)"
-                        else -> "Summarized $successCount thread(s), $failureCount failed"
+                        failureCount == 0 ->
+                            resources.getQuantityString(R.plurals.auto_summary_notification_done, successCount, successCount)
+                        successCount == 0 ->
+                            resources.getQuantityString(R.plurals.auto_summary_notification_failed, failureCount, failureCount)
+                        else -> context.getString(
+                            R.string.auto_summary_notification_mixed,
+                            resources.getQuantityString(R.plurals.auto_summary_notification_done, successCount, successCount),
+                            resources.getQuantityString(R.plurals.auto_summary_notification_failed, failureCount, failureCount)
+                        )
                     }
                 )
             }
@@ -115,10 +122,10 @@ class AutoSummarizationWorker @AssistedInject constructor(
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
             NOTIFICATION_CHANNEL_ID,
-            "Auto-Summarization",
+            context.getString(R.string.auto_summary_channel_name),
             NotificationManager.IMPORTANCE_DEFAULT
         ).apply {
-            description = "Notifications for daily auto-summarization"
+            description = context.getString(R.string.auto_summary_channel_description)
         }
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

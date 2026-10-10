@@ -6,7 +6,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
-import java.util.Locale
 
 class UpcomingWidgetModelTest {
 
@@ -112,19 +111,5 @@ class UpcomingWidgetModelTest {
         assertEquals(3, UpcomingWidgetModel.rowsThatFit(200f))
         assertEquals(4, UpcomingWidgetModel.rowsThatFit(250f))
         assertEquals(4, UpcomingWidgetModel.rowsThatFit(600f))
-    }
-
-    @Test
-    fun `weekday is short upper case without a trailing dot`() {
-        val friday = LocalDate.of(2026, 10, 16)
-
-        assertEquals("FRI", UpcomingWidgetModel.weekdayShort(friday, Locale.ENGLISH))
-        assertEquals("PT", UpcomingWidgetModel.weekdayShort(friday, Locale.forLanguageTag("pl")))
-    }
-
-    @Test
-    fun `time is formatted for the locale and unparsable text is kept`() {
-        assertEquals("07:30", UpcomingWidgetModel.timeText("07:30", Locale.forLanguageTag("pl")))
-        assertEquals("rano", UpcomingWidgetModel.timeText("rano", Locale.ENGLISH))
     }
 }

@@ -9,8 +9,9 @@
     <string name="search_filter_tasks">Tasks</string>
     <string name="search_filter_messages">Messages</string>
     <string name="search_section_tasks">Tasks (%1$d)</string>
+    <string name="search_error_body">Something went wrong. Try again.</string>
     <string name="search_filter_empty">Nothing here matches. Try another filter.</string>
-    <string name="search_message_line">%1$s: %2$s</string>
+    <string name="search_message_line" translatable="false">%1$s: %2$s</string>
     <string name="search_task_due">%1$s · by %2$s</string>
     <string name="search_task_done">Done</string>
 </resources>

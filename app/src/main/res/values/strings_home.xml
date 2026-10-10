@@ -31,7 +31,7 @@
     <string name="thread_row_failed">Couldn\'t summarize</string>
     <string name="thread_row_no_summary">No summary</string>
     <string name="thread_row_up_to_date">Up to date</string>
-    <string name="thread_row_sender_message">%1$s: %2$s</string>
+    <string name="thread_row_sender_message" translatable="false">%1$s: %2$s</string>
     <string name="thread_row_options">show options</string>
     <string name="thread_row_follow">Follow</string>
     <string name="thread_row_unfollow">Unfollow</string>
@@ -72,10 +72,6 @@
         <item quantity="other">%1$d d ago</item>
     </plurals>
     <string name="rel_time_yesterday">Yesterday</string>
-    <!-- java.time patterns -->
-    <string name="pattern_short_date" translatable="false">d MMM</string>
-    <string name="pattern_agenda_date" translatable="false">EEE, d MMM</string>
-    <string name="pattern_weekday" translatable="false">EEE</string>
 
     <!-- Agenda (home card and tasks) -->
     <string name="agenda_today">today</string>
@@ -88,7 +84,6 @@
         <item quantity="one">%1$d day overdue</item>
         <item quantity="other">%1$d days overdue</item>
     </plurals>
-    <string name="agenda_meta">%1$s · %2$s</string>
 
     <!-- Tasks -->
     <string name="tasks_title">Tasks</string>

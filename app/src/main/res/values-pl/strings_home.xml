@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Bottom navigation -->
+    <string name="nav_chats">Czaty</string>
+    <string name="nav_tasks">Zadania</string>
+    <string name="nav_settings">Ustawienia</string>
+    <plurals name="nav_tasks_badge_cd">
+        <item quantity="one">%1$d zadanie na ten tydzień</item>
+        <item quantity="few">%1$d zadania na ten tydzień</item>
+        <item quantity="many">%1$d zadań na ten tydzień</item>
+        <item quantity="other">%1$d zadania na ten tydzień</item>
+    </plurals>
+
+    <!-- Home -->
+    <string name="home_search_hint">Szukaj w czatach i podsumowaniach</string>
+    <string name="home_this_week">Ten tydzień</string>
+    <string name="home_this_week_all">Wszystkie</string>
+    <string name="home_this_week_all_cd">Wszystkie zadania i terminy</string>
+    <string name="home_followed">Obserwowane</string>
+    <string name="home_auto_summary">Auto-podsumowanie o %1$s</string>
+    <string name="home_followed_empty">Obserwuj ważne dla Ciebie czaty, żeby dostawać podsumowania i widzieć tu ich terminy. Przytrzymaj czat, aby go obserwować.</string>
+    <string name="home_other_chats">Pozostałe czaty · %1$d</string>
+    <string name="home_other_chats_hint">Obserwuj, aby dostawać podsumowania</string>
+    <string name="state_expanded">Rozwinięte</string>
+    <string name="state_collapsed">Zwinięte</string>
+    <string name="home_empty_title">Nie ma jeszcze czatów</string>
+    <string name="home_empty_body">Wiadomości z Twoich grup WhatsApp pojawią się tutaj, gdy tylko przyjdą.</string>
+    <string name="home_empty_no_permission_body">Włącz dostęp do powiadomień, żeby aplikacja mogła zbierać wiadomości z Twoich grup WhatsApp.</string>
+
+    <!-- Home: thread row -->
+    <string name="thread_row_summarize">Podsumuj</string>
+    <string name="thread_row_summarizing">Podsumowuję…</string>
+    <string name="thread_row_failed">Nie udało się podsumować</string>
+    <string name="thread_row_no_summary">Brak podsumowania</string>
+    <string name="thread_row_up_to_date">Na bieżąco</string>
+    <string name="thread_row_options">pokaż opcje</string>
+    <string name="thread_row_follow">Obserwuj</string>
+    <string name="thread_row_unfollow">Przestań obserwować</string>
+    <plurals name="thread_row_open_tasks">
+        <item quantity="one">%1$d zadanie</item>
+        <item quantity="few">%1$d zadania</item>
+        <item quantity="many">%1$d zadań</item>
+        <item quantity="other">%1$d zadania</item>
+    </plurals>
+    <!-- Spoken by TalkBack, joined with commas -->
+    <string name="thread_row_cd_last_message_time">ostatnia wiadomość %1$s</string>
+    <plurals name="thread_row_cd_new_messages">
+        <item quantity="one">%1$d nowa wiadomość od podsumowania</item>
+        <item quantity="few">%1$d nowe wiadomości od podsumowania</item>
+        <item quantity="many">%1$d nowych wiadomości od podsumowania</item>
+        <item quantity="other">%1$d nowej wiadomości od podsumowania</item>
+    </plurals>
+    <plurals name="thread_row_cd_new_messages_no_summary">
+        <item quantity="one">%1$d wiadomość, jeszcze bez podsumowania</item>
+        <item quantity="few">%1$d wiadomości, jeszcze bez podsumowania</item>
+        <item quantity="many">%1$d wiadomości, jeszcze bez podsumowania</item>
+        <item quantity="other">%1$d wiadomości, jeszcze bez podsumowania</item>
+    </plurals>
+    <plurals name="thread_row_cd_open_tasks">
+        <item quantity="one">%1$d otwarte zadanie</item>
+        <item quantity="few">%1$d otwarte zadania</item>
+        <item quantity="many">%1$d otwartych zadań</item>
+        <item quantity="other">%1$d otwartego zadania</item>
+    </plurals>
+    <string name="thread_row_cd_summary">podsumowanie: %1$s</string>
+    <string name="thread_row_cd_summarized">podsumowano %1$s</string>
+    <string name="thread_row_cd_last_message">ostatnia wiadomość: %1$s</string>
+
+    <!-- Relative times -->
+    <string name="rel_time_just_now">przed chwilą</string>
+    <plurals name="rel_time_minutes_ago">
+        <item quantity="one">%1$d min temu</item>
+        <item quantity="few">%1$d min temu</item>
+        <item quantity="many">%1$d min temu</item>
+        <item quantity="other">%1$d min temu</item>
+    </plurals>
+    <plurals name="rel_time_hours_ago">
+        <item quantity="one">%1$d godz. temu</item>
+        <item quantity="few">%1$d godz. temu</item>
+        <item quantity="many">%1$d godz. temu</item>
+        <item quantity="other">%1$d godz. temu</item>
+    </plurals>
+    <plurals name="rel_time_days_ago">
+        <item quantity="one">%1$d dzień temu</item>
+        <item quantity="few">%1$d dni temu</item>
+        <item quantity="many">%1$d dni temu</item>
+        <item quantity="other">%1$d dnia temu</item>
+    </plurals>
+    <string name="rel_time_yesterday">Wczoraj</string>
+
+    <!-- Agenda (home card and tasks) -->
+    <string name="agenda_today">dziś</string>
+    <string name="agenda_tomorrow">jutro</string>
+    <plurals name="agenda_in_days">
+        <item quantity="one">za %1$d dzień</item>
+        <item quantity="few">za %1$d dni</item>
+        <item quantity="many">za %1$d dni</item>
+        <item quantity="other">za %1$d dnia</item>
+    </plurals>
+    <plurals name="agenda_overdue_days">
+        <item quantity="one">%1$d dzień po terminie</item>
+        <item quantity="few">%1$d dni po terminie</item>
+        <item quantity="many">%1$d dni po terminie</item>
+        <item quantity="other">%1$d dnia po terminie</item>
+    </plurals>
+
+    <!-- Tasks -->
+    <string name="tasks_title">Zadania</string>
+    <string name="tasks_bucket_overdue">Po terminie</string>
+    <string name="tasks_bucket_today">Dziś</string>
+    <string name="tasks_bucket_tomorrow">Jutro</string>
+    <string name="tasks_bucket_this_week">Ten tydzień</string>
+    <string name="tasks_bucket_later">Później</string>
+    <string name="tasks_bucket_no_date">Bez terminu</string>
+    <string name="tasks_done_snackbar">Zadanie zrobione</string>
+    <string name="tasks_undo">Cofnij</string>
+    <string name="tasks_add_to_calendar">Dodaj do kalendarza</string>
+    <string name="tasks_no_calendar_app">Nie znaleziono aplikacji kalendarza</string>
+    <string name="tasks_kind_date">Termin</string>
+    <string name="tasks_empty_title">Nic się nie zbliża</string>
+    <string name="tasks_empty_body">Tu pojawią się terminy i zadania z podsumowań obserwowanych czatów.</string>
+
+    <!-- Notification access card -->
+    <string name="permission_card_title">Potrzebny dostęp do powiadomień</string>
+    <string name="permission_card_body">Żeby zbierać wiadomości z WhatsAppa, Summarizer potrzebuje dostępu do powiadomień. Wiadomości zostają na Twoim telefonie.</string>
+    <string name="permission_card_open_settings">Otwórz ustawienia</string>
+</resources>

@@ -57,6 +57,14 @@
     <string name="settings_banner_key_body">Add a key, or switch back to the on-device engine.</string>
     <string name="settings_banner_key_action">Add key</string>
 
+    <!-- Errors -->
+    <string name="settings_error_load">Couldn\'t load the settings.</string>
+    <string name="settings_error_save">Couldn\'t save the setting.</string>
+    <string name="settings_error_key_empty">Enter an API key.</string>
+    <string name="settings_error_key_save">Couldn\'t save the API key.</string>
+    <string name="settings_error_key_remove">Couldn\'t remove the API key.</string>
+    <string name="settings_error_reset">Couldn\'t reset the app.</string>
+
     <!-- Dialog buttons -->
     <string name="settings_dialog_save">Save</string>
     <string name="settings_dialog_close">Close</string>

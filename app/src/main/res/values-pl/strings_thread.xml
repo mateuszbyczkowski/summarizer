@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Thread screen: top bar. Subtitle: "48 wiadomości · 10–13 paź" -->
+    <string name="thread_fallback_title">Czat</string>
+    <plurals name="thread_message_count">
+        <item quantity="one">%1$d wiadomość</item>
+        <item quantity="few">%1$d wiadomości</item>
+        <item quantity="many">%1$d wiadomości</item>
+        <item quantity="other">%1$d wiadomości</item>
+    </plurals>
+    <string name="thread_subtitle_summarizing">Aktualizuję podsumowanie…</string>
+    <string name="thread_share">Udostępnij podsumowanie</string>
+    <string name="thread_menu_full_resummary">Podsumuj od nowa</string>
+    <string name="thread_menu_full_resummary_description">Jednorazowo, ze wszystkich wiadomości</string>
+    <string name="thread_menu_mode">Tryb podsumowania</string>
+    <string name="thread_mode_incremental">Przyrostowy</string>
+    <string name="thread_mode_incremental_description">Tylko nowe wiadomości</string>
+    <string name="thread_mode_full">Pełny</string>
+    <string name="thread_mode_full_description">Wszystkie wiadomości</string>
+    <string name="thread_menu_follow">Obserwuj czat</string>
+    <string name="thread_menu_unfollow">Przestań obserwować czat</string>
+
+    <!-- Tabs -->
+    <string name="thread_tab_summary">Podsumowanie</string>
+    <string name="thread_tab_messages">Wiadomości</string>
+    <plurals name="thread_tab_new_cd">
+        <item quantity="one">%1$d nowa od podsumowania</item>
+        <item quantity="few">%1$d nowe od podsumowania</item>
+        <item quantity="many">%1$d nowych od podsumowania</item>
+        <item quantity="other">%1$d nowej od podsumowania</item>
+    </plurals>
+
+    <!-- Summary tab: history chip ("Dziś, 17:02") and engine chip -->
+    <string name="thread_history_today">Dziś, %1$s</string>
+    <string name="thread_history_yesterday">Wczoraj, %1$s</string>
+    <string name="thread_history_cd">Podsumowanie z: %1$s. Pokaż wcześniejsze podsumowania</string>
+    <string name="thread_history_latest">Najnowsze</string>
+    <string name="thread_engine_on_device">Na urządzeniu</string>
+
+    <!-- Summary tab: sections -->
+    <string name="thread_in_short">W skrócie</string>
+    <string name="thread_key_dates">Ważne daty</string>
+    <string name="thread_todo">Do zrobienia</string>
+    <plurals name="thread_todo_progress">
+        <item quantity="one">%1$d z %2$d zrobione</item>
+        <item quantity="few">%1$d z %2$d zrobione</item>
+        <item quantity="many">%1$d z %2$d zrobione</item>
+        <item quantity="other">%1$d z %2$d zrobione</item>
+    </plurals>
+    <string name="thread_task_due">do %1$s</string>
+    <string name="thread_announcements">Ogłoszenia</string>
+    <string name="thread_topics">Tematy</string>
+    <string name="thread_date_unknown">Data do potwierdzenia</string>
+    <!-- Footer: "30 wiadomości · 13–14 paź · Demo" -->
+    <string name="thread_rate_up">Przydatne</string>
+    <string name="thread_rate_down">Nieprzydatne</string>
+    <string name="thread_copy">Kopiuj</string>
+    <string name="thread_share_short">Udostępnij</string>
+    <string name="thread_raw_output">Surowa odpowiedź AI (debug)</string>
+    <string name="thread_no_summary_title">Nie ma jeszcze podsumowania</string>
+    <string name="thread_no_summary_body">Podsumuj ten czat, żeby zobaczyć ważne daty, zadania i ogłoszenia.</string>
+
+    <!-- Main action -->
+    <string name="thread_fab_update">Aktualizuj</string>
+    <plurals name="thread_fab_new">
+        <item quantity="one">· %1$d nowa</item>
+        <item quantity="few">· %1$d nowe</item>
+        <item quantity="many">· %1$d nowych</item>
+        <item quantity="other">· %1$d nowej</item>
+    </plurals>
+    <plurals name="thread_fab_update_cd">
+        <item quantity="one">Aktualizuj podsumowanie, %1$d nowa wiadomość</item>
+        <item quantity="few">Aktualizuj podsumowanie, %1$d nowe wiadomości</item>
+        <item quantity="many">Aktualizuj podsumowanie, %1$d nowych wiadomości</item>
+        <item quantity="other">Aktualizuj podsumowanie, %1$d nowej wiadomości</item>
+    </plurals>
+    <string name="thread_fab_summarize">Podsumuj</string>
+
+    <!-- Generating -->
+    <string name="thread_step_preparing">Zbieram wiadomości</string>
+    <string name="thread_step_loading_model">Wczytuję model</string>
+    <string name="thread_step_reading">Czytam rozmowę</string>
+    <string name="thread_step_writing">Piszę podsumowanie</string>
+    <string name="thread_step_done">gotowe</string>
+    <string name="thread_step_current">w toku</string>
+    <string name="thread_step_pending">oczekuje</string>
+    <string name="thread_waiting">Czekam na start…</string>
+    <string name="thread_elapsed">Minęło %1$s</string>
+    <string name="thread_usual_time">zwykle 30–60 s</string>
+    <string name="thread_leave_app">Możesz wyjść z aplikacji. Damy znać powiadomieniem, gdy będzie gotowe.</string>
+    <string name="thread_previous_summary">Poprzednie podsumowanie · %1$s</string>
+    <string name="thread_failed_title">Nie udało się podsumować</string>
+    <string name="thread_failed_body">Coś poszło nie tak podczas pisania podsumowania. Spróbuj ponownie.</string>
+    <string name="thread_nothing_new_title">Brak nowych wiadomości do podsumowania</string>
+
+    <!-- Messages tab -->
+    <string name="thread_new_since_summary">Nowe od podsumowania</string>
+    <string name="thread_day_today">Dziś</string>
+    <string name="thread_day_yesterday">Wczoraj</string>
+    <string name="thread_sender_you">Ty</string>
+    <string name="thread_messages_empty_title">Brak wiadomości w tym czacie</string>
+    <string name="thread_messages_empty_body">Nowe wiadomości z tego czatu pojawią się tutaj, gdy tylko przyjdą.</string>
+    <string name="thread_media_image">Zdjęcie</string>
+    <string name="thread_media_video">Film</string>
+    <string name="thread_media_audio">Wiadomość głosowa</string>
+    <string name="thread_media_document">Dokument</string>
+    <string name="thread_media_location">Lokalizacja</string>
+    <string name="thread_media_contact">Kontakt</string>
+    <string name="thread_media_sticker">Naklejka</string>
+</resources>

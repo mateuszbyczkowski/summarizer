@@ -50,13 +50,15 @@ fun NotificationAccessScreen(
     var granted by remember { mutableStateOf(PermissionHelper.hasNotificationListenerPermission(context)) }
     // Set while the user is away in the system settings this step opened
     var openedSettings by rememberSaveable { mutableStateOf(false) }
+    // However the step is left, a later return (Back from step 3) must not move on by itself
+    val leave = {
+        openedSettings = false
+        onContinue()
+    }
 
     LifecycleResumeEffect(Unit) {
         granted = PermissionHelper.hasNotificationListenerPermission(context)
-        if (OnboardingFlow.autoAdvance(openedSettings, granted)) {
-            openedSettings = false
-            onContinue()
-        }
+        if (OnboardingFlow.autoAdvance(openedSettings, granted)) leave()
         onPauseOrDispose { }
     }
 
@@ -65,7 +67,7 @@ fun NotificationAccessScreen(
         primaryLabel = stringResource(if (granted) R.string.onboarding_engine_continue else R.string.onboarding_access_open),
         onPrimary = {
             if (granted) {
-                onContinue()
+                leave()
             } else {
                 openedSettings = true
                 PermissionHelper.openNotificationListenerSettings(context)
@@ -76,7 +78,7 @@ fun NotificationAccessScreen(
                 OnboardingHint(stringResource(R.string.onboarding_access_granted))
             } else {
                 OnboardingHint(stringResource(R.string.onboarding_access_hint))
-                TextButton(onClick = onContinue) { Text(stringResource(R.string.onboarding_access_later)) }
+                TextButton(onClick = leave) { Text(stringResource(R.string.onboarding_access_later)) }
             }
         }
     ) {

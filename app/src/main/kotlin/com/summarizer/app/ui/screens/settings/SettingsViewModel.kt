@@ -1,7 +1,9 @@
 package com.summarizer.app.ui.screens.settings
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.summarizer.app.R
 import com.summarizer.app.data.ai.OpenAIEngine
 import com.summarizer.app.domain.model.AIProvider
 import com.summarizer.app.domain.model.OpenAIModel
@@ -104,14 +106,14 @@ class SettingsViewModel @Inject constructor(
                     smartNotificationThreshold = smartNotificationThreshold,
                     activeModelName = activeModel?.name,
                     isValidating = previous?.isValidating ?: false,
-                    validationMessage = if (clearValidation) null else previous?.validationMessage,
+                    keyCheck = if (clearValidation) null else previous?.keyCheck,
                     showAppLockPinSetup = previous?.showAppLockPinSetup ?: false
                 )
 
                 Timber.d("Settings loaded: provider=$provider, hasApiKey=${!apiKey.isNullOrBlank()}, autoSummary=$autoSummarizationEnabled@$autoSummarizationHour, appLock=$appLockEnabled, smartNotifications=$smartNotificationsEnabled@$smartNotificationThreshold")
             } catch (e: Exception) {
                 Timber.e(e, "Failed to load settings")
-                _uiState.value = SettingsUiState.Error("Failed to load settings: ${e.message}")
+                _uiState.value = SettingsUiState.Error(R.string.settings_error_load)
             }
         }
     }
@@ -128,7 +130,7 @@ class SettingsViewModel @Inject constructor(
                 loadSettings()
             } catch (e: Exception) {
                 Timber.e(e, "Failed to set AI provider")
-                _uiState.value = SettingsUiState.Error("Failed to change provider: ${e.message}")
+                _uiState.value = SettingsUiState.Error(R.string.settings_error_save)
             }
         }
     }
@@ -136,7 +138,7 @@ class SettingsViewModel @Inject constructor(
     /** @param activate also switch to OpenAI once the key is saved */
     fun saveApiKey(apiKey: String, activate: Boolean = false) {
         if (apiKey.isBlank()) {
-            _uiState.value = SettingsUiState.Error("API key cannot be empty")
+            _uiState.value = SettingsUiState.Error(R.string.settings_error_key_empty)
             return
         }
 
@@ -155,7 +157,7 @@ class SettingsViewModel @Inject constructor(
                 Timber.i("API key saved successfully")
             } catch (e: Exception) {
                 Timber.e(e, "Failed to save API key")
-                _uiState.value = SettingsUiState.Error("Failed to save API key: ${e.message}")
+                _uiState.value = SettingsUiState.Error(R.string.settings_error_key_save)
             }
         }
     }
@@ -167,7 +169,7 @@ class SettingsViewModel @Inject constructor(
                 return@launch
             }
 
-            _uiState.value = currentState.copy(isValidating = true, validationMessage = null)
+            _uiState.value = currentState.copy(isValidating = true, keyCheck = null)
 
             try {
                 Timber.d("Validating OpenAI API key...")
@@ -183,21 +185,21 @@ class SettingsViewModel @Inject constructor(
                     Timber.i("API key validation successful")
                     _uiState.value = currentState.copy(
                         isValidating = false,
-                        validationMessage = "✓ API key is valid"
+                        keyCheck = ApiKeyCheck.Valid
                     )
                 } else {
-                    val error = result.exceptionOrNull()?.message ?: "Unknown error"
+                    val error = result.exceptionOrNull()?.message
                     Timber.w("API key validation failed: $error")
                     _uiState.value = currentState.copy(
                         isValidating = false,
-                        validationMessage = "✗ Validation failed: $error"
+                        keyCheck = ApiKeyCheck.Invalid(error)
                     )
                 }
             } catch (e: Exception) {
                 Timber.e(e, "API key validation failed")
                 _uiState.value = currentState.copy(
                     isValidating = false,
-                    validationMessage = "✗ Validation failed: ${e.message}"
+                    keyCheck = ApiKeyCheck.Invalid(e.message)
                 )
             }
         }
@@ -219,7 +221,7 @@ class SettingsViewModel @Inject constructor(
                 Timber.i("API key cleared, switched to Local provider")
             } catch (e: Exception) {
                 Timber.e(e, "Failed to clear API key")
-                _uiState.value = SettingsUiState.Error("Failed to clear API key: ${e.message}")
+                _uiState.value = SettingsUiState.Error(R.string.settings_error_key_remove)
             }
         }
     }
@@ -239,7 +241,7 @@ class SettingsViewModel @Inject constructor(
                 loadSettings()
             } catch (e: Exception) {
                 Timber.e(e, "Failed to set auto-summarization enabled")
-                _uiState.value = SettingsUiState.Error("Failed to update setting: ${e.message}")
+                _uiState.value = SettingsUiState.Error(R.string.settings_error_save)
             }
         }
     }
@@ -254,7 +256,7 @@ class SettingsViewModel @Inject constructor(
                 loadSettings()
             } catch (e: Exception) {
                 Timber.e(e, "Failed to set auto-summarization hour")
-                _uiState.value = SettingsUiState.Error("Failed to update setting: ${e.message}")
+                _uiState.value = SettingsUiState.Error(R.string.settings_error_save)
             }
         }
     }
@@ -269,7 +271,7 @@ class SettingsViewModel @Inject constructor(
                 loadSettings()
             } catch (e: Exception) {
                 Timber.e(e, "Failed to set data retention days")
-                _uiState.value = SettingsUiState.Error("Failed to update setting: ${e.message}")
+                _uiState.value = SettingsUiState.Error(R.string.settings_error_save)
             }
         }
     }
@@ -292,7 +294,7 @@ class SettingsViewModel @Inject constructor(
                 loadSettings()
             } catch (e: Exception) {
                 Timber.e(e, "Failed to set app lock enabled")
-                _uiState.value = SettingsUiState.Error("Failed to update setting: ${e.message}")
+                _uiState.value = SettingsUiState.Error(R.string.settings_error_save)
             }
         }
     }
@@ -312,7 +314,7 @@ class SettingsViewModel @Inject constructor(
                 loadSettings()
             } catch (e: Exception) {
                 Timber.e(e, "Failed to set smart notifications enabled")
-                _uiState.value = SettingsUiState.Error("Failed to update setting: ${e.message}")
+                _uiState.value = SettingsUiState.Error(R.string.settings_error_save)
             }
         }
     }
@@ -327,7 +329,7 @@ class SettingsViewModel @Inject constructor(
                 loadSettings()
             } catch (e: Exception) {
                 Timber.e(e, "Failed to set smart notification threshold")
-                _uiState.value = SettingsUiState.Error("Failed to update setting: ${e.message}")
+                _uiState.value = SettingsUiState.Error(R.string.settings_error_save)
             }
         }
     }
@@ -342,7 +344,7 @@ class SettingsViewModel @Inject constructor(
                 loadSettings()
             } catch (e: Exception) {
                 Timber.e(e, "Failed to set selected model")
-                _uiState.value = SettingsUiState.Error("Failed to update model: ${e.message}")
+                _uiState.value = SettingsUiState.Error(R.string.settings_error_save)
             }
         }
     }
@@ -363,7 +365,7 @@ class SettingsViewModel @Inject constructor(
                 onComplete()
             } catch (e: Exception) {
                 Timber.e(e, "Failed to reset application")
-                _uiState.value = SettingsUiState.Error("Failed to reset application: ${e.message}")
+                _uiState.value = SettingsUiState.Error(R.string.settings_error_reset)
             } finally {
                 _isResetting.value = false
             }
@@ -383,7 +385,7 @@ sealed class SettingsUiState {
         val apiKeyMasked: String,
         val selectedModel: OpenAIModel = OpenAIModel.DEFAULT,
         val isValidating: Boolean = false,
-        val validationMessage: String? = null,
+        val keyCheck: ApiKeyCheck? = null,
         val autoSummarizationEnabled: Boolean = false,
         val autoSummarizationHour: Int = 20,
         val dataRetentionDays: Int = 30,
@@ -401,5 +403,13 @@ sealed class SettingsUiState {
         val openAiKeyMissing: Boolean get() = aiProvider == AIProvider.OPENAI && !hasApiKey
     }
 
-    data class Error(val message: String) : SettingsUiState()
+    data class Error(@StringRes val messageRes: Int) : SettingsUiState()
+}
+
+/** Result of checking the OpenAI API key with a tiny request. */
+sealed interface ApiKeyCheck {
+    data object Valid : ApiKeyCheck
+
+    /** @property detail the error, technical and in English; null when unknown */
+    data class Invalid(val detail: String?) : ApiKeyCheck
 }

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AI engine / model manager (stage 2E) -->
+    <string name="engine_title">Silnik AI</string>
+    <string name="engine_tab_on_device">Na urządzeniu</string>
+
+    <!-- Active model -->
+    <string name="engine_active_label">Aktywny model</string>
+    <string name="engine_ready">Gotowy</string>
+    <string name="engine_try_example">Wypróbuj na przykładzie</string>
+    <string name="engine_try_started">Podsumowuję testowy czat. Dostaniesz powiadomienie, gdy będzie gotowe.</string>
+    <string name="engine_none_title">Nie pobrano jeszcze żadnego modelu</string>
+    <string name="engine_none_body">Pobierz model poniżej. Podsumowania będą wtedy powstawać na tym telefonie, bez internetu.</string>
+
+    <!-- Plain names (shown first) and descriptions -->
+    <string name="engine_plain_recommended">Polecany</string>
+    <string name="engine_plain_best_quality">Najwyższa jakość</string>
+    <string name="engine_plain_backup_cpu">Zapasowy (CPU)</string>
+    <string name="engine_plain_demo">Demo (debug)</string>
+    <string name="engine_language_gemma">Dobrze rozumie polski i wiele innych języków</string>
+    <string name="engine_language_lfm">Prostsze podsumowania, słabszy polski; dla telefonów, na których GPU nie uruchomi Gemmy</string>
+    <string name="engine_language_demo">Gotowe polskie podsumowanie testowego czatu</string>
+
+    <!-- Specs -->
+    <string name="engine_time_per_summary">%1$s / podsumowanie</string>
+    <string name="engine_no_download">Bez pobierania</string>
+    <string name="engine_needs_ram">Wymaga %1$d GB RAM; ten telefon ma %2$d GB</string>
+
+    <!-- Model list -->
+    <string name="engine_other_models">Inne modele</string>
+    <string name="engine_models">Modele</string>
+    <string name="engine_use">Użyj</string>
+    <string name="engine_now_using">Używasz teraz: %1$s</string>
+    <string name="engine_delete">Usuń model</string>
+    <string name="engine_download_cd">Pobierz %1$s</string>
+    <string name="engine_resume_cd">Wznów pobieranie</string>
+    <string name="engine_cancel_cd">Anuluj pobieranie</string>
+    <string name="engine_retry_cd">Spróbuj pobrać ponownie</string>
+    <string name="engine_downloading">%1$s z %2$s · %3$d%%</string>
+
+    <!-- Storage -->
+    <string name="engine_storage_title">Pamięć</string>
+    <string name="engine_storage_internal">Pamięć wewnętrzna</string>
+    <string name="engine_storage_external">Karta SD</string>
+    <string name="engine_storage_models">Modele %1$s</string>
+    <string name="engine_storage_other">Inne</string>
+    <string name="engine_storage_free">Wolne %1$s</string>
+    <string name="engine_storage_location">Miejsce zapisu</string>
+    <string name="engine_storage_location_value">%1$s · dla nowych pobrań</string>
+    <string name="engine_wifi_only">Pobieraj tylko przez Wi-Fi</string>
+    <string name="engine_wifi_only_on">Oszczędza dane komórkowe</string>
+    <string name="engine_wifi_only_off">Pobiera przez każdą sieć</string>
+
+    <!-- OpenAI tab -->
+    <string name="engine_openai_active_title">OpenAI jest aktywne</string>
+    <string name="engine_openai_inactive_title">Dodaj klucz API, żeby używać OpenAI</string>
+    <string name="engine_openai_body">Wiadomości są wysyłane do OpenAI w celu podsumowania. Wymaga połączenia z internetem.</string>
+    <string name="engine_openai_key_group">Klucz API</string>
+    <string name="engine_openai_key_saved">Klucz zapisany</string>
+    <string name="engine_openai_validate">Sprawdź klucz</string>
+    <string name="engine_openai_remove">Usuń klucz</string>
+    <string name="engine_openai_save_use">Zapisz i używaj OpenAI</string>
+    <string name="engine_openai_use">Używaj OpenAI</string>
+    <string name="engine_openai_model_group">Model</string>
+    <string name="engine_openai_key_valid">Klucz API działa.</string>
+    <string name="engine_openai_key_invalid">Klucz API nie działa.</string>
+    <!-- The error comes from OpenAI and is in English -->
+    <string name="engine_openai_key_invalid_detail">Klucz API nie działa: %1$s</string>
+    <string name="openai_model_gpt_4o_mini_description">Najmniejszy i najtańszy; najlepszy wybór dla większości osób</string>
+    <string name="openai_model_gpt_4o_description">Lepsza jakość, wyższy koszt</string>
+    <string name="openai_model_o1_mini_description">Model rozumujący do złożonych czatów; najdroższy</string>
+    <!-- "ok. 0,0006 USD za podsumowanie" -->
+    <string name="openai_cost_per_summary">ok. %1$s USD za podsumowanie</string>
+</resources>

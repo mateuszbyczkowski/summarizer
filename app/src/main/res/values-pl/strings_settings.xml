@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings: grouped list (stage 2E) -->
+    <string name="settings_group_summaries">Podsumowania</string>
+    <string name="settings_group_notifications">Powiadomienia</string>
+    <string name="settings_group_privacy">Prywatność i bezpieczeństwo</string>
+    <string name="settings_group_about">O aplikacji</string>
+
+    <!-- Summaries -->
+    <string name="settings_engine_title">Silnik AI</string>
+    <string name="settings_engine_local">Na urządzeniu · %1$s</string>
+    <string name="settings_engine_local_none">Na urządzeniu · brak pobranego modelu</string>
+    <string name="settings_engine_openai">OpenAI · %1$s</string>
+    <string name="settings_engine_openai_no_key">OpenAI · brak klucza API</string>
+    <string name="settings_daily_title">Codzienne podsumowanie</string>
+    <string name="settings_daily_on">O %1$s · obserwowane czaty</string>
+    <string name="settings_value_off">Wyłączone</string>
+    <string name="settings_daily_time_title">Godzina podsumowania</string>
+    <string name="settings_daily_time_note">Obserwowane czaty są podsumowywane na początku wybranej godziny.</string>
+
+    <!-- Notifications -->
+    <string name="settings_smart_title">Inteligentne powiadomienia</string>
+    <string name="settings_smart_on">Tylko ważne wiadomości · %1$s</string>
+    <string name="settings_sensitivity_title">Czułość powiadomień</string>
+    <string name="settings_sensitivity_low">Więcej powiadomień</string>
+    <string name="settings_sensitivity_medium">Zrównoważona</string>
+    <string name="settings_sensitivity_high">Mniej powiadomień</string>
+    <string name="settings_sensitivity_very_high">Tylko krytyczne</string>
+
+    <!-- Privacy & security -->
+    <string name="settings_app_lock_system">Odcisk palca, twarz lub blokada ekranu</string>
+    <string name="settings_app_lock_pin">PIN aplikacji (telefon nie ma blokady ekranu)</string>
+    <string name="settings_app_lock_off">Wyłączona · każdy z Twoim telefonem przeczyta Twoje czaty</string>
+    <string name="settings_retention_row_title">Przechowywanie wiadomości</string>
+    <string name="settings_retention_value">%1$s · podsumowania zostają</string>
+    <string name="settings_retention_dialog_title">Przechowuj wiadomości przez</string>
+    <string name="settings_access_title">Dostęp do powiadomień</string>
+    <string name="settings_access_on">Włączony · nowe wiadomości są zbierane</string>
+    <string name="settings_access_off">Wyłączony · dotknij, aby włączyć</string>
+    <string name="settings_access_granted">Przyznany</string>
+    <string name="settings_access_missing">Brak</string>
+    <string name="settings_autostart_title">Autostart (%1$s)</string>
+
+    <!-- About and reset -->
+    <string name="settings_about_row_title">O aplikacji</string>
+    <string name="settings_reset_row_title">Resetuj aplikację…</string>
+    <string name="settings_reset_row_value">Usuń wszystkie dane i zacznij od nowa</string>
+
+    <!-- Status banner, shown only when something is wrong -->
+    <string name="settings_banner_access_title">Dostęp do powiadomień jest wyłączony</string>
+    <string name="settings_banner_access_body">Nowe wiadomości z WhatsAppa nie są zbierane.</string>
+    <string name="settings_banner_access_action">Włącz</string>
+    <string name="settings_banner_model_title">Nie pobrano modelu AI</string>
+    <string name="settings_banner_model_body">Pobierz model, żeby podsumowywać czaty na tym telefonie.</string>
+    <string name="settings_banner_model_action">Wybierz model</string>
+    <string name="settings_banner_key_title">Brak klucza API OpenAI</string>
+    <string name="settings_banner_key_body">Dodaj klucz albo wróć do silnika na urządzeniu.</string>
+    <string name="settings_banner_key_action">Dodaj klucz</string>
+
+    <!-- Errors -->
+    <string name="settings_error_load">Nie udało się wczytać ustawień.</string>
+    <string name="settings_error_save">Nie udało się zapisać ustawienia.</string>
+    <string name="settings_error_key_empty">Wpisz klucz API.</string>
+    <string name="settings_error_key_save">Nie udało się zapisać klucza API.</string>
+    <string name="settings_error_key_remove">Nie udało się usunąć klucza API.</string>
+    <string name="settings_error_reset">Nie udało się zresetować aplikacji.</string>
+
+    <!-- Dialog buttons -->
+    <string name="settings_dialog_save">Zapisz</string>
+    <string name="settings_dialog_close">Zamknij</string>
+</resources>

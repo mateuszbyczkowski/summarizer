@@ -367,7 +367,7 @@ private fun ThreadTopBar(
     )
 }
 
-/** "48 messages · 10–13.10", or null for an empty chat. */
+/** "48 messages · Oct 10–13", or null for an empty chat. */
 @Composable
 private fun threadSubtitle(state: ThreadUiState.Ready): String? {
     val count = state.messages.size
@@ -375,7 +375,7 @@ private fun threadSubtitle(state: ThreadUiState.Ready): String? {
     return stringResource(
         R.string.thread_subtitle,
         pluralStringResource(R.plurals.thread_message_count, count, count),
-        ThreadSummaryRules.formatDayRange(range.first, range.second)
+        dayRange(range.first, range.second)
     )
 }
 
