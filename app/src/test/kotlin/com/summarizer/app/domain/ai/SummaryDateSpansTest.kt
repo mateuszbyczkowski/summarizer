@@ -19,6 +19,13 @@ class SummaryDateSpansTest {
     }
 
     @Test
+    fun `words that only start like a weekday are not part of the date`() {
+        assertEquals(listOf("17.10"), spans("Wtedy 17.10 jedziemy."))
+        assertEquals(listOf("17.10"), spans("Ponad 17.10 nic nie wiadomo."))
+        assertEquals(listOf("sobotę 17.10"), spans("Wycieczka w sobotę 17.10."))
+    }
+
+    @Test
     fun `a time right after a date joins it`() {
         assertEquals(listOf("wt 21.10, 18:00"), spans("Zebranie rodziców wt 21.10, 18:00."))
         assertEquals(listOf("21.10 o 18:00"), spans("Zebranie 21.10 o 18:00 w szkole."))

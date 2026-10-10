@@ -16,11 +16,11 @@ import com.summarizer.app.service.WhatsAppNotificationParser
 import com.summarizer.app.util.minuteTicks
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -47,6 +47,7 @@ sealed interface ThreadUiState {
      * @property shown The summary on screen: the latest, or an earlier one picked from the history
      * @property newMessages Messages newer than the latest summary (0 without a summary)
      * @property generation The summary being generated or the failed attempt, if any
+     * @property dayRange First and last day of the messages; null without messages
      */
     data class Ready(
         val thread: Thread?,
@@ -58,7 +59,8 @@ sealed interface ThreadUiState {
         val newMessages: Int,
         val mode: SummarizationMode,
         val generation: SummaryGenerationCoordinator.State?,
-        val today: LocalDate
+        val today: LocalDate,
+        val dayRange: Pair<LocalDate, LocalDate>? = null
     ) : ThreadUiState {
         val latest: Summary? get() = summaries.firstOrNull()
         val isGenerating: Boolean get() = generation is SummaryGenerationCoordinator.State.Running
@@ -71,7 +73,7 @@ sealed interface ThreadUiState {
  */
 @HiltViewModel
 class ThreadViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+    private val savedStateHandle: SavedStateHandle,
     messageRepository: MessageRepository,
     private val summaryRepository: SummaryRepository,
     private val threadRepository: ThreadRepository,
@@ -84,10 +86,16 @@ class ThreadViewModel @Inject constructor(
     /** Tab named in the route, if any; otherwise the screen picks one once data has loaded. */
     val requestedTab: ThreadTab? = ThreadTab.fromRoute(savedStateHandle.get<String>(ARG_TAB))
 
-    /** An earlier summary picked from the history; null shows the latest. */
-    private val selectedSummaryId = MutableStateFlow(
-        savedStateHandle.get<Long>(ARG_SUMMARY_ID)?.takeIf { it >= 0 }
-    )
+    /**
+     * An earlier summary picked from the history; null shows the latest. Kept in the saved state,
+     * so after process death the route's summary does not come back once another was chosen.
+     */
+    private val selectedSummaryId = savedStateHandle.getStateFlow(ARG_SUMMARY_ID, -1L)
+        .map { id -> id.takeIf { it >= 0 } }
+
+    private fun setSelectedSummary(summaryId: Long?) {
+        savedStateHandle[ARG_SUMMARY_ID] = summaryId ?: -1L
+    }
 
     private val today = minuteTicks()
         .map { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate() }
@@ -100,7 +108,8 @@ class ThreadViewModel @Inject constructor(
         val timeline: List<TimelineItem>,
         val summaries: List<Summary>,
         val newMessages: Int,
-        val mode: SummarizationMode
+        val mode: SummarizationMode,
+        val dayRange: Pair<LocalDate, LocalDate>?
     )
 
     private val content = combine(
@@ -118,9 +127,10 @@ class ThreadViewModel @Inject constructor(
             },
             summaries = summaries,
             newMessages = ThreadSummaryRules.newMessageCount(messages, latest),
-            mode = mode
+            mode = mode,
+            dayRange = ThreadSummaryRules.dayRange(messages.map { it.timestamp })
         )
-    }
+    }.flowOn(Dispatchers.Default) // grouping 30 days of messages stays off the main thread
 
     val uiState: StateFlow<ThreadUiState> = combine(
         content,
@@ -138,23 +148,22 @@ class ThreadViewModel @Inject constructor(
             newMessages = content.newMessages,
             mode = content.mode,
             generation = generation,
-            today = day
+            today = day,
+            dayRange = content.dayRange
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ThreadUiState.Loading)
 
-    fun selectSummary(summaryId: Long) {
-        selectedSummaryId.value = summaryId
-    }
+    fun selectSummary(summaryId: Long) = setSelectedSummary(summaryId)
 
     /** Summarizes in the thread's mode (by default only the new messages). */
     fun update() {
-        selectedSummaryId.value = null
+        setSelectedSummary(null)
         coordinator.generate(threadId)
     }
 
     /** Summarizes the whole conversation once, without changing the thread's mode. */
     fun fullResummary() {
-        selectedSummaryId.value = null
+        setSelectedSummary(null)
         coordinator.generate(threadId, full = true)
     }
 

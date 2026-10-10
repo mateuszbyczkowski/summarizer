@@ -123,6 +123,9 @@ class SummaryDatesTest {
     fun `amounts, quantities and names are not dates`() {
         assertNull(firstDate("Zapłacić \$2.10 za bilet"))
         assertNull(firstDate("Kupić 1.5 kg mąki"))
+        assertNull(firstDate("Kupić 1.5 l mleka"))
+        assertNull(firstDate("Kabel 2.5 m"))
+        assertNull(firstDate("Drożdże 10.5 g."))
         assertNull(firstDate("Składka 2.10 zł"))
         assertNull(firstDate("Jan 2 bilety kupi"))
         assertEquals(LocalDate.of(2026, 10, 17), firstDate("October 17"))

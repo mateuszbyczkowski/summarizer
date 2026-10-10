@@ -371,7 +371,7 @@ private fun ThreadTopBar(
 @Composable
 private fun threadSubtitle(state: ThreadUiState.Ready): String? {
     val count = state.messages.size
-    val range = ThreadSummaryRules.dayRange(state.messages.map { it.timestamp }) ?: return null
+    val range = state.dayRange ?: return null
     return stringResource(
         R.string.thread_subtitle,
         pluralStringResource(R.plurals.thread_message_count, count, count),

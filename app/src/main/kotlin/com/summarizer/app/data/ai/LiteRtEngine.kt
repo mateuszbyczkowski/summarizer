@@ -136,12 +136,13 @@ class LiteRtEngine @Inject constructor(
                     maxOutputToken = maxTokens
                 )
                 loaded.createConversation(config).use { conversation ->
-                    synchronized(conversationLock) {
+                    val cancelledDuringCreation = synchronized(conversationLock) {
                         activeConversation = conversation
-                        // Cancelled while the conversation was being created
-                        if (cancelRequestedAt > 0) conversation.cancelProcess()
+                        cancelRequestedAt > 0
                     }
                     try {
+                        // Cancelled while the conversation was being created: never send the prompt
+                        if (cancelledDuringCreation) throw CancellationException("Generation cancelled")
                         streamReply(conversation, prompt, onPartial)
                     } finally {
                         // Cleared before use{} closes the conversation, so cancel never sees a closed one

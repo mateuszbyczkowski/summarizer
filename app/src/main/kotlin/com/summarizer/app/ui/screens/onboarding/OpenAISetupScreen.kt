@@ -47,7 +47,8 @@ import com.summarizer.app.ui.screens.settings.SettingsUiState
 import com.summarizer.app.ui.screens.settings.SettingsViewModel
 
 /**
- * Onboarding screen for setting up OpenAI API key.
+ * Onboarding: the OpenAI API key, when the engine step chose OpenAI. Saving the key makes
+ * OpenAI the engine; "Skip" leaves the engine unchanged.
  */
 @Composable
 fun OpenAISetupScreen(
@@ -60,7 +61,7 @@ fun OpenAISetupScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val errorMessage = (uiState as? SettingsUiState.Error)?.message
     val canSave = apiKeyInput.isNotBlank() && errorMessage == null
-    val saveKey = { if (canSave) viewModel.saveApiKey(apiKeyInput.trim()) }
+    val saveKey = { if (canSave) viewModel.saveApiKey(apiKeyInput.trim(), activate = true) }
 
     // Auto-navigate when API key is saved
     LaunchedEffect(uiState) {

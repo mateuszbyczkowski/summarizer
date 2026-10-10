@@ -3,6 +3,7 @@ package com.summarizer.app.data.download
 import android.content.Context
 import com.summarizer.app.di.ApplicationScope
 import com.summarizer.app.domain.model.AIModel
+import com.summarizer.app.domain.model.DownloadFailure
 import com.summarizer.app.domain.model.DownloadStatus
 import com.summarizer.app.domain.model.ModelDownloadState
 import com.summarizer.app.domain.repository.ModelRepository
@@ -54,12 +55,20 @@ class ModelDownloadManager @Inject constructor(
 
     private val activeDownloads = ConcurrentHashMap<String, Job>()
 
-    private class DownloadException(message: String) : Exception(message)
+    private class DownloadException(
+        message: String,
+        val failure: DownloadFailure = DownloadFailure.OTHER
+    ) : Exception(message)
 
     /** Start or resume downloading [model]; a running download for the same model is left alone. */
     fun startDownload(model: AIModel) {
         val previous = activeDownloads[model.id]
         if (previous != null && previous.isActive && !previous.isCancelled) return
+        // Show the download as running right away (keeping its progress), not once it connects
+        _downloadStates.update { states ->
+            val current = states[model.id]?.copy(status = DownloadStatus.DOWNLOADING, error = null, failure = null)
+            states + (model.id to (current ?: ModelDownloadState(model.id, DownloadStatus.DOWNLOADING)))
+        }
         val job = applicationScope.launch(Dispatchers.IO, start = CoroutineStart.LAZY) {
             // A paused transfer may still be finishing a write; never let two jobs share the file
             previous?.join()
@@ -77,7 +86,12 @@ class ModelDownloadManager @Inject constructor(
                     is java.io.IOException -> "Network error: could not reach the download server. Check your connection and try again."
                     else -> e.message
                 }
-                updateState(model.id, DownloadStatus.FAILED, error = message ?: "Download failed")
+                val failure = when (e) {
+                    is DownloadException -> e.failure
+                    is java.io.IOException -> DownloadFailure.NETWORK
+                    else -> DownloadFailure.OTHER
+                }
+                updateState(model.id, DownloadStatus.FAILED, error = message ?: "Download failed", failure = failure)
             } finally {
                 activeDownloads.remove(model.id, coroutineContext.job)
             }
@@ -111,7 +125,10 @@ class ModelDownloadManager @Inject constructor(
 
     private suspend fun download(model: AIModel): File = withContext(Dispatchers.IO) {
         if (preferencesRepository.isWiFiOnlyDownload() && !NetworkHelper.isWiFiConnected(context)) {
-            throw DownloadException("WiFi connection required. Enable mobile data download in settings.")
+            throw DownloadException(
+                "WiFi connection required. Enable mobile data download in settings.",
+                DownloadFailure.WIFI_REQUIRED
+            )
         }
 
         val storageLocation = preferencesRepository.getStorageLocation()
@@ -137,7 +154,8 @@ class ModelDownloadManager @Inject constructor(
         val partialMB = tempFile.length() / (1024 * 1024)
         if (!StorageHelper.hasEnoughSpace(model.sizeInMB - partialMB, storageInfo.availableSpaceMB)) {
             throw DownloadException(
-                "Insufficient storage: ${storageInfo.availableSpaceMB}MB available, ${model.sizeInMB}MB required"
+                "Insufficient storage: ${storageInfo.availableSpaceMB}MB available, ${model.sizeInMB}MB required",
+                DownloadFailure.NO_SPACE
             )
         }
 
@@ -226,10 +244,11 @@ class ModelDownloadManager @Inject constructor(
         progress: Float = 0f,
         downloadedBytes: Long = 0,
         totalBytes: Long = 0,
-        error: String? = null
+        error: String? = null,
+        failure: DownloadFailure? = null
     ) {
         _downloadStates.update { states ->
-            states + (modelId to ModelDownloadState(modelId, status, progress, downloadedBytes, totalBytes, error))
+            states + (modelId to ModelDownloadState(modelId, status, progress, downloadedBytes, totalBytes, error, failure))
         }
     }
 

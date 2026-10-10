@@ -2,6 +2,7 @@ package com.summarizer.app.domain.repository
 
 import com.summarizer.app.domain.model.AIProvider
 import com.summarizer.app.util.StorageHelper
+import kotlinx.coroutines.flow.Flow
 
 interface PreferencesRepository {
     suspend fun hasCompletedOnboarding(): Boolean
@@ -12,6 +13,10 @@ interface PreferencesRepository {
     suspend fun setStorageLocation(location: StorageHelper.StorageLocation)
     suspend fun isWiFiOnlyDownload(): Boolean
     suspend fun setWiFiOnlyDownload(wifiOnly: Boolean)
+
+    /** The model onboarding is downloading in the background (Home shows its progress), or null. */
+    fun observeSetupModelId(): Flow<String?>
+    suspend fun setSetupModelId(modelId: String?)
 
     // AI Provider preferences (Week 8)
     suspend fun getAIProvider(): AIProvider

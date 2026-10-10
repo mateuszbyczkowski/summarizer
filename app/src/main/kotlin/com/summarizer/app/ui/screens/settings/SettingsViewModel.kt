@@ -10,6 +10,7 @@ import com.summarizer.app.di.ApplicationScope
 import com.summarizer.app.domain.repository.ModelRepository
 import com.summarizer.app.domain.repository.PreferencesRepository
 import com.summarizer.app.ui.lock.AppLockManager
+import com.summarizer.app.ui.widget.UpcomingWidgetUpdater
 import com.summarizer.app.worker.WorkScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,7 @@ class SettingsViewModel @Inject constructor(
     private val appDataResetter: AppDataResetter,
     private val appLockManager: AppLockManager,
     private val modelRepository: ModelRepository,
+    private val upcomingWidgetUpdater: UpcomingWidgetUpdater,
     @ApplicationScope private val applicationScope: CoroutineScope
 ) : ViewModel() {
 
@@ -282,6 +284,9 @@ class SettingsViewModel @Inject constructor(
                 }
                 Timber.d("Setting app lock enabled: $enabled")
                 preferencesRepository.setAppLockEnabled(enabled)
+                // Hide (or show) the widget's details now: waiting for the app to go to the
+                // background would leave them visible if the process is killed first
+                applicationScope.launch { upcomingWidgetUpdater.refresh() }
 
                 // Reload settings to update UI
                 loadSettings()

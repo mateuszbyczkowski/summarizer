@@ -76,11 +76,11 @@ class UpcomingWidget : GlanceAppWidget() {
     }
 }
 
-private val PADDING = 12.dp
-private val HEADER_HEIGHT = 24.dp
-private val HEADER_GAP = 4.dp
-private val ROW_HEIGHT = 38.dp
-private val ROW_GAP = 4.dp
+// Rows are 48dp touch targets, the header 40dp; heights match UpcomingWidgetModel
+private val PADDING_HORIZONTAL = 12.dp
+private val PADDING_VERTICAL = 8.dp
+private val HEADER_HEIGHT = 40.dp
+private val ROW_HEIGHT = 48.dp
 private val BADGE_SIZE = 36.dp
 
 @Composable
@@ -97,10 +97,9 @@ private fun UpcomingContent(state: UpcomingWidgetState) {
             .appWidgetBackground()
             .background(GlanceTheme.colors.widgetBackground)
             .cornerRadius(android.R.dimen.system_app_widget_background_radius)
-            .padding(PADDING)
+            .padding(horizontal = PADDING_HORIZONTAL, vertical = PADDING_VERTICAL)
     ) {
         Header(more = more, onClick = openApp)
-        Spacer(GlanceModifier.height(HEADER_GAP))
         when (state) {
             is UpcomingWidgetState.CountOnly -> Message(
                 title = if (state.count == 0) {
@@ -125,10 +124,7 @@ private fun UpcomingContent(state: UpcomingWidgetState) {
                     )
                 } else {
                     Column(modifier = GlanceModifier.fillMaxWidth()) {
-                        shownRows.forEachIndexed { index, row ->
-                            if (index > 0) Spacer(GlanceModifier.height(ROW_GAP))
-                            AgendaRow(row)
-                        }
+                        shownRows.forEach { row -> AgendaRow(row) }
                     }
                 }
         }

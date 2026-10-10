@@ -45,11 +45,11 @@ object UpcomingWidgetModel {
     /** Most rows the widget shows, however tall it is. */
     const val MAX_ROWS = 4
 
-    /** Outer padding, header and the gap below it, in dp. */
-    const val CHROME_HEIGHT_DP = 52
+    /** Vertical padding and the header, in dp. */
+    const val CHROME_HEIGHT_DP = 56
 
-    /** Height of one row including the space between rows, in dp. */
-    const val ROW_PITCH_DP = 42
+    /** Height of one row (a 48dp touch target), in dp. */
+    const val ROW_PITCH_DP = 48
 
     fun build(agenda: List<AgendaItem>, today: LocalDate, appLockEnabled: Boolean): UpcomingWidgetState {
         val week = agenda.filter { AgendaSchedule.isThisWeek(it, today) }

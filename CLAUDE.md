@@ -84,7 +84,7 @@ All use `@HiltWorker` for dependency injection.
 2. **Hilt caching** - On compile errors: `./gradlew clean && rm -rf app/build`
 3. **No cloud storage** - All data on-device only (privacy commitment)
 4. **APK size ~135MB debug / ~66MB release** - llama.cpp (Llamatik) and LiteRT-LM native libraries; only `arm64-v8a` is packaged (`abiFilters`)
-5. **Model catalog** - `ModelDownloadViewModel.DEFAULT_MODELS`; URLs pinned to a Hugging Face commit with a SHA-256 `checksum` (look them up from the phone with `LiteRtModelProbe#fileHashes`; Hugging Face is blocked on the corporate network)
+5. **Model catalog** - `data/download/ModelCatalog.DEFAULT_MODELS` (the app picks one by RAM in onboarding, `ModelRecommendation`); URLs pinned to a Hugging Face commit with a SHA-256 `checksum` (look them up from the phone with `LiteRtModelProbe#fileHashes`; Hugging Face is blocked on the corporate network)
 
 ## Documentation
 

@@ -36,15 +36,17 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.summarizer.app.domain.model.AIProvider
 import com.summarizer.app.domain.repository.PreferencesRepository
 import com.summarizer.app.ui.screens.auth.PinSetupScreen
 import com.summarizer.app.ui.screens.home.HomeScreen
 import com.summarizer.app.ui.screens.models.ModelDownloadScreen
 import com.summarizer.app.ui.screens.models.StorageLocationScreen
-import com.summarizer.app.ui.screens.onboarding.AIProviderChoiceScreen
+import com.summarizer.app.ui.screens.onboarding.EngineChoiceScreen
+import com.summarizer.app.ui.screens.onboarding.NotificationAccessScreen
+import com.summarizer.app.ui.screens.onboarding.OnboardingNext
+import com.summarizer.app.ui.screens.onboarding.OnboardingNextEffect
+import com.summarizer.app.ui.screens.onboarding.OnboardingViewModel
 import com.summarizer.app.ui.screens.onboarding.OpenAISetupScreen
-import com.summarizer.app.ui.screens.onboarding.PermissionExplanationScreen
 import com.summarizer.app.ui.screens.onboarding.WelcomeScreen
 import com.summarizer.app.ui.screens.search.SearchScreen
 import com.summarizer.app.ui.screens.settings.SettingsScreen
@@ -52,26 +54,21 @@ import com.summarizer.app.ui.screens.tasks.TasksScreen
 import com.summarizer.app.ui.screens.thread.ThreadScreen
 import com.summarizer.app.ui.screens.thread.ThreadTab
 import com.summarizer.app.ui.screens.thread.ThreadViewModel
-import com.summarizer.app.util.BiometricHelper
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.launch
 
 private const val ONBOARDING_GRAPH = "onboarding"
-private const val ARG_ONBOARDING = "onboarding"
 private const val NO_SUMMARY_ID = -1L
 
 sealed class Screen(val route: String) {
+    // Onboarding: three numbered steps, then the OpenAI key and the app PIN when needed
     object Welcome : Screen("welcome")
-    object PermissionExplanation : Screen("permission_explanation")
-    object PinSetup : Screen("pin_setup")
-    object AIProviderChoice : Screen("ai_provider_choice")
+    object NotificationAccess : Screen("notification_access")
+    object EngineChoice : Screen("engine_choice")
     object OpenAISetup : Screen("openai_setup")
-    object StorageLocation : Screen("storage_location?$ARG_ONBOARDING={$ARG_ONBOARDING}") {
-        fun createRoute(onboarding: Boolean = false) = "storage_location?$ARG_ONBOARDING=$onboarding"
-    }
-    object ModelDownload : Screen("model_download?$ARG_ONBOARDING={$ARG_ONBOARDING}") {
-        fun createRoute(onboarding: Boolean = false) = "model_download?$ARG_ONBOARDING=$onboarding"
-    }
+    object PinSetup : Screen("pin_setup")
+    object StorageLocation : Screen("storage_location")
+    object ModelDownload : Screen("model_download")
     object Home : Screen("home")
     object Tasks : Screen("tasks")
     object Settings : Screen("settings")
@@ -99,11 +96,6 @@ sealed interface PendingNavigation {
     data class Thread(val threadId: String) : PendingNavigation
     data class Summary(val threadId: String) : PendingNavigation
     data object Threads : PendingNavigation
-}
-
-private val onboardingArgument = navArgument(ARG_ONBOARDING) {
-    type = NavType.BoolType
-    defaultValue = false
 }
 
 @Composable
@@ -154,6 +146,14 @@ fun NavGraph(
             navController.navigate(Screen.Home.route) {
                 popUpTo(ONBOARDING_GRAPH) { inclusive = true }
             }
+        }
+    }
+
+    fun onOnboardingNext(next: OnboardingNext) {
+        when (next) {
+            OnboardingNext.OPENAI_SETUP -> navController.navigate(Screen.OpenAISetup.route) { launchSingleTop = true }
+            OnboardingNext.PIN_SETUP -> navController.navigate(Screen.PinSetup.route) { launchSingleTop = true }
+            OnboardingNext.FINISH -> finishOnboarding()
         }
     }
 
@@ -225,80 +225,50 @@ fun NavGraph(
             navigation(startDestination = Screen.Welcome.route, route = ONBOARDING_GRAPH) {
                 composable(Screen.Welcome.route) {
                     WelcomeScreen(
-                        onContinueClick = { navController.navigate(Screen.PermissionExplanation.route) }
+                        onContinueClick = { navController.navigate(Screen.NotificationAccess.route) }
                     )
                 }
 
-                composable(Screen.PermissionExplanation.route) {
-                    PermissionExplanationScreen(
-                        onContinueClick = {
-                            // The phone's own screen lock protects the app; an app PIN only without one
-                            val next = if (BiometricHelper.isDeviceSecure(context)) Screen.AIProviderChoice else Screen.PinSetup
-                            navController.navigate(next.route)
+                composable(Screen.NotificationAccess.route) {
+                    NotificationAccessScreen(
+                        onContinue = {
+                            navController.navigate(Screen.EngineChoice.route) { launchSingleTop = true }
                         }
                     )
                 }
 
-                composable(Screen.PinSetup.route) {
-                    PinSetupScreen(
-                        onPinSet = {
-                            // The PIN cannot be changed by navigating back to this screen
-                            navController.navigate(Screen.AIProviderChoice.route) {
-                                popUpTo(ONBOARDING_GRAPH) { inclusive = false }
-                            }
-                        }
-                    )
-                }
-
-                composable(Screen.AIProviderChoice.route) {
-                    AIProviderChoiceScreen(
-                        onProviderSelected = { provider ->
-                            when (provider) {
-                                AIProvider.LOCAL -> navController.navigate(Screen.StorageLocation.createRoute(onboarding = true))
-                                AIProvider.OPENAI -> navController.navigate(Screen.OpenAISetup.route)
-                            }
-                        }
-                    )
+                composable(Screen.EngineChoice.route) {
+                    EngineChoiceScreen(onNext = ::onOnboardingNext)
                 }
 
                 composable(Screen.OpenAISetup.route) {
+                    val onboardingViewModel: OnboardingViewModel = hiltViewModel()
+                    OnboardingNextEffect(onboardingViewModel, ::onOnboardingNext)
                     OpenAISetupScreen(
-                        onSetupComplete = ::finishOnboarding,
+                        onSetupComplete = onboardingViewModel::openAiSetupDone,
                         onBackClick = { navController.popBackStack() }
                     )
                 }
+
+                // Only on phones without a screen lock; not one of the numbered steps
+                composable(Screen.PinSetup.route) {
+                    PinSetupScreen(onPinSet = ::finishOnboarding)
+                }
             }
 
-            composable(Screen.StorageLocation.route, arguments = listOf(onboardingArgument)) { entry ->
-                val isOnboarding = entry.arguments?.getBoolean(ARG_ONBOARDING) == true
+            composable(Screen.StorageLocation.route) {
                 StorageLocationScreen(
-                    onLocationSelected = {
-                        if (isOnboarding) {
-                            navController.navigate(Screen.ModelDownload.createRoute(onboarding = true))
-                        } else {
-                            navController.popBackStack()
-                        }
-                    },
+                    onLocationSelected = { navController.popBackStack() },
                     onBackClick = { navController.popBackStack() }
                 )
             }
 
-            composable(Screen.ModelDownload.route, arguments = listOf(onboardingArgument)) { entry ->
-                val isOnboarding = entry.arguments?.getBoolean(ARG_ONBOARDING) == true
+            composable(Screen.ModelDownload.route) {
                 ModelDownloadScreen(
-                    onModelSelected = {
-                        if (isOnboarding) finishOnboarding() else navController.popBackStack()
-                    },
-                    onSkip = {
-                        if (isOnboarding) finishOnboarding() else navController.popBackStack()
-                    },
-                    onBackClick = if (isOnboarding) null else {
-                        { navController.popBackStack() }
-                    },
-                    onStorageClick = {
-                        navController.navigate(Screen.StorageLocation.createRoute())
-                    },
-                    onOpenThread = { threadId -> navController.openThread(threadId) }
+                    onBackClick = { navController.popBackStack() },
+                    onStorageClick = { navController.navigate(Screen.StorageLocation.route) },
+                    // "Try on example": show the summary being written
+                    onOpenThread = { threadId -> navController.openThread(threadId, ThreadTab.SUMMARY) }
                 )
             }
 
@@ -324,9 +294,7 @@ fun NavGraph(
                 SettingsScreen(
                     // A top-level tab: no back arrow
                     onBackPressed = null,
-                    onModelConfigClick = {
-                        navController.navigate(Screen.ModelDownload.createRoute())
-                    },
+                    onModelConfigClick = { navController.navigate(Screen.ModelDownload.route) },
                     onResetComplete = { navController.restartAtOnboarding() }
                 )
             }

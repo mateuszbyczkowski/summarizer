@@ -22,6 +22,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.summarizer.app.R
+import com.summarizer.app.data.download.ModelCatalog
 import com.summarizer.app.ui.components.AppTopBar
 import com.summarizer.app.ui.components.InfoCard
 import com.summarizer.app.ui.components.InfoCardTone
@@ -81,8 +82,8 @@ fun StorageLocationScreen(
                 Text(
                     text = stringResource(
                         R.string.storage_subtitle,
-                        formatModelSize(ModelDownloadViewModel.DEFAULT_MODELS.minOf { it.sizeInMB }),
-                        formatModelSize(ModelDownloadViewModel.DEFAULT_MODELS.maxOf { it.sizeInMB })
+                        formatModelSize(ModelCatalog.DEFAULT_MODELS.minOf { it.sizeInMB }),
+                        formatModelSize(ModelCatalog.DEFAULT_MODELS.maxOf { it.sizeInMB })
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant

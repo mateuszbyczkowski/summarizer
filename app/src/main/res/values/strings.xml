@@ -12,7 +12,6 @@
     <string name="dismiss">Dismiss</string>
     <string name="cd_more_options">More options</string>
     <string name="cd_search">Search</string>
-    <string name="badge_recommended">Recommended</string>
     <string name="size_mb">%1$d MB</string>
     <string name="size_gb">%1$.1f GB</string>
 
@@ -20,10 +19,6 @@
         <item quantity="one">%1$d day</item>
         <item quantity="other">%1$d days</item>
     </plurals>
-
-    <!-- AI providers -->
-    <string name="provider_local_title">Local (On-device)</string>
-    <string name="provider_openai_title">OpenAI (Cloud)</string>
 
     <!-- OpenAI API key (shared by onboarding and settings) -->
     <string name="api_key_label">OpenAI API Key</string>
@@ -35,7 +30,7 @@
     <string name="openai_privacy_title">Privacy Notice</string>
     <string name="openai_privacy_body">OpenAI provider sends your WhatsApp messages to OpenAI servers for processing. %1$s</string>
     <string name="openai_privacy_suggestion_settings">Use the Local provider for complete privacy.</string>
-    <string name="openai_privacy_suggestion_onboarding">If you prefer complete privacy, go back and choose the Local provider instead.</string>
+    <string name="openai_privacy_suggestion_onboarding">If you prefer complete privacy, go back and choose On this phone instead.</string>
 
     <!-- Onboarding: OpenAI setup -->
     <string name="openai_setup_title">OpenAI Setup</string>
@@ -122,48 +117,6 @@
     <string name="settings_reset_dialog_confirm">Reset Everything</string>
     <string name="settings_resetting_title">Resetting…</string>
     <string name="settings_resetting_message">Deleting models, messages and settings. This may take a moment.</string>
-    <!-- Onboarding: welcome -->
-    <string name="welcome_title">Welcome to\nThreadSummarizer</string>
-    <string name="welcome_subtitle">Never miss important school updates.\nStay on top of what matters from your groups.</string>
-    <string name="welcome_feature_updates_title">Never Miss Updates</string>
-    <string name="welcome_feature_updates_body">Track important announcements, deadlines, and action items from your groups</string>
-    <string name="welcome_feature_summaries_title">Smart AI Summaries</string>
-    <string name="welcome_feature_summaries_body">Get key points from busy conversations without reading hundreds of messages</string>
-    <string name="welcome_feature_privacy_title">Private by Default</string>
-    <string name="welcome_feature_privacy_body">Messages are stored encrypted on your device. Zero tracking. Choose the on-device AI to keep everything offline.</string>
-    <string name="welcome_get_started">Get Started</string>
-
-    <!-- Onboarding: notification permission -->
-    <string name="permission_screen_title">Notification Access</string>
-    <string name="permission_screen_body">ThreadSummarizer helps you stay on top of school group chats by tracking important announcements, deadlines, and action items.</string>
-    <string name="permission_screen_capture_title">What We Capture</string>
-    <string name="permission_screen_capture_body">Only message notifications from WhatsApp and WhatsApp Business. Notifications from other apps are completely ignored.</string>
-    <string name="permission_screen_storage_title">Stored Only On Your Device</string>
-    <string name="permission_screen_storage_body">Messages are stored encrypted on your phone. Zero cloud storage, zero tracking. With the on-device AI, nothing ever leaves your phone.</string>
-    <string name="permission_screen_next_title">What happens next?</string>
-    <string name="permission_screen_next_body">You\'ll be taken to Android\'s notification settings where you need to enable notification access for ThreadSummarizer.</string>
-    <string name="permission_screen_rom_title">%1$s - Additional Steps Required</string>
-    <string name="permission_screen_rom_body">After enabling notification access, you MUST also enable AutoStart permission, or the app won\'t work.</string>
-    <string name="permission_screen_rom_steps_title">Steps to enable AutoStart:</string>
-    <string name="permission_screen_open_autostart">Open AutoStart Settings</string>
-    <string name="permission_screen_grant">Grant Permission</string>
-
-    <!-- Onboarding: AI provider choice -->
-    <string name="provider_choice_title">Choose AI Provider</string>
-    <string name="provider_choice_heading">How would you like to generate summaries?</string>
-    <string name="provider_choice_subtitle">You can change this later in Settings</string>
-    <string name="provider_choice_local_benefit_privacy">🔒 Complete Privacy - Everything stays on your device</string>
-    <string name="provider_choice_local_benefit_offline">🌐 Works Offline - No internet required</string>
-    <string name="provider_choice_local_benefit_free">💰 Completely Free - No API costs</string>
-    <string name="provider_choice_local_benefit_storage">📦 Requires %1$s - %2$s storage for AI model</string>
-    <string name="provider_choice_use_local">Use Local Model</string>
-    <string name="provider_choice_openai_benefit_fast">⚡ Faster Processing - Cloud-based</string>
-    <string name="provider_choice_openai_benefit_quality">🎯 High Quality - State-of-the-art model</string>
-    <string name="provider_choice_openai_benefit_cost">💵 Very Affordable - ~$0.0006 per summary</string>
-    <string name="provider_choice_openai_benefit_requirements">🌐 Requires Internet &amp; API Key</string>
-    <string name="provider_choice_openai_benefit_privacy">⚠️ Messages sent to OpenAI servers</string>
-    <string name="provider_choice_use_openai">Use OpenAI</string>
-
     <!-- Storage location -->
     <string name="storage_title">Choose Storage Location</string>
     <string name="storage_heading">Where would you like to store AI models?</string>
@@ -200,7 +153,6 @@
     <string name="models_retry_download">Retry Download</string>
     <string name="models_paused">Paused at %1$d%%</string>
     <string name="models_resume">Resume Download</string>
-    <string name="models_skip">Skip for Now</string>
 
     <!-- Search -->
     <string name="search_placeholder">Search summaries and messages…</string>

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Step indicator, read out by TalkBack -->
+    <string name="onboarding_step">Step %1$d of %2$d</string>
+
+    <!-- Step 1: welcome. The picture shows an example chat turned into a summary. -->
+    <string name="onboarding_welcome_title">148 messages.\n3 things to remember.</string>
+    <string name="onboarding_welcome_body">Summarizer reads notifications from your WhatsApp groups and turns them into short summaries with dates, payments and announcements.</string>
+    <string name="onboarding_welcome_privacy">Messages stay on your phone, encrypted. Summaries are made by AI on the device.</string>
+    <string name="onboarding_welcome_start">Get started</string>
+    <string name="onboarding_welcome_hint">3 steps · about a minute</string>
+    <string name="onboarding_example_cd">Example: a busy group chat turned into a short summary with a payment, a trip and a meeting</string>
+    <string name="onboarding_example_more">+145 messages</string>
+    <string name="onboarding_example_sender_1">Anna</string>
+    <string name="onboarding_example_message_1">What time does the bus leave?</string>
+    <string name="onboarding_example_sender_2">Ms Kate</string>
+    <string name="onboarding_example_message_2">Meeting on Tuesday at 6 pm</string>
+    <string name="onboarding_example_sender_3">Mark</string>
+    <string name="onboarding_example_message_3">Trip money by Wednesday!</string>
+    <string name="onboarding_example_chat">Class 3B parents</string>
+    <string name="onboarding_example_summary">Summary</string>
+    <string name="onboarding_example_task">Pay for the trip by Wed 15 Oct</string>
+    <string name="onboarding_example_trip">Trip Fri 17 Oct · bus at 7:30</string>
+    <string name="onboarding_example_meeting">Meeting Tue 21 Oct, 6 pm</string>
+
+    <!-- Step 2: notification access -->
+    <string name="onboarding_access_title">Allow notification access</string>
+    <string name="onboarding_access_body">Summarizer sees your group chats through WhatsApp\'s message notifications. It never opens WhatsApp and never sends anything.</string>
+    <string name="onboarding_access_only_whatsapp">Only WhatsApp and WhatsApp Business. Notifications from other apps are ignored.</string>
+    <string name="onboarding_access_on_device">Messages are stored encrypted on this phone and nowhere else.</string>
+    <string name="onboarding_access_setting">Summarizer</string>
+    <string name="onboarding_access_setting_hint">Notification access</string>
+    <string name="onboarding_access_open">Open settings</string>
+    <string name="onboarding_access_granted">Notification access is on</string>
+    <string name="onboarding_access_hint">Find Summarizer in the list and turn it on, then come back.</string>
+    <string name="onboarding_access_later">Not now</string>
+    <string name="onboarding_access_rom_title">%1$s: one more setting</string>
+    <string name="onboarding_access_rom_body">This phone stops apps in the background. Also allow AutoStart for Summarizer, or new messages will be missed.</string>
+    <string name="onboarding_access_rom_open">Open AutoStart settings</string>
+
+    <!-- Step 3: engine -->
+    <string name="onboarding_engine_title">Where should summaries be made?</string>
+    <string name="onboarding_engine_body">You can change this later in Settings.</string>
+    <string name="onboarding_engine_local_title">On this phone</string>
+    <string name="onboarding_engine_local_body">Private and free. Works offline; nothing leaves your phone.</string>
+    <string name="onboarding_engine_local_model">Downloads %1$s (%2$s) in the background, picked for your phone\'s %3$d GB of RAM.</string>
+    <string name="onboarding_engine_local_no_model">Choose a model later in Settings › AI engine.</string>
+    <string name="onboarding_engine_recommended">Recommended</string>
+    <string name="onboarding_engine_openai_title">OpenAI</string>
+    <string name="onboarding_engine_openai_body">Fast on any phone. Messages are sent to OpenAI to be summarized. Needs your own API key, about $0.0006 per summary.</string>
+    <string name="onboarding_engine_start">Start</string>
+    <string name="onboarding_engine_continue">Continue</string>
+
+    <!-- Home: background download of the model picked in onboarding -->
+    <string name="model_setup_downloading_title">Downloading %1$s</string>
+    <string name="model_setup_downloading_body">Summaries can start once it is ready. You can keep using the app.</string>
+    <string name="model_setup_progress">%1$d%% · %2$s of %3$s</string>
+    <string name="model_setup_progress_cd">Download %1$d%% complete</string>
+    <string name="model_setup_paused_title">Download of %1$s paused</string>
+    <string name="model_setup_failed_title">Couldn\'t download %1$s</string>
+    <string name="model_setup_failed_body">The download failed. Check your connection and try again.</string>
+    <string name="model_setup_wifi_body">Waiting for Wi-Fi. Connect to Wi-Fi, or allow mobile data in Settings › AI engine.</string>
+    <string name="model_setup_space_body">Not enough free storage. Free up %1$s and try again.</string>
+    <string name="model_setup_interrupted_body">The download stopped when the app was closed.</string>
+    <string name="model_setup_paused_body">The download is paused.</string>
+    <string name="model_setup_cancel">Cancel</string>
+    <string name="model_setup_retry">Try again</string>
+    <string name="model_setup_resume">Resume</string>
+</resources>

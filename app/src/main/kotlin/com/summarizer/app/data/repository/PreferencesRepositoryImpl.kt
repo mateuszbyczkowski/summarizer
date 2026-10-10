@@ -13,6 +13,8 @@ import com.summarizer.app.domain.repository.PreferencesRepository
 import com.summarizer.app.util.StorageHelper
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -31,6 +33,7 @@ class PreferencesRepositoryImpl @Inject constructor(
         val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
         val STORAGE_LOCATION = stringPreferencesKey("storage_location")
         val WIFI_ONLY_DOWNLOAD = booleanPreferencesKey("wifi_only_download")
+        val SETUP_MODEL_ID = stringPreferencesKey("setup_model_id")
         val AI_PROVIDER = stringPreferencesKey("ai_provider")
         val AUTO_SUMMARIZATION_ENABLED = booleanPreferencesKey("auto_summarization_enabled")
         val AUTO_SUMMARIZATION_HOUR = stringPreferencesKey("auto_summarization_hour")
@@ -81,6 +84,19 @@ class PreferencesRepositoryImpl @Inject constructor(
     override suspend fun setWiFiOnlyDownload(wifiOnly: Boolean) {
         context.dataStore.edit { preferences: androidx.datastore.preferences.core.MutablePreferences ->
             preferences[PreferencesKeys.WIFI_ONLY_DOWNLOAD] = wifiOnly
+        }
+    }
+
+    override fun observeSetupModelId(): Flow<String?> =
+        context.dataStore.data.map { preferences -> preferences[PreferencesKeys.SETUP_MODEL_ID] }.distinctUntilChanged()
+
+    override suspend fun setSetupModelId(modelId: String?) {
+        context.dataStore.edit { preferences ->
+            if (modelId == null) {
+                preferences.remove(PreferencesKeys.SETUP_MODEL_ID)
+            } else {
+                preferences[PreferencesKeys.SETUP_MODEL_ID] = modelId
+            }
         }
     }
 

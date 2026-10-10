@@ -59,6 +59,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.summarizer.app.R
 import com.summarizer.app.domain.model.AgendaItem
+import com.summarizer.app.domain.model.ModelSetupState
 import com.summarizer.app.domain.usecase.AgendaSchedule
 import com.summarizer.app.ui.components.AgendaDateBadge
 import com.summarizer.app.ui.components.EmptyState
@@ -76,6 +77,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
 private const val KEY_PERMISSION = "permission"
+private const val KEY_MODEL_SETUP = "model_setup"
 private const val KEY_THIS_WEEK = "this_week"
 private const val KEY_FOLLOWED_HEADER = "followed_header"
 private const val KEY_FOLLOWED_EMPTY = "followed_empty"
@@ -94,6 +96,7 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val autoSummaryHour by viewModel.autoSummaryHour.collectAsStateWithLifecycle()
+    val modelSetup by viewModel.modelSetup.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var hasPermission by remember { mutableStateOf(PermissionHelper.hasNotificationListenerPermission(context)) }
 
@@ -112,6 +115,9 @@ fun HomeScreen(
         uiState = uiState,
         hasPermission = hasPermission,
         autoSummaryHour = autoSummaryHour,
+        modelSetup = modelSetup,
+        onRetryModelSetup = viewModel::retryModelSetup,
+        onCancelModelSetup = viewModel::cancelModelSetup,
         onSearchClick = onSearchClick,
         onAllTasksClick = onAllTasksClick,
         onThreadClick = onThreadClick,
@@ -125,6 +131,9 @@ private fun HomeContent(
     uiState: HomeUiState,
     hasPermission: Boolean,
     autoSummaryHour: Int?,
+    modelSetup: ModelSetupState?,
+    onRetryModelSetup: () -> Unit,
+    onCancelModelSetup: () -> Unit,
     onSearchClick: () -> Unit,
     onAllTasksClick: () -> Unit,
     onThreadClick: (String) -> Unit,
@@ -168,6 +177,18 @@ private fun HomeContent(
                 if (!hasPermission) {
                     item(key = KEY_PERMISSION) {
                         PermissionCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                    }
+                }
+                if (modelSetup != null) {
+                    item(key = KEY_MODEL_SETUP) {
+                        ModelSetupCard(
+                            state = modelSetup,
+                            onRetry = onRetryModelSetup,
+                            onCancel = onCancelModelSetup,
+                            modifier = Modifier
+                                .animateItem()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
                     }
                 }
                 if (uiState.thisWeek.isNotEmpty()) {

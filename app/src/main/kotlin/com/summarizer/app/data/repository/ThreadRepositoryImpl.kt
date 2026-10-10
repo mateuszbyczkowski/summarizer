@@ -23,10 +23,15 @@ class ThreadRepositoryImpl @Inject constructor(
 
     /**
      * One shared overview query for all screens (Home, the Tasks badge, Tasks): it is the
-     * heaviest query in the app and re-runs on every captured message.
+     * heaviest query in the app and re-runs on every captured message. The cached value is
+     * dropped when the query stops, so a later subscriber never starts from stale overviews.
      */
     private val sharedOverviews: Flow<List<ThreadOverview>> by lazy {
-        overviewsFromDatabase().shareIn(applicationScope, SharingStarted.WhileSubscribed(5_000), replay = 1)
+        overviewsFromDatabase().shareIn(
+            applicationScope,
+            SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000, replayExpirationMillis = 0),
+            replay = 1
+        )
     }
 
     override fun getAllThreads(): Flow<List<Thread>> {

@@ -29,10 +29,10 @@ object SummaryDates {
     private val ISO_DATE = Regex("(?<!\\d)(\\d{4})-(\\d{1,2})-(\\d{1,2})(?!\\d)")
 
     // "17.10", "17/10", "17.10.2026", "17.10.26"; not part of a longer number, time, decimal or
-    // amount ("$2.10", "1.5 kg", "2.10 zł")
+    // amount ("$2.10", "1.5 kg", "1.5 l", "2.10 zł"). "g." before a time is "godz." ("17.10 g. 8:00")
     private val NUMERIC_DATE = Regex(
         "(?<![\\d.,:/$€£])(\\d{1,2})[./](\\d{1,2})(?:[./](\\d{4}|\\d{2}))?(?![\\d:/]|[.,]\\d)" +
-            "(?!\\s*(?:zł|zl|pln|eur|usd|kg|km|ml|mg|%|\\$|€)(?!\\p{L}))",
+            "(?!\\s*(?:zł|zl|pln|eur|usd|kg|km|ml|mg|l|m|g(?!\\.\\s*\\d)|%|\\$|€)(?!\\p{L}))",
         RegexOption.IGNORE_CASE
     )
 
@@ -58,8 +58,11 @@ object SummaryDates {
         RegexOption.IGNORE_CASE
     )
 
-    private val WEEKDAY = "(?:pon\\p{L}*|wt\\p{L}*|śr\\p{L}*|sr\\p{L}*|czw\\p{L}*|pt|piąt\\p{L}*|piat\\p{L}*|sob\\p{L}*|nd|niedz\\p{L}*|" +
-        "mon\\p{L}*|tue\\p{L}*|wed\\p{L}*|thu\\p{L}*|fri\\p{L}*|sat\\p{L}*|sun\\p{L}*)\\.?,?"
+    // Abbreviations and inflected names, but not words that merely start alike ("wtedy", "ponad",
+    // "sobie", "month")
+    private val WEEKDAY = "(?:pon(?:iedzia\\p{L}*)?|wt(?:or\\p{L}*)?|[śs]r(?:od\\p{L}*)?|czw(?:art\\p{L}*)?|pt|pi[ąa]t\\p{L}*|" +
+        "sob(?:o\\p{L}*)?|nd|niedz\\p{L}*|mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:rs?(?:day)?)?|fri(?:day)?|" +
+        "sat(?:urday)?|sun(?:day)?)(?!\\p{L})\\.?,?"
     private val DEADLINE_WORD = "(?:do|by|due|until|before|przed|termin|deadline)"
 
     /** What may surround a deadline date for it to be dropped from the task text. */

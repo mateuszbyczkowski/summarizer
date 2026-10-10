@@ -2,6 +2,7 @@ package com.summarizer.app.ui.screens.models
 
 import com.summarizer.app.R
 import com.summarizer.app.data.ai.DemoEngine
+import com.summarizer.app.data.download.ModelCatalog
 import com.summarizer.app.domain.model.AIModel
 import com.summarizer.app.util.StorageHelper
 import org.junit.Assert.assertEquals
@@ -12,7 +13,7 @@ import org.junit.Test
 
 class ModelProfilesTest {
 
-    private val catalog = ModelDownloadViewModel.DEFAULT_MODELS
+    private val catalog = ModelCatalog.DEFAULT_MODELS
 
     private fun model(id: String) = catalog.first { it.id == id }
 

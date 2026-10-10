@@ -2,7 +2,9 @@ package com.summarizer.app.ui.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.summarizer.app.data.download.ModelSetupManager
 import com.summarizer.app.domain.model.AgendaItem
+import com.summarizer.app.domain.model.ModelSetupState
 import com.summarizer.app.domain.model.ThreadOverview
 import com.summarizer.app.domain.repository.PreferencesRepository
 import com.summarizer.app.domain.repository.ThreadRepository
@@ -64,8 +66,17 @@ sealed interface HomeUiState {
 class HomeViewModel @Inject constructor(
     private val threadRepository: ThreadRepository,
     private val preferencesRepository: PreferencesRepository,
-    private val coordinator: SummaryGenerationCoordinator
+    private val coordinator: SummaryGenerationCoordinator,
+    private val modelSetupManager: ModelSetupManager
 ) : ViewModel() {
+
+    /** The model onboarding is downloading, for the progress card; null when there is none. */
+    val modelSetup: StateFlow<ModelSetupState?> = modelSetupManager.state
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    fun retryModelSetup() = modelSetupManager.retry()
+
+    fun cancelModelSetup() = modelSetupManager.cancel()
 
     private val overviews = threadRepository.getThreadOverviews()
         .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)

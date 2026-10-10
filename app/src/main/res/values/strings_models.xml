@@ -2,7 +2,6 @@
 <resources>
     <!-- AI engine / model manager (stage 2E) -->
     <string name="engine_title">AI engine</string>
-    <string name="engine_title_onboarding">Choose an AI model</string>
     <string name="engine_tab_on_device">On device</string>
     <string name="engine_tab_openai">OpenAI</string>
 
@@ -12,7 +11,6 @@
     <string name="engine_hero_subtitle">%1$s · %2$s</string>
     <string name="engine_try_example">Try on example</string>
     <string name="engine_try_started">Summarizing the test chat. You will get a notification when it is ready.</string>
-    <string name="engine_continue_with_model">Continue with this model</string>
     <string name="engine_none_title">No model downloaded yet</string>
     <string name="engine_none_body">Download a model below. Summaries are then written on this phone, without the internet.</string>
 

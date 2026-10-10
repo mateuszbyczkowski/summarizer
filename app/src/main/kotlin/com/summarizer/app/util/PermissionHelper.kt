@@ -190,31 +190,4 @@ object PermissionHelper {
             Timber.e(e, "Failed to open app settings")
         }
     }
-
-    /**
-     * Get user-friendly instructions for enabling AutoStart on their device
-     */
-    fun getAutoStartInstructions(): String {
-        val manufacturer = Build.MANUFACTURER.lowercase()
-
-        return when {
-            manufacturer.contains("xiaomi") || manufacturer.contains("redmi") ->
-                "Settings → Apps → Manage apps → ThreadSummarizer → Autostart → Enable"
-
-            manufacturer.contains("oppo") ->
-                "Settings → Apps → App Management → ThreadSummarizer → Allow autostart"
-
-            manufacturer.contains("vivo") ->
-                "Settings → Battery → Background activity management → ThreadSummarizer → Enable"
-
-            manufacturer.contains("oneplus") ->
-                "Settings → Apps → ThreadSummarizer → Battery → Battery optimization → Don't optimize"
-
-            manufacturer.contains("huawei") || manufacturer.contains("honor") ->
-                "Settings → Apps → ThreadSummarizer → Battery → App launch → Manage manually → Enable all"
-
-            else ->
-                "Settings → Apps → ThreadSummarizer → Enable all background permissions"
-        }
-    }
 }

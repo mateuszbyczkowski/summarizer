@@ -107,9 +107,10 @@ class UpcomingWidgetModelTest {
     fun `rows that fit follow the height between one and four`() {
         assertEquals(1, UpcomingWidgetModel.rowsThatFit(60f))
         assertEquals(1, UpcomingWidgetModel.rowsThatFit(110f))
-        assertEquals(2, UpcomingWidgetModel.rowsThatFit(140f))
-        assertEquals(3, UpcomingWidgetModel.rowsThatFit(190f))
-        assertEquals(4, UpcomingWidgetModel.rowsThatFit(230f))
+        assertEquals(1, UpcomingWidgetModel.rowsThatFit(140f))
+        assertEquals(2, UpcomingWidgetModel.rowsThatFit(160f))
+        assertEquals(3, UpcomingWidgetModel.rowsThatFit(200f))
+        assertEquals(4, UpcomingWidgetModel.rowsThatFit(250f))
         assertEquals(4, UpcomingWidgetModel.rowsThatFit(600f))
     }
 

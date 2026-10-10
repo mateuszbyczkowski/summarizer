@@ -1,6 +1,5 @@
 package com.summarizer.app.ui.screens.models
 
-import android.app.ActivityManager
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -62,7 +61,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -100,35 +98,31 @@ import com.summarizer.app.ui.components.settingsPageColor
 import com.summarizer.app.ui.screens.settings.SettingsEvent
 import com.summarizer.app.ui.screens.settings.SettingsUiState
 import com.summarizer.app.ui.screens.settings.SettingsViewModel
+import com.summarizer.app.util.DeviceMemory
 import com.summarizer.app.util.StorageHelper
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 /**
- * The AI engine screen. Outside onboarding: a segmented On device / OpenAI switch; On device
- * shows the active model first, then the other models with plain names, inline downloads and
- * storage. During onboarding only the on-device part is shown, with "Skip for now".
+ * The AI engine screen: a segmented On device / OpenAI switch; On device shows the active model
+ * first, then the other models with plain names, inline downloads and storage. Onboarding picks
+ * and downloads a model by itself (ModelSetupManager); this is where the user changes it.
  *
- * @param onModelSelected onboarding: the user picked a downloaded model to continue with
- * @param onSkip onboarding: continue without a model
  * @param onStorageClick opens the storage location picker
  * @param onOpenThread opens a thread after "Try on example" started its summary; without it a
  *   snackbar says a notification will follow
- * @param isOnboarding defaults to "no back button", which is how onboarding shows this screen
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModelDownloadScreen(
+    onBackClick: () -> Unit,
     viewModel: ModelDownloadViewModel = hiltViewModel(),
-    onModelSelected: (AIModel) -> Unit,
-    onSkip: () -> Unit,
-    onBackClick: (() -> Unit)? = null,
     onStorageClick: (() -> Unit)? = null,
-    onOpenThread: ((threadId: String) -> Unit)? = null,
-    isOnboarding: Boolean = onBackClick == null
+    onOpenThread: ((threadId: String) -> Unit)? = null
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    // Provider, OpenAI key and model live in the Settings view model
+    val engineViewModel: SettingsViewModel = hiltViewModel()
     val tryStartedMessage = stringResource(R.string.engine_try_started)
     val resources = LocalResources.current
 
@@ -149,13 +143,10 @@ fun ModelDownloadScreen(
             }
         },
         onUse = { model ->
-            viewModel.preloadModel(model)
-            if (isOnboarding) {
-                onModelSelected(model)
-            } else {
-                val name = ModelProfiles.technicalName(model)
-                scope.launch { snackbarHostState.showSnackbar(resources.getString(R.string.engine_now_using, name)) }
-            }
+            // Picking a model switches the engine to on-device: show it (e.g. "Try on example")
+            viewModel.preloadModel(model) { engineViewModel.onEvent(SettingsEvent.Refresh) }
+            val name = ModelProfiles.technicalName(model)
+            scope.launch { snackbarHostState.showSnackbar(resources.getString(R.string.engine_now_using, name)) }
         },
         onStorageClick = onStorageClick
     )
@@ -166,14 +157,10 @@ fun ModelDownloadScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = {
-                    Text(stringResource(if (isOnboarding) R.string.engine_title_onboarding else R.string.engine_title))
-                },
+                title = { Text(stringResource(R.string.engine_title)) },
                 navigationIcon = {
-                    if (onBackClick != null) {
-                        IconButton(onClick = onBackClick) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                        }
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -183,33 +170,17 @@ fun ModelDownloadScreen(
             )
         }
     ) { paddingValues ->
-        val contentModifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)
-            .consumeWindowInsets(paddingValues)
-            .verticalScroll(rememberScrollState())
-            .padding(start = 12.dp, end = 12.dp, bottom = 24.dp)
-
-        if (isOnboarding) {
-            Column(modifier = contentModifier) {
-                OnDeviceContent(
-                    viewModel = viewModel,
-                    isOnboarding = true,
-                    localEngineActive = true,
-                    actions = actions
-                )
-                TextButton(
-                    onClick = onSkip,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp)
-                ) {
-                    Text(stringResource(R.string.models_skip))
-                }
-            }
-        } else {
-            EngineHub(viewModel = viewModel, actions = actions, modifier = contentModifier)
-        }
+        EngineHub(
+            viewModel = viewModel,
+            engineViewModel = engineViewModel,
+            actions = actions,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .consumeWindowInsets(paddingValues)
+                .verticalScroll(rememberScrollState())
+                .padding(start = 12.dp, end = 12.dp, bottom = 24.dp)
+        )
     }
 }
 
@@ -223,11 +194,10 @@ private class ModelActions(
 @Composable
 private fun EngineHub(
     viewModel: ModelDownloadViewModel,
+    engineViewModel: SettingsViewModel,
     actions: ModelActions,
     modifier: Modifier = Modifier
 ) {
-    // Provider, OpenAI key and model live in the Settings view model
-    val engineViewModel: SettingsViewModel = hiltViewModel()
     val engineState by engineViewModel.uiState.collectAsStateWithLifecycle()
     val success = engineState as? SettingsUiState.Success
     val provider = success?.aiProvider ?: AIProvider.LOCAL
@@ -272,7 +242,6 @@ private fun EngineHub(
         when (shownTab) {
             AIProvider.LOCAL -> OnDeviceContent(
                 viewModel = viewModel,
-                isOnboarding = false,
                 localEngineActive = provider == AIProvider.LOCAL,
                 actions = actions
             )
@@ -308,7 +277,6 @@ private fun EngineHub(
 @Composable
 private fun OnDeviceContent(
     viewModel: ModelDownloadViewModel,
-    isOnboarding: Boolean,
     localEngineActive: Boolean,
     actions: ModelActions
 ) {
@@ -327,13 +295,8 @@ private fun OnDeviceContent(
     if (active != null) {
         ActiveModelHero(
             model = active,
-            canTryExample = !isOnboarding && localEngineActive && sampleThreadId != null,
+            canTryExample = localEngineActive && sampleThreadId != null,
             onTryExample = actions.onTryExample,
-            onContinue = if (isOnboarding) {
-                { actions.onUse(active) }
-            } else {
-                null
-            },
             onDelete = if (active.sizeInMB > 0) {
                 { viewModel.deleteModel(active.id) }
             } else {
@@ -374,19 +337,11 @@ private fun OnDeviceContent(
     }
 }
 
-/**
- * Total device RAM rounded to whole GB. [ActivityManager.MemoryInfo.totalMem] excludes memory
- * reserved by the kernel, so rounding the decimal value lands on the advertised size
- * (e.g. ~7.9e9 bytes on an "8 GB" phone).
- */
+/** Total device RAM in whole GB, see [DeviceMemory.totalRamGb]. */
 @Composable
 private fun rememberDeviceRamGb(): Int {
     val context = LocalContext.current
-    return remember(context) {
-        val memoryInfo = ActivityManager.MemoryInfo()
-        context.getSystemService(ActivityManager::class.java).getMemoryInfo(memoryInfo)
-        (memoryInfo.totalMem / 1_000_000_000.0).roundToInt()
-    }
+    return remember(context) { DeviceMemory.totalRamGb(context) }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -395,7 +350,6 @@ private fun ActiveModelHero(
     model: AIModel,
     canTryExample: Boolean,
     onTryExample: () -> Unit,
-    onContinue: (() -> Unit)?,
     onDelete: (() -> Unit)?
 ) {
     val profile = ModelProfiles.profileOf(model)
@@ -451,20 +405,15 @@ private fun ActiveModelHero(
                 }
                 SpecChip(icon = Icons.Default.SdStorage, text = sizeLabel(model))
             }
-            val buttonAction = onContinue ?: onTryExample.takeIf { canTryExample }
-            if (buttonAction != null) {
-                Button(onClick = buttonAction, modifier = Modifier.padding(top = 16.dp)) {
+            if (canTryExample) {
+                Button(onClick = onTryExample, modifier = Modifier.padding(top = 16.dp)) {
                     Icon(
-                        imageVector = if (onContinue != null) Icons.Default.Check else Icons.Default.AutoAwesome,
+                        imageVector = Icons.Default.AutoAwesome,
                         contentDescription = null,
                         modifier = Modifier.size(ButtonDefaults.IconSize)
                     )
                     Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                    Text(
-                        stringResource(
-                            if (onContinue != null) R.string.engine_continue_with_model else R.string.engine_try_example
-                        )
-                    )
+                    Text(stringResource(R.string.engine_try_example))
                 }
             }
         }
