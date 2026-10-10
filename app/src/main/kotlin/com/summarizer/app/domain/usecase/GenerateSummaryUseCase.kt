@@ -78,27 +78,30 @@ class GenerateSummaryUseCase @Inject constructor(
                 messageRepository.getMessagesForThread(threadId).first()
             }
 
-            // Step 3: Build prompt (before loading the model, so idle threads stay cheap)
-            val language = languageDetector.detectLanguageName(
-                PromptTemplate.summarizableMessages(messages)
-                    .filter { it.messageType == MessageType.TEXT }
-                    .joinToString("\n") { it.content }
-            )
-            val prompt = PromptTemplate.buildSummarizationPrompt(
-                messages = messages,
-                threadName = thread.threadName,
-                maxTranscriptChars = aiEngine.maxPromptChars(),
-                languageName = language
-            ) ?: throw NothingToSummarizeException(
-                if (incremental && !allowRepeat) "No new messages since the last summary" else "No messages to summarize"
-            )
+            // Step 3: Skip idle threads before loading the model, which is expensive
+            val summarizable = PromptTemplate.summarizableMessages(messages)
+            if (summarizable.isEmpty()) {
+                throw NothingToSummarizeException(
+                    if (incremental && !allowRepeat) "No new messages since the last summary" else "No messages to summarize"
+                )
+            }
 
-            Timber.d("Summarizing ${messages.size} messages (mode: ${settings.summarizationMode}, language: $language, prompt: ${prompt.length} chars)")
-
-            // Step 4: Ensure the active engine is ready
+            // Step 4: Ensure the engine is ready; the prompt budget depends on which engine
+            // actually loaded (a GPU model may fall back to a CPU model)
             aiEngine.ensureModelLoaded(modelRepository).getOrElse { error ->
                 throw IllegalStateException("Failed to load AI model: ${error.message}", error)
             }
+            val language = languageDetector.detectLanguageName(
+                summarizable.filter { it.messageType == MessageType.TEXT }.joinToString("\n") { it.content }
+            )
+            val prompt = PromptTemplate.buildSummarizationPrompt(
+                messages = summarizable,
+                threadName = thread.threadName,
+                maxTranscriptChars = aiEngine.maxPromptChars(),
+                languageName = language
+            ) ?: throw NothingToSummarizeException("No messages to summarize")
+
+            Timber.d("Summarizing ${messages.size} messages (mode: ${settings.summarizationMode}, language: $language, prompt: ${prompt.length} chars)")
 
             // Step 5: Generate summary. Transient failures are retried by the engine itself.
             val rawResponse = aiEngine.generate(

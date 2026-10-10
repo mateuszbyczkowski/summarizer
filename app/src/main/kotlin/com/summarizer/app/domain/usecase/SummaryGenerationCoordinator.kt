@@ -74,6 +74,11 @@ class SummaryGenerationCoordinator @Inject constructor(
             .get()
             .lastOrNull()
             ?: return
-        if (latest.state == WorkInfo.State.FAILED) dismissed.update { it + latest.id }
+        if (latest.state == WorkInfo.State.FAILED) {
+            dismissed.update { it + latest.id }
+            // Finished jobs are stored by WorkManager; prune them so the error does not return
+            // after a restart
+            workManager.pruneWork()
+        }
     }
 }

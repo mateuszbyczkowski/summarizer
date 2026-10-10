@@ -30,12 +30,10 @@ class ModelRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getDownloadedModel(): AIModel? {
-        forgetMissingFiles()
         return aiModelDao.getDownloadedModel()?.toDomainModel()
     }
 
     override suspend fun getDownloadedModels(): List<AIModel> {
-        forgetMissingFiles()
         return aiModelDao.getDownloadedModels().map { it.toDomainModel() }
     }
 

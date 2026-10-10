@@ -8,6 +8,9 @@ import com.summarizer.app.domain.repository.ModelRepository
  */
 suspend fun AIEngine.ensureModelLoaded(modelRepository: ModelRepository): Result<Unit> {
     if (isModelLoaded()) return Result.success(Unit)
-    val modelPath = modelRepository.getDownloadedModel()?.localFilePath.orEmpty()
-    return loadModel(modelPath)
+    val result = loadModel(modelRepository.getDownloadedModel()?.localFilePath.orEmpty())
+    if (result.exceptionOrNull() !is AIEngineError.ModelNotFound) return result
+    // The active model's file is gone (deleted, SD card removed): forget it and try the next one
+    modelRepository.refreshDownloadState()
+    return loadModel(modelRepository.getDownloadedModel()?.localFilePath.orEmpty())
 }

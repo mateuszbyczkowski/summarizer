@@ -86,6 +86,23 @@ class SummaryResponseParserTest {
     }
 
     @Test
+    fun `label variants are recognized and content lines are not taken for labels`() {
+        val parsed = SummaryResponseParser.parse(
+            """
+            OVERVIEW: Wycieczka w piątek.
+            Key Topics:
+            - Wycieczka
+            Action items:
+            - Dziadek: odbierze Zosię o 15:00
+            - Zadanie: przelew 85 zł
+            """.trimIndent()
+        )
+
+        assertEquals(listOf("Wycieczka"), parsed.topics)
+        assertEquals(listOf("Dziadek: odbierze Zosię o 15:00", "Zadanie: przelew 85 zł"), parsed.actions)
+    }
+
+    @Test
     fun `reply without labels becomes the overview`() {
         val parsed = SummaryResponseParser.parse("Everyone agreed to meet at 7 at the park.")
 

@@ -6,12 +6,15 @@ import com.llamatik.library.platform.LlamaBridge
 import com.summarizer.app.domain.ai.AIEngine
 import com.summarizer.app.domain.ai.AIEngineError
 import com.summarizer.app.domain.ai.ModelInfo
+import com.summarizer.app.domain.ai.stripReasoning
 import com.summarizer.app.util.suspendRunCatching
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
@@ -38,6 +41,7 @@ class RealAIEngine @Inject constructor() : AIEngine {
     @Volatile
     private var chatTemplate: String? = null
     private val bridge = LlamaBridge
+    private val generationMutex = Mutex()
     private val llamaDispatcher = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "llama-native")
     }.asCoroutineDispatcher()
@@ -47,7 +51,7 @@ class RealAIEngine @Inject constructor() : AIEngine {
         private const val GENERATION_TIMEOUT_MS = 10 * 60_000L
         private const val MAX_CHARS_PER_TOKEN = 8
         private const val MAX_LINE_REPEATS = 3
-        private val UNCLOSED_THINKING = Regex("<think>[\\s\\S]*$")
+        private const val STOPPED_WAIT_MS = 5_000L
         private const val DEFAULT_TEMPERATURE = 0.7f
         private const val DEFAULT_MAX_TOKENS = 512
         private const val DEFAULT_TOP_P = 0.9f
@@ -136,11 +140,13 @@ class RealAIEngine @Inject constructor() : AIEngine {
         maxTokens: Int,
         temperature: Float
     ): Result<String> = suspendRunCatching {
-        val raw = runCancellable {
+        // One generation at a time: waiting must not count against the timeout, and a timeout
+        // must only stop this generation (nativeCancelGenerate is global)
+        val raw = generationMutex.withLock { runCancellable {
             if (currentModelInfo == null) throw AIEngineError.ModelNotLoaded
             updateGenerateParams(temperature, maxTokens)
             streamGeneration(prompt, systemPrompt.orEmpty(), maxTokens)
-        }
+        } }
 
         val result = stripReasoning(raw)
         if (result.isEmpty()) {
@@ -219,8 +225,11 @@ class RealAIEngine @Inject constructor() : AIEngine {
                 callback = callback
             )
         }
-        // The native call normally returns after its last callback; wait in case it streams asynchronously
-        done.await(GENERATION_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+        // The native call normally returns after its last callback; wait in case it streams
+        // asynchronously, but only briefly once we stopped it ourselves
+        if (!done.await(if (stopped) STOPPED_WAIT_MS else GENERATION_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+            Timber.w("Generation did not report completion; using the output collected so far")
+        }
 
         val now = SystemClock.elapsedRealtime()
         val promptMs = if (firstTokenAt > 0) firstTokenAt - startedAt else now - startedAt
@@ -253,14 +262,6 @@ class RealAIEngine @Inject constructor() : AIEngine {
         } else {
             prompt + "<think>\n\n</think>\n\n"
         }
-    }
-
-    /** Removes reasoning, including a block cut off before it was closed. */
-    private fun stripReasoning(text: String): String {
-        var answer = text
-        if ("</think>" in answer) answer = answer.substringAfterLast("</think>")
-        answer = answer.replace(UNCLOSED_THINKING, "")
-        return answer.trim()
     }
 
     /**

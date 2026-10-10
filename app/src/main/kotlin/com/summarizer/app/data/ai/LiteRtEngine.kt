@@ -13,6 +13,7 @@ import com.google.ai.edge.litertlm.SamplerConfig
 import com.summarizer.app.domain.ai.AIEngine
 import com.summarizer.app.domain.ai.AIEngineError
 import com.summarizer.app.domain.ai.ModelInfo
+import com.summarizer.app.domain.ai.stripReasoning
 import com.summarizer.app.util.suspendRunCatching
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -20,6 +21,8 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
@@ -48,7 +51,6 @@ class LiteRtEngine @Inject constructor(
         private const val GENERATION_TIMEOUT_MS = 5 * 60_000L
         private const val TOP_K = 40
         private const val TOP_P = 0.9
-        private val UNCLOSED_THINKING = Regex("<think>[\\s\\S]*$")
     }
 
     private val dispatcher = Executors.newSingleThreadExecutor { runnable ->
@@ -60,6 +62,9 @@ class LiteRtEngine @Inject constructor(
 
     @Volatile
     private var currentModelInfo: ModelInfo? = null
+
+    private val generationMutex = Mutex()
+    private val conversationLock = Any()
 
     @Volatile
     private var activeConversation: Conversation? = null
@@ -107,7 +112,9 @@ class LiteRtEngine @Inject constructor(
         maxTokens: Int,
         temperature: Float
     ): Result<String> = suspendRunCatching {
-        val raw = coroutineScope {
+        // One generation at a time: waiting for another summary must not count against this
+        // one's timeout, and a timeout must only cancel this summary's conversation
+        val raw = generationMutex.withLock { coroutineScope {
             val nativeCall = async(dispatcher) {
                 val loaded = engine ?: throw AIEngineError.ModelNotLoaded
                 val config = ConversationConfig(
@@ -116,7 +123,7 @@ class LiteRtEngine @Inject constructor(
                     maxOutputToken = maxTokens
                 )
                 loaded.createConversation(config).use { conversation ->
-                    activeConversation = conversation
+                    synchronized(conversationLock) { activeConversation = conversation }
                     try {
                         val started = SystemClock.elapsedRealtime()
                         val reply = conversation.sendMessage(prompt)
@@ -124,7 +131,8 @@ class LiteRtEngine @Inject constructor(
                         Timber.i("LiteRT-LM generation: prompt ${prompt.length} chars, ${text.length} chars in ${SystemClock.elapsedRealtime() - started}ms")
                         text
                     } finally {
-                        activeConversation = null
+                        // Cleared before use{} closes the conversation, so cancel never sees a closed one
+                        synchronized(conversationLock) { activeConversation = null }
                     }
                 }
             }
@@ -132,27 +140,21 @@ class LiteRtEngine @Inject constructor(
                 withTimeout(GENERATION_TIMEOUT_MS) { nativeCall.await() }
             } catch (e: CancellationException) {
                 // Coroutine cancellation cannot interrupt native code; ask LiteRT-LM to stop
-                activeConversation?.cancelProcess()
+                cancelGeneration()
                 if (e is TimeoutCancellationException) throw AIEngineError.GenerationTimeout
                 throw e
             }
-        }
+        } }
 
         val result = stripReasoning(raw)
         if (result.isEmpty()) throw AIEngineError.InvalidResponse("Empty response from model")
         result
     }
 
-    private fun stripReasoning(text: String): String {
-        var answer = text
-        if ("</think>" in answer) answer = answer.substringAfterLast("</think>")
-        return answer.replace(UNCLOSED_THINKING, "").trim()
-    }
-
     override suspend fun maxPromptChars(): Int = MAX_PROMPT_CHARS
 
     override fun cancelGeneration() {
-        activeConversation?.cancelProcess()
+        synchronized(conversationLock) { activeConversation?.cancelProcess() }
     }
 
     override suspend fun unloadModel() {

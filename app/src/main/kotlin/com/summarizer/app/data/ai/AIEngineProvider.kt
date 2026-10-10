@@ -6,6 +6,7 @@ import com.summarizer.app.domain.model.AIProvider
 import com.summarizer.app.domain.repository.ModelRepository
 import com.summarizer.app.domain.repository.PreferencesRepository
 import timber.log.Timber
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -61,13 +62,17 @@ class AIEngineProvider @Inject constructor(
 
         // CPU fallback: the GPU could not load the model, use a downloaded GGUF model instead
         if (engine === liteRtEngine) {
-            val cpuModelPath = modelRepository.getDownloadedModels()
-                .mapNotNull { it.localFilePath }
-                .firstOrNull { it.endsWith(".gguf") }
+            val cpuModel = modelRepository.getDownloadedModels()
+                .firstOrNull { it.localFilePath?.endsWith(".gguf") == true && File(it.localFilePath).exists() }
+            val cpuModelPath = cpuModel?.localFilePath
             if (cpuModelPath != null) {
-                Timber.w(result.exceptionOrNull(), "GPU model failed to load, falling back to a CPU model")
+                Timber.w(result.exceptionOrNull(), "GPU model failed to load, falling back to ${cpuModel.name} on the CPU")
                 liteRtEngine.unloadModel()
-                return realEngine.loadModel(cpuModelPath).onSuccess { loadedLocalEngine = realEngine }
+                return realEngine.loadModel(cpuModelPath).onSuccess {
+                    loadedLocalEngine = realEngine
+                    // Make the CPU model the active one, so later runs do not retry the GPU
+                    modelRepository.markAsDownloaded(cpuModel.id, cpuModelPath, System.currentTimeMillis())
+                }
             }
         }
         loadedLocalEngine = null

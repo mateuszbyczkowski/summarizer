@@ -21,11 +21,14 @@ object SummaryResponseParser {
     private const val MAX_ITEMS = 5
     private const val MAX_FALLBACK_OVERVIEW_CHARS = 400
 
-    // Label with ":" and optional inline content, or a bare label on its own line ("OVERVIEW").
-    // Prefix matching tolerates misspellings ("ANNOUNCEMTY"); Polish labels appear when a model
-    // translates them despite the instruction.
+    // A label at the start of a line, with ":" or "-" and optional inline content, or alone on
+    // its line ("OVERVIEW"). English labels tolerate typos ("ANNOUNCEMTY") and variants ("Key
+    // Topics", "Action items"); Polish labels (used when a model translates them) must be whole
+    // words so content such as "Dziadek: odbierze Zosię" is not taken for a label.
     private val SECTION_LABEL = Regex(
-        "^(?:\\d+[.)]\\s*)?(OVERVIEW|PRZEGL\\p{L}*|TOPIC\\p{L}*|TEMAT\\p{L}*|ACTION\\p{L}*|ZADANI\\p{L}*|DZIA\\p{L}*|ANNOUNC\\p{L}*|OG\\p{L}OSZ\\p{L}*)" +
+        "^(?:\\d+[.)]\\s*)?" +
+            "((?:KEY\\s+)?(?:OVERVIEW|SUMMARY|TOPIC\\p{L}*|ACTION\\p{L}*(?:\\s+ITEMS?)?|ANNOUNC\\p{L}*)" +
+            "|PRZEGLĄD|PODSUMOWANIE|TEMATY|DZIAŁANIA|ZADANIA|OGŁOSZENIA)" +
             "\\s*(?::\\s*(.*)|-\\s+(.*))?$",
         RegexOption.IGNORE_CASE
     )
@@ -62,7 +65,7 @@ object SummaryResponseParser {
 
         if (sections.isEmpty()) {
             return ParsedSummary(
-                overview = rawResponse.replace(MARKDOWN, "").trim().take(MAX_FALLBACK_OVERVIEW_CHARS),
+                overview = truncateAtWord(rawResponse.replace(MARKDOWN, "").trim(), MAX_FALLBACK_OVERVIEW_CHARS),
                 topics = emptyList(),
                 actions = emptyList(),
                 announcements = emptyList()
@@ -77,12 +80,20 @@ object SummaryResponseParser {
         )
     }
 
+    private fun truncateAtWord(text: String, maxChars: Int): String {
+        if (text.length <= maxChars) return text
+        val cut = text.take(maxChars)
+        val lastSpace = cut.lastIndexOf(' ')
+        return (if (lastSpace > maxChars / 2) cut.take(lastSpace) else cut).trimEnd() + "…"
+    }
+
     private fun sectionFor(label: String): Section {
-        val upper = label.uppercase()
+        val upper = label.uppercase().removePrefix("KEY").trim()
         return when {
-            upper.startsWith("OVERVIEW") || upper.startsWith("PRZEGL") -> Section.OVERVIEW
-            upper.startsWith("TOPIC") || upper.startsWith("TEMAT") -> Section.TOPICS
-            upper.startsWith("ACTION") || upper.startsWith("ZADANI") || upper.startsWith("DZIA") -> Section.ACTIONS
+            upper.startsWith("OVERVIEW") || upper.startsWith("SUMMARY") ||
+                upper == "PRZEGLĄD" || upper == "PODSUMOWANIE" -> Section.OVERVIEW
+            upper.startsWith("TOPIC") || upper == "TEMATY" -> Section.TOPICS
+            upper.startsWith("ACTION") || upper == "DZIAŁANIA" || upper == "ZADANIA" -> Section.ACTIONS
             else -> Section.ANNOUNCEMENTS
         }
     }

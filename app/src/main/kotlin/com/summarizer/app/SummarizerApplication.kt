@@ -6,6 +6,7 @@ import androidx.work.Configuration
 import androidx.work.ExistingWorkPolicy
 import com.summarizer.app.data.debug.DebugSampleData
 import com.summarizer.app.di.ApplicationScope
+import com.summarizer.app.domain.repository.ModelRepository
 import com.summarizer.app.ui.lock.AppLockManager
 import com.summarizer.app.worker.WorkScheduler
 import dagger.hilt.android.HiltAndroidApp
@@ -33,6 +34,9 @@ class SummarizerApplication : Application(), Configuration.Provider {
     @Inject
     lateinit var debugSampleData: DebugSampleData
 
+    @Inject
+    lateinit var modelRepository: ModelRepository
+
     override fun onCreate() {
         super.onCreate()
 
@@ -48,6 +52,7 @@ class SummarizerApplication : Application(), Configuration.Provider {
         workScheduler.scheduleDailyDataRetention()
         // KEEP: when WorkManager starts the process to run a due check, do not cancel it
         applicationScope.launch { workScheduler.refreshAutoSummarization(ExistingWorkPolicy.KEEP) }
+        applicationScope.launch { modelRepository.refreshDownloadState() }
 
         // Development aid: a fixed sample chat for comparing models (debug builds only)
         if (BuildConfig.DEBUG) {
