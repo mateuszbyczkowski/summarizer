@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Name of the home-screen widget in the launcher's widget picker -->
+    <string name="widget_upcoming_label">Upcoming</string>
+    <string name="widget_upcoming_description">Dates and tasks from your chats for the coming week</string>
+    <string name="widget_upcoming_title">This week</string>
+    <!-- Header, when more items are coming up than fit: "+2" -->
+    <string name="widget_upcoming_more">+%1$d</string>
+    <string name="widget_upcoming_empty">Nothing coming up</string>
+    <!-- Shown instead of details while the app lock is on -->
+    <plurals name="widget_upcoming_count">
+        <item quantity="one">%1$d thing this week</item>
+        <item quantity="other">%1$d things this week</item>
+    </plurals>
+    <string name="widget_upcoming_hidden">Details are hidden while the app lock is on</string>
+    <string name="widget_upcoming_unavailable">Open the app to see what is coming up</string>
+
+    <!-- Sample content of the widget picker preview -->
+    <string name="widget_preview_item_1">School trip, bus at the gate</string>
+    <string name="widget_preview_item_1_detail">7:30 · Class 3B parents</string>
+    <string name="widget_preview_item_2">Pay for the theatre tickets</string>
+    <string name="widget_preview_item_2_detail">Class 3B parents</string>
+    <string name="widget_preview_item_3">Football practice moved</string>
+    <string name="widget_preview_item_3_detail">17:00 · Football club</string>
+    <string name="widget_preview_day_1">14</string>
+    <string name="widget_preview_weekday_1">TUE</string>
+    <string name="widget_preview_day_2">15</string>
+    <string name="widget_preview_weekday_2">WED</string>
+    <string name="widget_preview_day_3">18</string>
+    <string name="widget_preview_weekday_3">SAT</string>
+</resources>

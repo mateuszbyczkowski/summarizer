@@ -8,6 +8,7 @@ import com.summarizer.app.data.debug.DebugSampleData
 import com.summarizer.app.di.ApplicationScope
 import com.summarizer.app.domain.repository.ModelRepository
 import com.summarizer.app.ui.lock.AppLockManager
+import com.summarizer.app.ui.widget.UpcomingWidgetUpdater
 import com.summarizer.app.worker.WorkScheduler
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
@@ -37,6 +38,9 @@ class SummarizerApplication : Application(), Configuration.Provider {
     @Inject
     lateinit var modelRepository: ModelRepository
 
+    @Inject
+    lateinit var upcomingWidgetUpdater: UpcomingWidgetUpdater
+
     override fun onCreate() {
         super.onCreate()
 
@@ -48,6 +52,8 @@ class SummarizerApplication : Application(), Configuration.Provider {
         Timber.d("Application started")
 
         appLockManager.start()
+        // Keeps the home-screen widget current (agenda changes, app lock setting, midnight)
+        upcomingWidgetUpdater.start()
 
         workScheduler.scheduleDailyDataRetention()
         // KEEP: when WorkManager starts the process to run a due check, do not cancel it

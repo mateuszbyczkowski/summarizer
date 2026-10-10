@@ -54,6 +54,22 @@
             android:name=".worker.CopySummaryReceiver"
             android:exported="false" />
 
+        <!-- "Upcoming" home-screen widget (Glance) -->
+        <receiver
+            android:name=".ui.widget.UpcomingWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_upcoming_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/upcoming_widget_info" />
+        </receiver>
+
         <!-- Summary generation runs as a foreground job so it survives switching apps -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
