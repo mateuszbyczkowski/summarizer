@@ -29,6 +29,7 @@ class MainActivity : FragmentActivity() {
     companion object {
         const val EXTRA_THREAD_ID = "extra_thread_id"
         const val EXTRA_NAVIGATE_TO_THREADS = "extra_navigate_to_threads"
+        const val EXTRA_SUMMARY_THREAD_ID = "extra_summary_thread_id"
     }
 
     @Inject
@@ -80,7 +81,9 @@ class MainActivity : FragmentActivity() {
 
     private fun Intent.toPendingNavigation(): PendingNavigation? {
         val threadId = getStringExtra(EXTRA_THREAD_ID)
+        val summaryThreadId = getStringExtra(EXTRA_SUMMARY_THREAD_ID)
         return when {
+            summaryThreadId != null -> PendingNavigation.Summary(summaryThreadId)
             threadId != null -> PendingNavigation.Thread(threadId)
             getBooleanExtra(EXTRA_NAVIGATE_TO_THREADS, false) -> PendingNavigation.Threads
             else -> null

@@ -68,6 +68,7 @@ sealed class Screen(val route: String) {
 /** Navigation requested from outside the app, e.g. by tapping a notification. */
 sealed interface PendingNavigation {
     data class Thread(val threadId: String) : PendingNavigation
+    data class Summary(val threadId: String) : PendingNavigation
     data object Threads : PendingNavigation
 }
 
@@ -112,6 +113,14 @@ fun NavGraph(
             is PendingNavigation.Thread -> navController.navigate(Screen.ThreadDetail.createRoute(pendingNavigation.threadId)) {
                 popUpTo(Screen.ThreadList.route)
                 launchSingleTop = true
+            }
+            is PendingNavigation.Summary -> {
+                navController.navigate(Screen.ThreadDetail.createRoute(pendingNavigation.threadId)) {
+                    popUpTo(Screen.ThreadList.route)
+                }
+                navController.navigate(Screen.SummaryDisplay.createRoute(pendingNavigation.threadId)) {
+                    launchSingleTop = true
+                }
             }
             PendingNavigation.Threads -> navController.popBackStack(Screen.ThreadList.route, inclusive = false)
         }

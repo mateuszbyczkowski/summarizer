@@ -31,6 +31,12 @@ interface AIEngine {
     ): Result<String>
 
     /**
+     * How many characters of transcript a prompt may contain; local engines are limited by
+     * context size and on-device prompt processing speed.
+     */
+    suspend fun maxPromptChars(): Int
+
+    /**
      * Cancel ongoing text generation.
      */
     fun cancelGeneration()

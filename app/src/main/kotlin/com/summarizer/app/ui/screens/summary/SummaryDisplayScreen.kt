@@ -1,5 +1,6 @@
 package com.summarizer.app.ui.screens.summary
 
+import com.summarizer.app.ui.components.rememberNotificationPermissionRequest
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -41,6 +42,7 @@ fun SummaryDisplayScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val threadName by viewModel.threadName.collectAsStateWithLifecycle()
+    val requestNotificationPermission = rememberNotificationPermissionRequest()
 
     Scaffold(
         topBar = {
@@ -53,7 +55,7 @@ fun SummaryDisplayScreen(
                 onBackClick = onBackClick,
                 actions = {
                     if (uiState is SummaryUiState.Success) {
-                        IconButton(onClick = { viewModel.generateSummary() }) {
+                        IconButton(onClick = { requestNotificationPermission(); viewModel.generateSummary() }) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
                                 contentDescription = stringResource(R.string.summary_regenerate)
@@ -81,7 +83,7 @@ fun SummaryDisplayScreen(
                     is SummaryUiState.Loading -> Unit
                     is SummaryUiState.Initial -> {
                         InitialPrompt(
-                            onGenerateClick = { viewModel.generateSummary() }
+                            onGenerateClick = { requestNotificationPermission(); viewModel.generateSummary() }
                         )
                     }
                     is SummaryUiState.Generating -> {

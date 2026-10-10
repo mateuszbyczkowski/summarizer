@@ -31,6 +31,8 @@ class OpenAIEngine @Inject constructor(
     companion object {
         private const val TIMEOUT_MS = 30_000L // 30 seconds
         private const val CONTEXT_TOKENS = 128_000
+        // Well within the context window; bounds cost per summary
+        private const val MAX_PROMPT_CHARS = 60_000
 
         /** Only network errors, rate limits and server errors are worth retrying. */
         private fun isTransient(error: Throwable): Boolean = when (error) {
@@ -129,6 +131,8 @@ class OpenAIEngine @Inject constructor(
     override suspend fun unloadModel() {
         // Nothing to unload; the API key is only cleared by an explicit action in Settings
     }
+
+    override suspend fun maxPromptChars(): Int = MAX_PROMPT_CHARS
 
     override suspend fun isModelLoaded(): Boolean =
         !preferencesRepository.getOpenAIApiKey().isNullOrBlank()

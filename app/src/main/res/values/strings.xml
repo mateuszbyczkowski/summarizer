@@ -308,7 +308,15 @@
     <string name="summary_initial_body">Create a concise summary of this conversation using AI</string>
     <string name="summary_generate">Generate Summary</string>
     <string name="summary_generating">Generating summary…</string>
-    <string name="summary_generating_hint">This may take up to 60 seconds</string>
+    <string name="summary_generating_hint">On-device summaries can take a few minutes. You can leave the app: we\'ll notify you when it\'s ready.</string>
+    <string name="summary_channel_progress">Summary in progress</string>
+    <string name="summary_channel_result">Summary ready</string>
+    <string name="summary_notification_progress_title">Summarizing…</string>
+    <string name="summary_notification_ready_title">Summary ready</string>
+    <string name="summary_notification_ready_text">Tap to read the summary of %1$s</string>
+    <string name="summary_notification_failed_title">Summary failed</string>
+    <string name="summary_notification_failed_text">Could not generate the summary</string>
+    <string name="summary_notification_nothing_new_title">Nothing new to summarize</string>
     <string name="summary_error_title">Error</string>
     <string name="summary_section_raw_output">Raw AI Output</string>
     <string name="summary_section_overview">Overview</string>

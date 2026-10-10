@@ -22,7 +22,7 @@ class PromptTemplateTest {
     fun `long transcripts keep the newest messages`() {
         val messages = (1..2_000).map { message(it, "message number $it " + "x".repeat(40)) }
 
-        val prompt = PromptTemplate.buildSummarizationPrompt(messages, "Thread")!!
+        val prompt = PromptTemplate.buildSummarizationPrompt(messages, "Thread", maxTranscriptChars = 8_500)!!
 
         assertTrue(prompt.contains("message number 2000 "))
         assertFalse(prompt.contains("message number 1 "))
@@ -36,6 +36,6 @@ class PromptTemplateTest {
             message(2, "This message was deleted", MessageType.DELETED)
         )
 
-        assertNull(PromptTemplate.buildSummarizationPrompt(messages, "Thread"))
+        assertNull(PromptTemplate.buildSummarizationPrompt(messages, "Thread", maxTranscriptChars = 8_500))
     }
 }

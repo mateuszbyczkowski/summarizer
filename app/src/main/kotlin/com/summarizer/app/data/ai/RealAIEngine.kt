@@ -1,5 +1,7 @@
 package com.summarizer.app.data.ai
 
+import android.os.SystemClock
+import com.llamatik.library.platform.GenStream
 import com.llamatik.library.platform.LlamaBridge
 import com.summarizer.app.domain.ai.AIEngine
 import com.summarizer.app.domain.ai.AIEngineError
@@ -14,7 +16,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 import java.io.File
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,23 +33,34 @@ class RealAIEngine @Inject constructor() : AIEngine {
 
     @Volatile
     private var currentModelInfo: ModelInfo? = null
+
+    /** Chat template embedded in the loaded GGUF; read on the llama thread at load time. */
+    @Volatile
+    private var chatTemplate: String? = null
     private val bridge = LlamaBridge
     private val llamaDispatcher = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "llama-native")
     }.asCoroutineDispatcher()
 
     companion object {
-        private const val GENERATION_TIMEOUT_MS = 120_000L // 2 minutes
+        // On-device generation runs in a foreground job; long prompts on slow phones can take minutes
+        private const val GENERATION_TIMEOUT_MS = 10 * 60_000L
+        private const val MAX_CHARS_PER_TOKEN = 8
+        private val UNCLOSED_THINKING = Regex("<think>[\\s\\S]*$")
         private const val DEFAULT_TEMPERATURE = 0.7f
         private const val DEFAULT_MAX_TOKENS = 512
         private const val DEFAULT_TOP_P = 0.9f
         private const val DEFAULT_TOP_K = 40
         private const val DEFAULT_REPEAT_PENALTY = 1.1f
 
-        // Catalog models support 120K-256K natively; we cap on-device at 16K to keep KV-cache RAM reasonable on
-        // mid-range phones. Llamatik's generateWithContext reads the model's embedded ChatML
-        // chat template from the GGUF, so no manual <|im_start|>/<|im_end|> wrapping is needed here.
-        const val MODEL_CONTEXT_TOKENS = 16_384
+        // Catalog models support far more, but phones process prompts slowly on the CPU and the
+        // KV cache grows with context. 8K tokens fits a long day of chat (see maxPromptChars).
+        // Llamatik applies the model's own chat template from the GGUF.
+        const val MODEL_CONTEXT_TOKENS = 8_192
+
+        // ~3.5K tokens of transcript at ~2.4 chars/token: leaves room for instructions and output
+        // and keeps prompt processing to well under a minute on mid-range phones
+        private const val MAX_PROMPT_CHARS = 8_500
 
         // Runtime settings required since Llamatik 1.x; values follow llama.cpp defaults
         private const val MAX_THREADS = 4
@@ -100,6 +115,7 @@ class RealAIEngine @Inject constructor() : AIEngine {
             }
             updateGenerateParams(DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS)
 
+            chatTemplate = bridge.getModelChatTemplate()
             currentModelInfo = ModelInfo(
                 name = modelFile.nameWithoutExtension,
                 path = modelPath,
@@ -116,27 +132,108 @@ class RealAIEngine @Inject constructor() : AIEngine {
         maxTokens: Int,
         temperature: Float
     ): Result<String> = suspendRunCatching {
-        Timber.d("Generating text (${prompt.length} chars, max tokens: $maxTokens, temp: $temperature)")
-
-        val result = runCancellable {
+        val raw = runCancellable {
             if (currentModelInfo == null) throw AIEngineError.ModelNotLoaded
             updateGenerateParams(temperature, maxTokens)
-            if (systemPrompt != null) {
-                bridge.generateWithContext(
-                    systemPrompt = systemPrompt,
-                    contextBlock = "",
-                    userPrompt = prompt
-                )
-            } else {
-                bridge.generate(prompt)
+            streamGeneration(prompt, systemPrompt.orEmpty(), maxTokens)
+        }
+
+        val result = stripReasoning(raw)
+        if (result.isEmpty()) {
+            throw AIEngineError.GenerationFailed(
+                if (raw.isBlank()) "The model returned an empty response"
+                else "The model only produced reasoning and no answer. Try again or choose another model."
+            )
+        }
+        result
+    }
+
+    /**
+     * Streams a generation on the llama thread. Streaming lets us stop a model that ignores the
+     * token limit (instead of running until the timeout) and measure prompt processing vs.
+     * generation speed. Logs contain sizes and timings only, never content.
+     */
+    private fun streamGeneration(prompt: String, systemPrompt: String, maxTokens: Int): String {
+        val output = StringBuilder()
+        val done = CountDownLatch(1)
+        var error: String? = null
+        val startedAt = SystemClock.elapsedRealtime()
+        var firstTokenAt = 0L
+        // Generous upper bound in characters for maxTokens; only hit by runaway generations
+        val maxChars = maxTokens * MAX_CHARS_PER_TOKEN
+
+        val callback = object : GenStream {
+            override fun onDelta(text: String) {
+                if (firstTokenAt == 0L) firstTokenAt = SystemClock.elapsedRealtime()
+                output.append(text)
+                if (output.length > maxChars) {
+                    Timber.w("Generation exceeded $maxChars chars, stopping")
+                    bridge.nativeCancelGenerate()
+                }
+            }
+
+            override fun onComplete() = done.countDown()
+
+            override fun onError(message: String) {
+                error = message
+                done.countDown()
             }
         }
 
-        if (result.isNullOrEmpty()) {
-            throw AIEngineError.InvalidResponse("Empty response from model")
+        val chatPrompt = buildChatPrompt(systemPrompt, prompt)
+        if (chatPrompt != null) {
+            bridge.generateStream(chatPrompt, callback)
+        } else {
+            // No usable chat template in the GGUF: let Llamatik apply its fallback format
+            bridge.generateStreamWithContext(
+                systemPrompt = systemPrompt,
+                contextBlock = "",
+                userPrompt = prompt,
+                callback = callback
+            )
         }
-        Timber.i("Generation complete (${result.length} chars)")
-        result
+        // The native call normally returns after its last callback; wait in case it streams asynchronously
+        done.await(GENERATION_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+
+        val now = SystemClock.elapsedRealtime()
+        val promptMs = if (firstTokenAt > 0) firstTokenAt - startedAt else now - startedAt
+        val generationMs = if (firstTokenAt > 0) now - firstTokenAt else 0
+        Timber.i(
+            "Generation: prompt ${prompt.length} chars processed in ${promptMs}ms, " +
+                "${output.length} chars generated in ${generationMs}ms"
+        )
+
+        error?.let { if (output.isEmpty()) throw AIEngineError.GenerationFailed(it) }
+        return output.toString()
+    }
+
+    /**
+     * Applies the model's own chat template. For reasoning models (Qwen3/3.5 templates use
+     * <think>), an empty reasoning block is placed after the assistant prefix, which is how
+     * `enable_thinking=false` renders: the model answers directly instead of spending the whole
+     * token budget on reasoning.
+     */
+    private fun buildChatPrompt(systemPrompt: String, userPrompt: String): String? {
+        val messages = buildList {
+            if (systemPrompt.isNotBlank()) add("system" to systemPrompt)
+            add("user" to userPrompt)
+        }
+        val prompt = bridge.applyChatTemplate(messages, addAssistantPrefix = true) ?: return null
+        if (chatTemplate?.contains("<think>") != true) return prompt
+        Timber.d("Reasoning model: answering without thinking")
+        return if (prompt.trimEnd().endsWith("<think>")) {
+            prompt.trimEnd() + "\n\n</think>\n\n"
+        } else {
+            prompt + "<think>\n\n</think>\n\n"
+        }
+    }
+
+    /** Removes reasoning, including a block cut off before it was closed. */
+    private fun stripReasoning(text: String): String {
+        var answer = text
+        if ("</think>" in answer) answer = answer.substringAfterLast("</think>")
+        answer = answer.replace(UNCLOSED_THINKING, "")
+        return answer.trim()
     }
 
     /**
@@ -168,10 +265,13 @@ class RealAIEngine @Inject constructor() : AIEngine {
             if (currentModelInfo != null) {
                 bridge.shutdown()
                 currentModelInfo = null
+                chatTemplate = null
                 Timber.i("Model unloaded successfully")
             }
         }
     }
+
+    override suspend fun maxPromptChars(): Int = MAX_PROMPT_CHARS
 
     override suspend fun isModelLoaded(): Boolean = currentModelInfo != null
 

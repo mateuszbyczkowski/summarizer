@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.summarizer.app.domain.model.Summary
 import com.summarizer.app.domain.repository.SummaryRepository
 import com.summarizer.app.domain.repository.ThreadRepository
-import com.summarizer.app.domain.usecase.NothingToSummarizeException
 import com.summarizer.app.domain.usecase.SummaryGenerationCoordinator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -15,6 +14,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 sealed interface SummaryUiState {
@@ -45,7 +46,7 @@ class SummaryDisplayViewModel @Inject constructor(
     ) { latest, generation ->
         when (generation) {
             SummaryGenerationCoordinator.State.Running -> SummaryUiState.Generating
-            is SummaryGenerationCoordinator.State.Failed -> SummaryUiState.Error(errorMessage(generation.error))
+            is SummaryGenerationCoordinator.State.Failed -> SummaryUiState.Error(generation.message)
             null -> latest?.let { SummaryUiState.Success(it) } ?: SummaryUiState.Initial
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SummaryUiState.Loading)
@@ -55,17 +56,10 @@ class SummaryDisplayViewModel @Inject constructor(
     }
 
     fun retry() {
-        coordinator.dismissError(threadId)
         coordinator.generate(threadId)
     }
 
     fun dismissError() {
-        coordinator.dismissError(threadId)
-    }
-
-    private fun errorMessage(error: Throwable): String = when (error) {
-        is NothingToSummarizeException -> error.message ?: "Nothing new to summarize"
-        is IllegalArgumentException -> "Thread not found"
-        else -> error.message ?: "Failed to generate summary"
+        viewModelScope.launch(Dispatchers.IO) { coordinator.dismissError(threadId) }
     }
 }

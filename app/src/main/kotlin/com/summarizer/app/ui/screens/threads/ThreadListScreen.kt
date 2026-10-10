@@ -1,5 +1,6 @@
 package com.summarizer.app.ui.screens.threads
 
+import com.summarizer.app.ui.components.rememberNotificationPermissionRequest
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -50,6 +51,10 @@ fun ThreadListScreen(
     val showOnlyFollowed by viewModel.showOnlyFollowed.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var hasPermission by remember { mutableStateOf(PermissionHelper.hasNotificationListenerPermission(context)) }
+
+    // Notifications (smart alerts, summary ready) need runtime permission on Android 13+
+    val requestNotificationPermission = rememberNotificationPermissionRequest()
+    LaunchedEffect(Unit) { requestNotificationPermission() }
 
     // Check permission when screen resumes (user might grant it in Settings)
     LifecycleResumeEffect(Unit) {

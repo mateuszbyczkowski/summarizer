@@ -60,6 +60,8 @@ class AIEngineProvider @Inject constructor(
         realEngine.unloadModel()
     }
 
+    override suspend fun maxPromptChars(): Int = getActiveEngine().maxPromptChars()
+
     override suspend fun isModelLoaded(): Boolean = getActiveEngine().isModelLoaded()
 
     override suspend fun getModelInfo(): ModelInfo? = getActiveEngine().getModelInfo()

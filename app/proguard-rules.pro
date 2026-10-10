@@ -40,3 +40,7 @@
 
 # Google Error Prone annotations (used by Tink)
 -dontwarn com.google.errorprone.annotations.**
+
+# Llamatik: native code calls GenStream.onDelta/onComplete/onError by name
+-keep interface com.llamatik.library.platform.GenStream { *; }
+-keep class * implements com.llamatik.library.platform.GenStream { *; }
