@@ -171,7 +171,7 @@ private fun AgendaRow(row: UpcomingWidgetRow) {
     val locale = context.locale()
     val formats = dateTimeFormats(context, locale)
     val weekday = formats.weekdayBadge(row.date)
-    val time = row.time?.let(formats::time)
+    val time = row.time?.let { formats.timeRange(it, row.endTime) }
     val secondary = listOfNotNull(time, row.threadName).joinToString(" · ")
     val spokenDate = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).withLocale(locale).format(row.date)
 

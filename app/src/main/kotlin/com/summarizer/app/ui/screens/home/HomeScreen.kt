@@ -397,7 +397,7 @@ private fun ThisWeekRow(item: AgendaItem, today: LocalDate, onClick: () -> Unit)
     val meta = listOfNotNull(
         item.threadName,
         relativeDay(days).takeIf { urgent },
-        item.time?.let { agendaTime(it) }
+        item.time?.let { agendaTime(it, item.endTime) }
     ).joinToString(" · ")
     val description = listOfNotNull(
         item.label,

@@ -13,12 +13,19 @@ private const val DEFAULT_EVENT_MILLIS = 60 * 60 * 1000L
 
 /**
  * Opens the calendar app's "new event" screen filled with [title], [description] and, when
- * known, the day ([isoDate], yyyy-MM-dd) and time ([time], HH:mm); without a time the event is
- * all-day. The user saves it there, so no calendar permission is needed.
+ * known, the day ([isoDate], yyyy-MM-dd) and time ([time], HH:mm, ending at [endTime] or an hour
+ * later); without a time the event is all-day. The user saves it there, so no calendar
+ * permission is needed.
  *
  * @return false when no calendar app can take the event
  */
-fun Context.openAddToCalendar(title: String, description: String?, isoDate: String?, time: String?): Boolean {
+fun Context.openAddToCalendar(
+    title: String,
+    description: String?,
+    isoDate: String?,
+    time: String?,
+    endTime: String? = null
+): Boolean {
     val intent = Intent(Intent.ACTION_INSERT, CalendarContract.Events.CONTENT_URI)
         .putExtra(CalendarContract.Events.TITLE, title)
     description?.let { intent.putExtra(CalendarContract.Events.DESCRIPTION, it) }
@@ -30,7 +37,12 @@ fun Context.openAddToCalendar(title: String, description: String?, isoDate: Stri
         if (startTime != null) {
             val begin = date.atTime(startTime).atZone(zone).toInstant().toEpochMilli()
             intent.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, begin)
-            intent.putExtra(CalendarContract.EXTRA_EVENT_END_TIME, begin + DEFAULT_EVENT_MILLIS)
+            // "19:30–21:00" ends at 21:00; "22:00–1:00" the next day
+            val end = endTime?.let { runCatchingParse { LocalTime.parse(it) } }?.let { endAt ->
+                val endDate = if (endAt > startTime) date else date.plusDays(1)
+                endDate.atTime(endAt).atZone(zone).toInstant().toEpochMilli()
+            }
+            intent.putExtra(CalendarContract.EXTRA_EVENT_END_TIME, end ?: (begin + DEFAULT_EVENT_MILLIS))
         } else {
             intent.putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, true)
             intent.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, date.atStartOfDay(zone).toInstant().toEpochMilli())

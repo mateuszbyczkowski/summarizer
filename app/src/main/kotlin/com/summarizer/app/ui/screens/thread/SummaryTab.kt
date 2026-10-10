@@ -496,7 +496,7 @@ private fun KeyDateTile(keyDate: KeyDate, today: LocalDate, onAddToCalendar: (()
     val urgent = ThreadSummaryRules.isUrgent(keyDate, today)
     val colors = MaterialTheme.colorScheme
     val relative = date?.let { ChronoUnit.DAYS.between(today, it) }?.takeIf { urgent }?.let { relativeDay(it) }
-    val details = listOfNotNull(keyDate.time?.let { agendaTime(it) }, keyDate.detail, relative).joinToString(" · ")
+    val details = listOfNotNull(keyDate.time?.let { agendaTime(it, keyDate.endTime) }, keyDate.detail, relative).joinToString(" · ")
     val addLabel = stringResource(R.string.tasks_add_to_calendar)
     val description = listOfNotNull(
         keyDate.label,

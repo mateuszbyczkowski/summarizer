@@ -231,7 +231,7 @@ private fun ThreadContent(
         },
         onAddToCalendar = { summary, keyDate ->
             val description = listOfNotNull(keyDate.detail, summary.threadName).joinToString("\n")
-            if (!context.openAddToCalendar(keyDate.label, description, keyDate.date, keyDate.time)) {
+            if (!context.openAddToCalendar(keyDate.label, description, keyDate.date, keyDate.time, keyDate.endTime)) {
                 scope.launch { snackbarHostState.showSnackbar(noCalendarMessage) }
             }
         },

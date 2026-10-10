@@ -154,5 +154,43 @@ class SummaryDatesTest {
         assertEquals(LocalDate.of(2026, 10, 17), firstDate("Oct 17"))
         assertEquals(LocalDate.of(2026, 12, 5), firstDate("Pay fee (due Dec 5)"))
     }
+
+    @Test
+    fun `a time range keeps its start as the time and the event as the label`() {
+        val expected = KeyDate("Mecz", "2026-10-18", "19:30", null, endTime = "21:00")
+        assertEquals(expected, SummaryDates.parseKeyDate("18.10 19:30-21:00 | Mecz", reference))
+        assertEquals(expected, SummaryDates.parseKeyDate("18.10 19:30–21:00 | Mecz", reference))
+        assertEquals(expected, SummaryDates.parseKeyDate("18.10 19:30 - 21:00 | Mecz", reference))
+        assertEquals(expected, SummaryDates.parseKeyDate("18.10 19:30-21 | Mecz", reference))
+        assertEquals(expected, SummaryDates.parseKeyDate("18.10 od 19:30 do 21 | Mecz", reference))
+        assertEquals(expected, SummaryDates.parseKeyDate("18.10 19.30–21 | Mecz", reference))
+        assertEquals(expected, SummaryDates.parseKeyDate("18.10 19.30-21.00 | Mecz", reference))
+        assertEquals(expected, SummaryDates.parseKeyDate("18.10 7:30–9 pm | Mecz", reference))
+        assertEquals(expected, SummaryDates.parseKeyDate("18.10 | Mecz 19:30–21:00", reference))
+        assertEquals(expected, SummaryDates.parseKeyDate("Mecz 18.10 19:30-21:00", reference))
+        assertEquals(
+            KeyDate("Mecz", "2026-10-18", "19:30", "hala OSiR", endTime = "21:00"),
+            SummaryDates.parseKeyDate("18.10 19:30-21:00 | Mecz, hala OSiR", reference)
+        )
+    }
+
+    @Test
+    fun `times that only look like a range end stay single times`() {
+        // A date range after a time
+        val dateRange = SummaryDates.parseKeyDate("17.10 7:30 - 18.10 | Ferie", reference)!!
+        assertEquals("07:30", dateRange.time)
+        assertNull(dateRange.endTime)
+        assertEquals("Ferie", dateRange.label)
+        // A count, not an hour
+        assertNull(SummaryDates.findTimeRange("8:00 - 12 dzieci")!!.end)
+        // An end before the start without minutes
+        assertNull(SummaryDates.findTimeRange("19:00 - 2")!!.end)
+        // 12-hour times and an explicit range past midnight
+        assertEquals(LocalTime.of(19, 30), SummaryDates.findTimeRange("at 7:30 pm")!!.start)
+        val late = SummaryDates.findTimeRange("22:00-1:00")!!
+        assertEquals(LocalTime.of(22, 0), late.start)
+        assertEquals(LocalTime.of(1, 0), late.end)
+        assertEquals(LocalTime.MIDNIGHT, SummaryDates.findTimeRange("20:00-24:00")!!.end)
+    }
 }
 

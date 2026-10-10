@@ -56,6 +56,13 @@ class DateTimeFormats(
             text
         }
 
+    /**
+     * A summary's start time with its end, if any: "19:30–21:00" / "7:30 PM – 9:00 PM"; only
+     * the start without an end.
+     */
+    fun timeRange(start: String, end: String?): String =
+        if (end == null) time(start) else time(start) + (if (is24Hour) "–" else " – ") + time(end)
+
     /** Day and short month: "Oct 12" / "12 paź". */
     fun shortDate(date: LocalDate): String = formatter(SKELETON_DAY_MONTH).format(date)
 

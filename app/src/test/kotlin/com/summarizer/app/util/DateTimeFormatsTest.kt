@@ -103,4 +103,11 @@ class DateTimeFormatsTest {
             .replace('\u202F', '\u00A0').replace(' ', '\u00A0')
         assertEquals(expected, formats.time(LocalTime.of(9, 5)))
     }
+
+    @Test
+    fun `time ranges show start and end`() {
+        assertEquals("19:30–21:00", polish().timeRange("19:30", "21:00"))
+        assertEquals("19:30", polish().timeRange("19:30", null))
+        assertEquals("7:30 PM – 9:00 PM", english().timeRange("19:30", "21:00"))
+    }
 }
