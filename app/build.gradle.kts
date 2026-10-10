@@ -146,6 +146,9 @@ dependencies {
     // APIs confirmed: initGenerateModel, generateJson, generateWithContext, generateStream, GenStream interface
     implementation("com.llamatik:library:1.10.1")
 
+    // Experiment: Google LiteRT-LM (GPU inference); debug builds only until evaluated
+    debugImplementation("com.google.ai.edge.litertlm:litertlm-android:0.18.0")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")

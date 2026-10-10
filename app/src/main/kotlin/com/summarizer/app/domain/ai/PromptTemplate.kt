@@ -16,6 +16,14 @@ object PromptTemplate {
     const val SYSTEM_PROMPT =
         "You write short, accurate summaries of WhatsApp chats. You state only facts found in the messages."
 
+    /**
+     * System prompt naming the output language; models drift back to English after the English
+     * section labels unless the language is restated here.
+     */
+    fun systemPrompt(languageName: String?): String =
+        if (languageName == null) SYSTEM_PROMPT
+        else "$SYSTEM_PROMPT Always write in $languageName; only the four section labels stay in English."
+
     /** Template lines a model may copy verbatim; the parser drops them. */
     internal val FORMAT_HINTS = listOf(
         "<1-2 sentences: what happened and what was decided>",
@@ -50,7 +58,7 @@ object PromptTemplate {
             |
             |$transcript
             |
-            |Summarize this chat in $language. Use only facts from the messages; do not guess. Be short and specific: names, dates, times, places, amounts. "You" is the phone owner.
+            |Summarize this chat in $language. Use only facts from the messages; do not guess. If something changed later in the chat, give only the latest information. Be specific (names, dates, times, places, amounts) and keep each bullet under 15 words. "You" is the phone owner.
             |
             |Reply in exactly this format, keeping the four labels in English, with at most 3 bullets per section and "None" if a section is empty:
             |OVERVIEW: ${FORMAT_HINTS[0]}

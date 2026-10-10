@@ -103,7 +103,7 @@ class GenerateSummaryUseCase @Inject constructor(
             // Step 5: Generate summary. Transient failures are retried by the engine itself.
             val rawResponse = aiEngine.generate(
                 prompt = prompt,
-                systemPrompt = PromptTemplate.SYSTEM_PROMPT,
+                systemPrompt = PromptTemplate.systemPrompt(language),
                 maxTokens = SUMMARY_MAX_TOKENS,
                 temperature = 0.2f // Low temperature: factual, consistent wording
             ).getOrElse { error ->
