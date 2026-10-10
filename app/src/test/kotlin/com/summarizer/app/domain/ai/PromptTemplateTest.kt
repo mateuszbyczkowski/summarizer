@@ -38,4 +38,15 @@ class PromptTemplateTest {
 
         assertNull(PromptTemplate.buildSummarizationPrompt(messages, "Thread", maxTranscriptChars = 8_500))
     }
+
+    @Test
+    fun `dates are limited to planned events with the start time first`() {
+        val prompt = PromptTemplate.buildSummarizationPrompt(listOf(message(1)), "Thread", maxTranscriptChars = 8_500)!!
+
+        assertTrue(prompt.contains("DATES are only planned events and deadlines"))
+        assertTrue(prompt.contains("never when a message was sent"))
+        assertTrue(prompt.contains("HH:MM-HH:MM, start first"))
+        // The labels stay on lines of their own, as the parser expects
+        assertTrue(prompt.lines().contains("DATES:"))
+    }
 }

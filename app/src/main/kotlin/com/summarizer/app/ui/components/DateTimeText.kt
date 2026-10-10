@@ -67,9 +67,12 @@ fun agendaDate(date: LocalDate): String = rememberDateTimeFormats().weekdayDate(
 @Composable
 fun weekdayShort(date: LocalDate): String = rememberDateTimeFormats().weekdayBadge(date)
 
-/** An HH:mm time in the phone's format ("7:30 AM" or "07:30"); the text itself if it does not parse. */
+/**
+ * An HH:mm time in the phone's format ("7:30 AM" or "07:30"), with the end of its range when
+ * there is one ("19:30–21:00"); the text itself if it does not parse.
+ */
 @Composable
-fun agendaTime(time: String): String = rememberDateTimeFormats().time(time)
+fun agendaTime(time: String, endTime: String? = null): String = rememberDateTimeFormats().timeRange(time, endTime)
 
 /** Distance of a day from today: "today", "tomorrow", "in 3 days", "2 days overdue". */
 @Composable

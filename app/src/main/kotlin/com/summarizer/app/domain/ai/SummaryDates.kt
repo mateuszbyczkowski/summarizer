@@ -21,6 +21,9 @@ object SummaryDates {
 
     data class TimeMatch(val range: IntRange, val time: LocalTime)
 
+    /** A time of day or a time range ("19:30–21:00"); [range] covers all of it, [end] is null for a single time. */
+    data class TimeRangeMatch(val range: IntRange, val start: LocalTime, val end: LocalTime?)
+
     /** Dates up to this many days before the reference stay in the past instead of moving to next year. */
     private const val PAST_TOLERANCE_DAYS = 30L
 
@@ -58,6 +61,23 @@ object SummaryDates {
         RegexOption.IGNORE_CASE
     )
 
+    // "19.30" right before a range dash ("19.30–21"); only when it cannot be a date (minutes 00 or above 12)
+    private val TIME_DOT_RANGE_START = Regex("(?<![\\d.,:/])([01]?\\d|2[0-3])\\.([0-5]\\d)(?=\\s*[-–—]\\s*\\d)")
+    private const val MERIDIEM_TEXT = "[ap]\\.?\\s?m\\.?(?!\\p{L})"
+    private val MERIDIEM = Regex("^\\s*($MERIDIEM_TEXT)", RegexOption.IGNORE_CASE)
+    // The end of a range right after its start: "–21:00", " - 21", " do 21.00", " to 9 pm", "-21h"
+    private val RANGE_END = Regex(
+        "^\\s*(?:[-–—]|(?:do|to|till|until)(?!\\p{L}))\\s*(?:godz\\.?\\s*)?([01]?\\d|2[0-4])(?:([:.])([0-5]\\d))?(?![\\d.:])" +
+            "(?:\\s*($MERIDIEM_TEXT)|h(?!\\p{L}))?",
+        RegexOption.IGNORE_CASE
+    )
+    private val WORD_AFTER = Regex("^\\s+\\p{L}")
+    // A separate part holding only the end of a range: "18.10 19:30 - 21:00 | Mecz" splits off "21:00"
+    private val RANGE_END_PART = Regex(
+        "^(?:(?:do|to|till|until)\\s*)?([01]?\\d|2[0-4])(?:[:.]([0-5]\\d))?\\s*(?:$MERIDIEM_TEXT|h)?$",
+        RegexOption.IGNORE_CASE
+    )
+
     // Abbreviations and inflected names, but not words that merely start alike ("wtedy", "ponad",
     // "sobie", "month")
     private val WEEKDAY = "(?:pon(?:iedzia\\p{L}*)?|wt(?:or\\p{L}*)?|[śs]r(?:od\\p{L}*)?|czw(?:art\\p{L}*)?|pt|pi[ąa]t\\p{L}*|" +
@@ -71,6 +91,11 @@ object SummaryDates {
     private val TRAILING_PARENS = Regex("\\s*[(\\[]([^()\\[\\]]*)[)\\]]\\s*\\.?\\s*$")
     private val WHEN_FILLER = Regex(
         "^\\s*(?:(?:w|we|do|od|na|by|on|at|until|o|godz\\.?|g\\.)(?!\\p{L})\\s*)*(?:$WEEKDAY)?\\s*$",
+        RegexOption.IGNORE_CASE
+    )
+    /** Prepositions left over from "od 19:30 do 21" or "o 18:00": never an event name. */
+    private val PREPOSITIONS_ONLY = Regex(
+        "^\\s*(?:(?:w|we|do|od|na|by|on|at|from|until|till|to|o|godz\\.?|g\\.)(?!\\p{L})\\s*)+$",
         RegexOption.IGNORE_CASE
     )
     private val WEEKDAY_ONLY = Regex("^\\s*(?:$WEEKDAY\\s*)*$", RegexOption.IGNORE_CASE)
@@ -148,6 +173,76 @@ object SummaryDates {
             .toList()
 
     /**
+     * The first time of day in [text] with the end of its range, if one follows: "19:30–21:00",
+     * "19:30 - 21", "od 19:30 do 21", "19.30–21", "7:30–9 pm" (19:30–21:00), "7:30 pm". The range
+     * includes a leading "o"/"at"/"godz.".
+     */
+    fun findTimeRange(text: String): TimeRangeMatch? {
+        val dotRangeStart = TIME_DOT_RANGE_START.findAll(text).firstOrNull { m ->
+            m.groupValues[2].toInt().let { it == 0 || it > 12 }
+        }
+        val startMatch = listOfNotNull(TIME_COLON.find(text), TIME_DOT.find(text), dotRangeStart)
+            .minByOrNull { it.range.first } ?: return null
+        var startHour = startMatch.groupValues[1].toInt()
+        val startMinute = startMatch.groupValues[2].toInt()
+        var last = startMatch.range.last
+
+        // "7:30 pm"
+        val startMeridiem = MERIDIEM.find(text.substring(last + 1))
+        if (startMeridiem != null) {
+            startHour = to24Hour(startHour, startMeridiem.groupValues[1])
+            last += startMeridiem.range.last + 1
+        }
+        val start = LocalTime.of(startHour, startMinute)
+
+        val afterStart = text.substring(last + 1)
+        val endMatch = RANGE_END.find(afterStart)
+        val times = endMatch?.let { m ->
+            rangeEnd(m, afterStart.substring(m.range.last + 1), start, startHasMeridiem = startMeridiem != null)
+        }
+        if (endMatch == null || times == null) return TimeRangeMatch(startMatch.range.first..last, start, null)
+        return TimeRangeMatch(startMatch.range.first..last + 1 + endMatch.range.last, times.first, times.second)
+    }
+
+    /**
+     * The start (moved to the afternoon for "7:30–9 pm") and the end of a range from a
+     * [RANGE_END] match, or null when the match is not the end of this range: a possible date
+     * ("7:30 - 18.10"), a count ("8:00 - 12 dzieci") or a time before the start.
+     */
+    private fun rangeEnd(m: MatchResult, after: String, start: LocalTime, startHasMeridiem: Boolean): Pair<LocalTime, LocalTime>? {
+        var hour = m.groupValues[1].toInt()
+        val separator = m.groupValues[2]
+        val minute = m.groupValues[3].ifEmpty { "0" }.toInt()
+        val meridiem = m.groupValues[4]
+        // "18.10" may be a date; "21.00" and "21.30" cannot
+        if (separator == "." && minute in 1..12) return null
+        // A bare number followed by a word is a count, unless it reads "21h" or "9 pm"
+        val hourSuffix = m.value.trimEnd().endsWith("h", ignoreCase = true)
+        if (separator.isEmpty() && meridiem.isEmpty() && !hourSuffix && WORD_AFTER.containsMatchIn(after)) return null
+        if (hour == 24) {
+            if (minute != 0) return null
+            hour = 0
+        }
+        if (meridiem.isNotEmpty()) hour = to24Hour(hour, meridiem)
+        val end = LocalTime.of(hour, minute)
+        val pm = meridiem.trim().lowercase().startsWith("p")
+        val first = if (pm && !startHasMeridiem && start.hour < 12 && start.plusHours(12) < end) start.plusHours(12) else start
+        // An explicit "22:00–1:00" may run past midnight; a bare "19:00 - 2" is not a range
+        val valid = end > first || end == LocalTime.MIDNIGHT || (separator == ":" && end != first)
+        return if (valid) first to end else null
+    }
+
+    private fun to24Hour(hour: Int, meridiem: String): Int {
+        val pm = meridiem.trim().lowercase().startsWith("p")
+        return when {
+            hour > 12 -> hour
+            pm && hour < 12 -> hour + 12
+            !pm && hour == 12 -> 0
+            else -> hour
+        }
+    }
+
+    /**
      * Spans of [text] that name a date or time, for highlighting: a weekday before a date is
      * included ("pt 17.10") and a date followed by its time is one span ("wt 21.10, 18:00").
      */
@@ -174,13 +269,22 @@ object SummaryDates {
      * then what happens; text after the first comma becomes the detail (usually the place).
      */
     fun parseKeyDate(line: String, reference: LocalDate): KeyDate? {
-        val parts = line.split(SEPARATOR).map { it.trim() }.filter { it.isNotEmpty() }
+        val parts = line.split(SEPARATOR).map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
         if (parts.isEmpty()) return null
 
         // "when | what": the first part naming a date or time is the "when"; without one, the part
         // before an explicit "|" ("w środę | Basen"), else the whole line is the event
-        val whenIndex = parts.indexOfFirst { findDates(it, reference).isNotEmpty() || findTime(it) != null }
+        val whenIndex = parts.indexOfFirst { findDates(it, reference).isNotEmpty() || findTimeRange(it) != null }
             .takeIf { it >= 0 } ?: if ('|' in line && parts.size > 1) 0 else -1
+        // "19:30 - 21:00" was split at its dash: the next part is the end of the time range
+        val endPart = parts.getOrNull(whenIndex + 1)
+        if (whenIndex >= 0 && endPart != null && RANGE_END_PART.matches(endPart) && findTimeRange(parts[whenIndex])?.end == null) {
+            val joined = "${parts[whenIndex]} - $endPart"
+            if (findTimeRange(joined)?.end != null) {
+                parts[whenIndex] = joined
+                parts.removeAt(whenIndex + 1)
+            }
+        }
         val whenText = if (whenIndex >= 0) parts[whenIndex] else line
         // A further part that is only a date is the end of a range ("17.10 - 18.10 | Ferie")
         val rangeEnds = parts.filterIndexed { i, part -> i != whenIndex && isOnlyDate(part, reference) }
@@ -189,24 +293,36 @@ object SummaryDates {
 
         val date = findDates(whenText, reference).firstOrNull()
         val withoutDate = whenText.blankOut(date?.range)
-        val time = findTime(withoutDate)
+        var time = findTimeRange(withoutDate)
         val rest = withoutDate.blankOut(time?.range).cleanup()
         // Next to a resolved date, leftovers like "w piątek" or "do" are not an event name; without
-        // one, "w środę" is the only "when" there is and stays as the detail
+        // one, "w środę" is the only "when" there is and stays as the detail. Bare prepositions
+        // ("od", left from "od 19:30 do 21") never are
         val meaningfulRest = rest.takeIf {
-            it.isNotEmpty() && !WEEKDAY_ONLY.matches(it) && !(date != null && WHEN_FILLER.matches(it))
+            it.isNotEmpty() && !WEEKDAY_ONLY.matches(it) && !PREPOSITIONS_ONLY.matches(it) &&
+                !(date != null && WHEN_FILLER.matches(it))
         }
 
         // Text next to a resolved date is the event ("17.10 Wycieczka | Kopernik": event
         // "Wycieczka", detail "Kopernik"); next to an unresolved one ("w środę | Basen") it is
         // kept as the detail
-        val description: String
+        var description: String
         val extraDetail: String?
         when {
             whatText == null -> { description = rest; extraDetail = null }
             meaningfulRest != null && date != null -> { description = meaningfulRest; extraDetail = whatText }
             date == null -> { description = whatText; extraDetail = meaningfulRest }
             else -> { description = whatText; extraDetail = null }
+        }
+        // "18.10 | Mecz 19:30–21:00": the time is in the event text
+        if (time == null && whatText != null) {
+            findTimeRange(description)?.let { inText ->
+                val withoutTime = description.blankOut(inText.range).cleanup()
+                if (withoutTime.isNotEmpty()) {
+                    time = inText
+                    description = withoutTime
+                }
+            }
         }
         val label = description.substringBefore(',').cleanup()
         val place = description.substringAfter(',', "").cleanup()
@@ -216,8 +332,9 @@ object SummaryDates {
         return KeyDate(
             label = label,
             date = date?.date?.toString(),
-            time = time?.time?.format(TIME_FORMAT),
-            detail = listOfNotNull(rangeEnd, extraDetail, place.ifEmpty { null }).joinToString(", ").ifEmpty { null }
+            time = time?.start?.format(TIME_FORMAT),
+            detail = listOfNotNull(rangeEnd, extraDetail, place.ifEmpty { null }).joinToString(", ").ifEmpty { null },
+            endTime = time?.end?.format(TIME_FORMAT)
         )
     }
 
@@ -250,7 +367,7 @@ object SummaryDates {
 
     private fun isOnlyDate(text: String, reference: LocalDate): Boolean {
         val date = findDates(text, reference).firstOrNull() ?: return false
-        return text.blankOut(date.range).let { rest -> rest.blankOut(findTime(rest)?.range) }.cleanup().isEmpty()
+        return text.blankOut(date.range).let { rest -> rest.blankOut(findTimeRange(rest)?.range) }.cleanup().isEmpty()
     }
 
     private fun resolve(day: Int, month: Int, yearText: String, reference: LocalDate): LocalDate? {

@@ -193,5 +193,40 @@ class SummaryResponseParserTest {
         assertEquals(listOf("2026-10-17", "2026-10-21"), parsed.keyDates.map { it.date })
         assertEquals(listOf("07:15", "18:00"), parsed.keyDates.map { it.time })
     }
+
+    @Test
+    fun `date lines that only say who wrote when are dropped`() {
+        val parsed = SummaryResponseParser.parse(
+            """
+            OVERVIEW: Mecz w sobotę.
+            DATES:
+            - 13.10 14:05 | Anna odpowiedziała w wątku
+            - 12.10 | Tomek napisał, że będzie
+            - 13.10 | Kasia replied in the thread
+            - w środę | Rodzice potwierdzili
+            - 18.10 19:30-21:00 | Mecz, hala OSiR
+            - 20.10 | Kasia potwierdziła wyjazd do Krakowa
+            - 13.10 18:00 | Zebranie rodziców
+            """.trimIndent(),
+            reference = LocalDate.of(2026, 10, 13)
+        )
+
+        assertEquals(
+            listOf("Mecz", "Kasia potwierdziła wyjazd do Krakowa", "Zebranie rodziców"),
+            parsed.keyDates.map { it.label }
+        )
+        assertEquals("19:30", parsed.keyDates[0].time)
+        assertEquals("21:00", parsed.keyDates[0].endTime)
+    }
+
+    @Test
+    fun `tasks phrased as infinitives are not chatter`() {
+        val reference = LocalDate.of(2026, 10, 13)
+        assertTrue(SummaryResponseParser.isChatter(KeyDate("Anna odpowiedziała", "2026-10-13"), reference))
+        assertTrue(SummaryResponseParser.isChatter(KeyDate("Ola asked about the bus"), reference))
+        assertEquals(false, SummaryResponseParser.isChatter(KeyDate("Odpowiedzieć na ankietę", "2026-10-13"), reference))
+        assertEquals(false, SummaryResponseParser.isChatter(KeyDate("Dodatkowy trening", "2026-10-13"), reference))
+        assertEquals(false, SummaryResponseParser.isChatter(KeyDate("Zebranie", "2026-10-13"), reference))
+    }
 }
 

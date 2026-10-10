@@ -49,7 +49,7 @@ object SummaryFormatter {
             appendLine(summary.threadName)
             if (summary.overview.isNotBlank()) appendLine(summary.overview)
 
-            section(labels.dates, summary.keyDates) { "• ${keyDateLine(it, day(it.date), it.time?.let(formats::time))}" }
+            section(labels.dates, summary.keyDates) { "• ${keyDateLine(it, day(it.date), it.time?.let { time -> formats.timeRange(time, it.endTime) })}" }
             section(labels.tasks, summary.actionItems) { item ->
                 val due = day(item.due)?.let { " (${labels.due.format(it)})" }.orEmpty()
                 "${if (item.done) "☑" else "☐"} ${item.task}$due"

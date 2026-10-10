@@ -93,9 +93,38 @@ object SummaryResponseParser {
             topics = listItems(sections[Section.TOPICS]),
             actions = listItems(sections[Section.ACTIONS]).map { SummaryDates.parseAction(it, reference) },
             announcements = listItems(sections[Section.ANNOUNCEMENTS]),
-            keyDates = listItems(sections[Section.DATES]).mapNotNull { SummaryDates.parseKeyDate(it, reference) }
+            // Chatter is dropped before the limit, so it never crowds out real events
+            keyDates = listItems(sections[Section.DATES], limit = Int.MAX_VALUE)
+                .mapNotNull { SummaryDates.parseKeyDate(it, reference) }
+                .filterNot { isChatter(it, reference) }
+                .take(MAX_ITEMS)
         )
     }
+
+    /**
+     * A DATES line that only says when someone wrote, e.g. "10.10 14:05 | Anna odpowiedziała w
+     * wątku": small models copy message times from the transcript. Dropped when the label is
+     * about messaging and the date is not after the conversation's last day (or unknown); a
+     * planned event on a later day stays even if phrased that way ("Kasia confirmed the trip").
+     */
+    internal fun isChatter(keyDate: KeyDate, reference: LocalDate): Boolean {
+        if (!CHATTER.containsMatchIn(keyDate.label)) return false
+        val date = keyDate.date?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return true
+        return !date.isAfter(reference)
+    }
+
+    // Past-tense messaging verbs ("replied", "odpowiedziała", "napisali"); infinitives such as
+    // "odpowiedzieć" (a task) do not match
+    private val CHATTER = Regex(
+        "(?<!\\p{L})(?:" +
+            "repl(?:ied|ies)|respond(?:ed|s)|answered|asked|wrote|writes|said|says|confirmed|agreed|thanked|" +
+            "reacted|sent|shared|posted|mentioned|reminded|joined|left|added|commented|messaged|texted|" +
+            "(?:odpowiedzia|odpowiedzie|odpisa|napisa|zapyta|pyta|potwierdzi|zgodzi|podziękowa|dziękowa|" +
+            "zareagowa|wysła|udostępni|przypomnia|wspomnia|dołączy|opuści|doda|skomentowa|poinformowa)" +
+            "(?:ł|ła|ło|li|ły)(?:a|am|em|aś|eś|y|i)?" +
+            ")(?!\\p{L})",
+        RegexOption.IGNORE_CASE
+    )
 
     /**
      * The overview of a reply that is still being written, for showing progress. Empty while
@@ -145,8 +174,8 @@ object SummaryResponseParser {
     }
 
     /** Bullets without a trailing period, so "Koszt." and "Koszt" count as the same item. */
-    private fun listItems(lines: List<String>?): List<String> =
-        items(lines).map { it.trimEnd('.').trim() }.filter { it.isNotEmpty() }.distinctBy { it.lowercase() }.take(MAX_ITEMS)
+    private fun listItems(lines: List<String>?, limit: Int = MAX_ITEMS): List<String> =
+        items(lines).map { it.trimEnd('.').trim() }.filter { it.isNotEmpty() }.distinctBy { it.lowercase() }.take(limit)
 
     private fun items(lines: List<String>?): List<String> =
         lines.orEmpty()

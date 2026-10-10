@@ -43,7 +43,8 @@ class ObserveAgendaUseCase @Inject constructor(
                             date = keyDate.date,
                             time = keyDate.time,
                             index = index,
-                            done = false
+                            done = false,
+                            endTime = keyDate.endTime
                         )
                     }
                     val tasks = summary.actionItems.mapIndexed { index, item ->

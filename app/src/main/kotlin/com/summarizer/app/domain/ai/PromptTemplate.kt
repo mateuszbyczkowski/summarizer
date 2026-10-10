@@ -28,9 +28,9 @@ object PromptTemplate {
     internal val FORMAT_HINTS = listOf(
         "<1-2 sentences: what happened and what was decided>",
         "<topic in a few words>",
-        "<task someone must do and who> (by DD.MM)",
+        "<task someone must still do and who> (by DD.MM)",
         "<important news or change>",
-        "DD.MM HH:MM | <event, place>"
+        "DD.MM HH:MM | <planned event, place>"
     )
 
     /**
@@ -60,8 +60,9 @@ object PromptTemplate {
             |$transcript
             |
             |Summarize this chat in $language. Use only facts from the messages; do not guess. If something changed later in the chat, give only the latest information. Be specific (names, dates, times, places, amounts) and keep each bullet under 15 words. "You" is the phone owner.
+            |ACTIONS are only tasks someone still has to do. DATES are only planned events and deadlines (meetings, matches, trips, payments); never when a message was sent or who replied. Skip greetings, thanks and small talk.
             |
-            |Reply in exactly this format, keeping the five labels in English, with at most 3 bullets per section and "None" if a section is empty. Write dates as DD.MM and times as HH:MM:
+            |Reply in exactly this format, keeping the five labels in English, with at most 3 bullets per section and "None" if a section is empty. Write dates as DD.MM and times as HH:MM; for an event with an end time write HH:MM-HH:MM, start first:
             |OVERVIEW: ${FORMAT_HINTS[0]}
             |TOPICS:
             |- ${FORMAT_HINTS[1]}

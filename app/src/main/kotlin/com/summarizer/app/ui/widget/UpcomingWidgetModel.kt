@@ -12,7 +12,8 @@ data class UpcomingWidgetRow(
     val kind: AgendaItem.Kind,
     val date: LocalDate,
     val time: String?,
-    val urgent: Boolean
+    val urgent: Boolean,
+    val endTime: String? = null
 )
 
 /** What the "Upcoming" widget shows. */
@@ -69,7 +70,8 @@ object UpcomingWidgetModel {
             kind = item.kind,
             date = date,
             time = item.time,
-            urgent = AgendaSchedule.isUrgent(item, today)
+            urgent = AgendaSchedule.isUrgent(item, today),
+            endTime = item.endTime
         )
     }
 }

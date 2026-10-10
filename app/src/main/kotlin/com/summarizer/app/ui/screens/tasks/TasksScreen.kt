@@ -98,7 +98,7 @@ fun TasksScreen(
         }
     }
     val onAddToCalendar: (AgendaItem) -> Unit = { item ->
-        if (!context.openAddToCalendar(item.label, item.threadName, item.date, item.time)) {
+        if (!context.openAddToCalendar(item.label, item.threadName, item.date, item.time, item.endTime)) {
             scope.launch { snackbarHostState.showSnackbar(noCalendarMessage) }
         }
     }
@@ -208,7 +208,7 @@ private fun AgendaRow(
     val urgent = AgendaSchedule.isUrgent(item, today)
     val whenText = listOfNotNull(
         date?.let { agendaDate(it) },
-        item.time?.let { agendaTime(it) },
+        item.time?.let { agendaTime(it, item.endTime) },
         AgendaSchedule.daysUntil(item, today)?.takeIf { it < 0 && !item.done }?.let { relativeDay(it) }
     ).joinToString(", ")
     val supporting = listOfNotNull(item.threadName, whenText.ifEmpty { null }).joinToString(" · ")
