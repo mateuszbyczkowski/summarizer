@@ -6,9 +6,10 @@ import com.summarizer.app.domain.model.MessageType
 /**
  * Prompt for chat summaries.
  *
- * Written for small on-device models as much as for OpenAI: short explicit rules, the
- * instructions repeated after the transcript (small models follow what they read last), and a
- * fixed output format that [SummaryResponseParser] can read back.
+ * Kept short on purpose: on-device models read prompts slowly (every instruction costs
+ * seconds) and follow few, concrete rules best. The instructions come after the transcript
+ * (small models follow what they read last), name the output language explicitly, and fix a
+ * format that [SummaryResponseParser] reads back.
  */
 object PromptTemplate {
 
@@ -17,10 +18,10 @@ object PromptTemplate {
 
     /** Template lines a model may copy verbatim; the parser drops them. */
     internal val FORMAT_HINTS = listOf(
-        "1-2 sentences on what was discussed and decided.",
-        "short topic",
-        "who does what, by when",
-        "important news, decisions or changes"
+        "<1-2 sentences: what happened and what was decided>",
+        "<topic in a few words>",
+        "<task someone must do, who and by when>",
+        "<important news, change or date>"
     )
 
     /**
@@ -29,37 +30,29 @@ object PromptTemplate {
      * @param messages List of messages to summarize
      * @param threadName Name of the conversation thread
      * @param maxTranscriptChars Transcript budget; the oldest messages are dropped beyond it
+     * @param languageName Language to write in (e.g. "Polish"); null keeps the chat's language
      * @return Formatted prompt string, or null if there are no summarizable messages
      */
     fun buildSummarizationPrompt(
         messages: List<Message>,
         threadName: String,
-        maxTranscriptChars: Int
+        maxTranscriptChars: Int,
+        languageName: String? = null
     ): String? {
-        // Deleted messages and group events carry no content worth summarizing
-        val validMessages = messages.filter {
-            !it.isDeleted && it.messageType != MessageType.DELETED && it.messageType != MessageType.SYSTEM
-        }
+        val validMessages = summarizableMessages(messages)
         if (validMessages.isEmpty()) return null
 
         val transcript = buildConversationTranscript(validMessages, maxTranscriptChars)
+        val language = languageName ?: "the language of the messages"
 
         return """
             |Chat: "$threadName"
             |
-            |Messages (oldest first):
             |$transcript
             |
-            |Summarize the chat above for someone who did not read it.
+            |Summarize this chat in $language. Use only facts from the messages; do not guess. Be short and specific: names, dates, times, places, amounts. "You" is the phone owner.
             |
-            |Rules:
-            |- Use only facts from the messages. Never guess or add details.
-            |- Write in the same language as the messages, but keep the labels OVERVIEW, TOPICS, ACTIONS and ANNOUNCEMENTS in English.
-            |- Be brief and specific: names, dates, times, places, amounts.
-            |- "You" is the phone owner.
-            |- Use "-" bullets, at most 5 per section. Write "None" if a section is empty.
-            |
-            |Reply with exactly these four sections and nothing else:
+            |Reply in exactly this format, keeping the four labels in English, with at most 3 bullets per section and "None" if a section is empty:
             |OVERVIEW: ${FORMAT_HINTS[0]}
             |TOPICS:
             |- ${FORMAT_HINTS[1]}
@@ -69,6 +62,12 @@ object PromptTemplate {
             |- ${FORMAT_HINTS[3]}
         """.trimMargin()
     }
+
+    /** Deleted messages and group events carry no content worth summarizing. */
+    fun summarizableMessages(messages: List<Message>): List<Message> =
+        messages.filter {
+            !it.isDeleted && it.messageType != MessageType.DELETED && it.messageType != MessageType.SYSTEM
+        }
 
     /**
      * Build conversation transcript from messages, keeping the newest messages when the

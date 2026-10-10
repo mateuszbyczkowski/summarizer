@@ -21,10 +21,15 @@ object SummaryResponseParser {
     private const val MAX_ITEMS = 5
     private const val MAX_FALLBACK_OVERVIEW_CHARS = 400
 
+    // Label with ":" and optional inline content, or a bare label on its own line ("OVERVIEW").
+    // Prefix matching tolerates misspellings ("ANNOUNCEMTY"); Polish labels appear when a model
+    // translates them despite the instruction.
     private val SECTION_LABEL = Regex(
-        "^(OVERVIEW|TOPICS|ACTIONS|ANNOUNCEMENTS)\\s*:\\s*(.*)$",
+        "^(?:\\d+[.)]\\s*)?(OVERVIEW|PRZEGL\\p{L}*|TOPIC\\p{L}*|TEMAT\\p{L}*|ACTION\\p{L}*|ZADANI\\p{L}*|DZIA\\p{L}*|ANNOUNC\\p{L}*|OG\\p{L}OSZ\\p{L}*)" +
+            "\\s*(?::\\s*(.*)|-\\s+(.*))?$",
         RegexOption.IGNORE_CASE
     )
+    private val PLACEHOLDER = Regex("^<.*>$")
     private val MARKDOWN = Regex("\\*\\*|__|^#+\\s*", RegexOption.MULTILINE)
     private val BULLET = Regex("^(?:[-*•–]|\\d+[.)])\\s*")
     private val EMPTY_MARKERS = setOf(
@@ -41,8 +46,15 @@ object SummaryResponseParser {
         for (line in lines) {
             val label = SECTION_LABEL.find(line.trim())
             if (label != null) {
-                current = Section.valueOf(label.groupValues[1].uppercase())
-                sections.getOrPut(current) { mutableListOf() }.add(label.groupValues[2])
+                current = sectionFor(label.groupValues[1])
+                val inline = label.groupValues[2].ifEmpty { label.groupValues[3] }
+                val section = sections.getOrPut(current) { mutableListOf() }
+                // "TOPICS: a, b, c" on one line is a list too
+                if (current != Section.OVERVIEW && inline.count { it == ',' } >= 2) {
+                    section.addAll(inline.split(','))
+                } else {
+                    section.add(inline)
+                }
             } else if (current != null) {
                 sections.getValue(current).add(line)
             }
@@ -59,17 +71,33 @@ object SummaryResponseParser {
 
         return ParsedSummary(
             overview = items(sections[Section.OVERVIEW]).joinToString(" "),
-            topics = items(sections[Section.TOPICS]).take(MAX_ITEMS),
-            actions = items(sections[Section.ACTIONS]).take(MAX_ITEMS),
-            announcements = items(sections[Section.ANNOUNCEMENTS]).take(MAX_ITEMS)
+            topics = listItems(sections[Section.TOPICS]),
+            actions = listItems(sections[Section.ACTIONS]),
+            announcements = listItems(sections[Section.ANNOUNCEMENTS])
         )
     }
+
+    private fun sectionFor(label: String): Section {
+        val upper = label.uppercase()
+        return when {
+            upper.startsWith("OVERVIEW") || upper.startsWith("PRZEGL") -> Section.OVERVIEW
+            upper.startsWith("TOPIC") || upper.startsWith("TEMAT") -> Section.TOPICS
+            upper.startsWith("ACTION") || upper.startsWith("ZADANI") || upper.startsWith("DZIA") -> Section.ACTIONS
+            else -> Section.ANNOUNCEMENTS
+        }
+    }
+
+    /** Bullets without a trailing period, so "Koszt." and "Koszt" count as the same item. */
+    private fun listItems(lines: List<String>?): List<String> =
+        items(lines).map { it.trimEnd('.').trim() }.filter { it.isNotEmpty() }.distinctBy { it.lowercase() }.take(MAX_ITEMS)
 
     private fun items(lines: List<String>?): List<String> =
         lines.orEmpty()
             .map { it.trim().replace(BULLET, "").trim() }
             .filter { item ->
                 val lower = item.lowercase()
-                item.isNotEmpty() && lower !in EMPTY_MARKERS && lower !in FORMAT_HINTS
+                item.isNotEmpty() && lower !in EMPTY_MARKERS && lower !in FORMAT_HINTS && !PLACEHOLDER.matches(item)
             }
+            // Small models sometimes loop on the same bullet
+            .distinctBy { it.lowercase() }
 }

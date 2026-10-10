@@ -35,7 +35,7 @@ class SummaryResponseParserTest {
             Wycieczka przeniesiona na piątek.
             **TOPICS:**
             1. Termin wycieczki
-            2) short topic
+            2) <topic in a few words>
             **ACTIONS:**
             - Brak
             ## ANNOUNCEMENTS:
@@ -47,6 +47,42 @@ class SummaryResponseParserTest {
         assertEquals(listOf("Termin wycieczki"), parsed.topics)
         assertTrue(parsed.actions.isEmpty())
         assertTrue(parsed.announcements.isEmpty())
+    }
+
+    @Test
+    fun `labels without colons are recognized and repeated bullets removed`() {
+        val parsed = SummaryResponseParser.parse(
+            """
+            OVERVIEW
+            Wycieczka w piątek, zbiórka 7:15.
+            TOPICS
+            - Wycieczka
+            ACTIONS
+            - Przelew 85 zł do środy
+            - Przelew 85 zł do środy
+            ANNOUNCEMENTS
+            - Zebranie we wtorek 18:00
+            """.trimIndent()
+        )
+
+        assertEquals("Wycieczka w piątek, zbiórka 7:15.", parsed.overview)
+        assertEquals(listOf("Wycieczka"), parsed.topics)
+        assertEquals(listOf("Przelew 85 zł do środy"), parsed.actions)
+        assertEquals(listOf("Zebranie we wtorek 18:00"), parsed.announcements)
+    }
+
+    @Test
+    fun `inline comma lists and misspelled labels are handled`() {
+        val parsed = SummaryResponseParser.parse(
+            """
+            OVERVIEW: Wycieczka do Centrum Nauki.
+            TOPICS: plan wycieczki, koszt, zgody rodziców
+            ANNOUNCEMTY: Zmiana autobusu na 7:30.
+            """.trimIndent()
+        )
+
+        assertEquals(listOf("plan wycieczki", "koszt", "zgody rodziców"), parsed.topics)
+        assertEquals(listOf("Zmiana autobusu na 7:30"), parsed.announcements)
     }
 
     @Test

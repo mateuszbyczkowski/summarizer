@@ -58,21 +58,23 @@ class DebugSampleData @Inject constructor(
     )
 
     suspend fun seed() {
-        val threadId = ThreadNaming.threadIdFor(THREAD_NAME)
-        val now = System.currentTimeMillis()
         // Fixed hashes keep re-seeding idempotent; timestamps are relative to the first seed
-        samples.forEachIndexed { index, sample ->
-            messageRepository.saveIncomingMessage(
-                Message(
-                    threadId = threadId,
-                    threadName = THREAD_NAME,
-                    sender = sample.sender,
-                    content = sample.text,
-                    timestamp = now - sample.minutesAgo * MINUTE,
-                    messageHash = "debug-sample-$index",
-                    messageType = sample.type,
-                    isDeleted = sample.type == MessageType.DELETED
-                )
+        sampleMessages(System.currentTimeMillis()).forEach { messageRepository.saveIncomingMessage(it) }
+    }
+
+    /** The sample chat as messages ending shortly before [now]; also used by the benchmark. */
+    fun sampleMessages(now: Long): List<Message> {
+        val threadId = ThreadNaming.threadIdFor(THREAD_NAME)
+        return samples.mapIndexed { index, sample ->
+            Message(
+                threadId = threadId,
+                threadName = THREAD_NAME,
+                sender = sample.sender,
+                content = sample.text,
+                timestamp = now - sample.minutesAgo * MINUTE,
+                messageHash = "debug-sample-$index",
+                messageType = sample.type,
+                isDeleted = sample.type == MessageType.DELETED
             )
         }
     }

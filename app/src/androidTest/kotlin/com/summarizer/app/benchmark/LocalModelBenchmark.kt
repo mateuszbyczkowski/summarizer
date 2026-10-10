@@ -6,7 +6,14 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.llamatik.library.platform.GenStream
 import com.llamatik.library.platform.LlamaBridge
+import com.summarizer.app.data.ai.AndroidLanguageDetector
+import com.summarizer.app.data.debug.DebugSampleData
 import com.summarizer.app.domain.ai.PromptTemplate
+import com.summarizer.app.domain.ai.SummaryResponseParser
+import com.summarizer.app.domain.repository.MessageRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.runBlocking
 import com.summarizer.app.domain.model.Message
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -56,12 +63,47 @@ class LocalModelBenchmark {
         bridge.shutdown()
     }
 
-    private fun measure(model: File, config: Config, prompt: String) {
+    /**
+     * Summarizes the debug sample chat with every downloaded model using the app's real prompt,
+     * logging speed, the raw output and what the parser extracts. Filter with `-e model <name>`.
+     */
+    @Test
+    fun compareModels() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val filter = InstrumentationRegistry.getArguments().getString("model").orEmpty()
+        val models = File(context.filesDir, "models").listFiles { f -> f.extension == "gguf" && filter in f.name }.orEmpty()
+        assumeTrue("No downloaded model", models.isNotEmpty())
+
+        val messages = DebugSampleData(NoOpMessageRepository).sampleMessages(System.currentTimeMillis())
+        val language = runBlocking {
+            AndroidLanguageDetector(context).detectLanguageName(messages.joinToString("\n") { it.content })
+        }
+        val prompt = PromptTemplate.buildSummarizationPrompt(messages, DebugSampleData.THREAD_NAME, 8_500, language)!!
+        log("Detected language: $language, prompt=${prompt.length} chars")
+        val threads = (Runtime.getRuntime().availableProcessors() - 2).coerceIn(2, 6)
+
+        for (model in models.sortedBy { it.length() }) {
+            val (output, stats) = runCatching { generate(model, Config(threads), prompt, maxTokens = 400) }
+                .getOrElse { log("${model.name} FAILED: ${it.message}"); continue }
+            log("===== ${model.name}: $stats")
+            output.lines().forEach { log("| $it") }
+            val parsed = SummaryResponseParser.parse(output)
+            log("parsed overview=${parsed.overview.length} chars, topics=${parsed.topics.size}, actions=${parsed.actions.size}, announcements=${parsed.announcements.size}")
+        }
         bridge.shutdown()
-        applyParams(config)
+    }
+
+    private fun measure(model: File, config: Config, prompt: String) {
+        val (output, stats) = generate(model, config, prompt, maxTokens = 96)
+        log("${model.name} $config $stats (${output.length} chars)")
+    }
+
+    private fun generate(model: File, config: Config, prompt: String, maxTokens: Int): Pair<String, String> {
+        bridge.shutdown()
+        applyParams(config, maxTokens)
         val loadStart = SystemClock.elapsedRealtime()
         check(bridge.initGenerateModel(model.path)) { "init failed" }
-        applyParams(config)
+        applyParams(config, maxTokens)
         val loadMs = SystemClock.elapsedRealtime() - loadStart
 
         val template = bridge.getModelChatTemplate().orEmpty()
@@ -89,17 +131,15 @@ class LocalModelBenchmark {
         val promptMs = firstTokenAt - start
         val genMs = end - firstTokenAt
         val promptTokens = prompt.length / 3.0 // rough; same prompt for every config
-        log(
-            "${model.name} $config load=${loadMs}ms prompt=${promptMs}ms " +
-                "(~${"%.0f".format(promptTokens * 1000 / promptMs)} tok/s) " +
-                "gen=${genMs}ms for ${output.length} chars (~${"%.1f".format(output.length / 4.0 * 1000 / genMs)} tok/s)"
-        )
+        val stats = "load=${loadMs}ms prompt=${promptMs}ms (~${"%.0f".format(promptTokens * 1000 / promptMs)} tok/s) " +
+            "gen=${genMs}ms (~${"%.1f".format(output.length / 4.0 * 1000 / genMs)} tok/s)"
+        return output.toString() to stats
     }
 
-    private fun applyParams(config: Config) {
+    private fun applyParams(config: Config, maxTokens: Int) {
         bridge.updateGenerateParams(
             temperature = 0.2f,
-            maxTokens = 96,
+            maxTokens = maxTokens,
             topP = 0.9f,
             topK = 40,
             repeatPenalty = 1.1f,
@@ -134,5 +174,14 @@ class LocalModelBenchmark {
 
     private fun log(message: String) {
         Log.i("LlamaBenchmark", message)
+    }
+
+    private object NoOpMessageRepository : MessageRepository {
+        override fun getMessagesForThread(threadId: String): Flow<List<Message>> = emptyFlow()
+        override suspend fun getRecentMessagesForThread(threadId: String, limit: Int) = emptyList<Message>()
+        override suspend fun getMessagesForThreadSince(threadId: String, sinceTimestamp: Long) = emptyList<Message>()
+        override suspend fun saveIncomingMessage(message: Message) = false
+        override suspend fun deleteMessagesForThread(threadId: String) = Unit
+        override suspend fun searchMessages(query: String) = emptyList<Message>()
     }
 }

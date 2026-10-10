@@ -46,6 +46,7 @@ class RealAIEngine @Inject constructor() : AIEngine {
         // On-device generation runs in a foreground job; long prompts on slow phones can take minutes
         private const val GENERATION_TIMEOUT_MS = 10 * 60_000L
         private const val MAX_CHARS_PER_TOKEN = 8
+        private const val MAX_LINE_REPEATS = 3
         private val UNCLOSED_THINKING = Regex("<think>[\\s\\S]*$")
         private const val DEFAULT_TEMPERATURE = 0.7f
         private const val DEFAULT_MAX_TOKENS = 512
@@ -165,13 +166,36 @@ class RealAIEngine @Inject constructor() : AIEngine {
         // Generous upper bound in characters for maxTokens; only hit by runaway generations
         val maxChars = maxTokens * MAX_CHARS_PER_TOKEN
 
+        val lineCounts = HashMap<String, Int>()
+        var checkedUpTo = 0
+        var stopped = false
         val callback = object : GenStream {
             override fun onDelta(text: String) {
                 if (firstTokenAt == 0L) firstTokenAt = SystemClock.elapsedRealtime()
                 output.append(text)
+                if (stopped) return
                 if (output.length > maxChars) {
                     Timber.w("Generation exceeded $maxChars chars, stopping")
+                    stopped = true
                     bridge.nativeCancelGenerate()
+                    return
+                }
+                // Stop a model stuck repeating the same line instead of waiting for the token limit
+                val lastNewline = output.lastIndexOf('\n')
+                if (lastNewline > checkedUpTo) {
+                    output.substring(checkedUpTo, lastNewline).lines()
+                        .map { it.trim() }
+                        .filter { it.length > 3 }
+                        .forEach { line ->
+                            val count = (lineCounts[line] ?: 0) + 1
+                            lineCounts[line] = count
+                            if (count >= MAX_LINE_REPEATS && !stopped) {
+                                Timber.w("Generation is repeating itself, stopping")
+                                stopped = true
+                                bridge.nativeCancelGenerate()
+                            }
+                        }
+                    checkedUpTo = lastNewline
                 }
             }
 

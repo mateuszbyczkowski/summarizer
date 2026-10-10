@@ -1,7 +1,9 @@
 package com.summarizer.app.di
 
 import com.summarizer.app.data.ai.AIEngineProvider
+import com.summarizer.app.data.ai.AndroidLanguageDetector
 import com.summarizer.app.domain.ai.AIEngine
+import com.summarizer.app.domain.ai.LanguageDetector
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -29,4 +31,10 @@ abstract class AIModule {
     abstract fun bindAIEngine(
         provider: AIEngineProvider
     ): AIEngine
+
+    @Binds
+    @Singleton
+    abstract fun bindLanguageDetector(
+        detector: AndroidLanguageDetector
+    ): LanguageDetector
 }

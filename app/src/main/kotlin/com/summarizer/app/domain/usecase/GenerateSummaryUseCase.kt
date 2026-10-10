@@ -2,9 +2,11 @@ package com.summarizer.app.domain.usecase
 
 import com.summarizer.app.domain.ai.AIEngine
 import com.summarizer.app.domain.model.ActionItem
+import com.summarizer.app.domain.ai.LanguageDetector
 import com.summarizer.app.domain.ai.PromptTemplate
 import com.summarizer.app.domain.ai.SummaryResponseParser
 import com.summarizer.app.domain.ai.ensureModelLoaded
+import com.summarizer.app.domain.model.MessageType
 import com.summarizer.app.domain.model.Summary
 import com.summarizer.app.domain.repository.MessageRepository
 import com.summarizer.app.domain.repository.ModelRepository
@@ -36,7 +38,8 @@ class GenerateSummaryUseCase @Inject constructor(
     private val summaryRepository: SummaryRepository,
     private val threadRepository: ThreadRepository,
     private val threadSettingsRepository: ThreadSettingsRepository,
-    private val modelRepository: ModelRepository
+    private val modelRepository: ModelRepository,
+    private val languageDetector: LanguageDetector
 ) {
 
     /**
@@ -76,15 +79,21 @@ class GenerateSummaryUseCase @Inject constructor(
             }
 
             // Step 3: Build prompt (before loading the model, so idle threads stay cheap)
+            val language = languageDetector.detectLanguageName(
+                PromptTemplate.summarizableMessages(messages)
+                    .filter { it.messageType == MessageType.TEXT }
+                    .joinToString("\n") { it.content }
+            )
             val prompt = PromptTemplate.buildSummarizationPrompt(
                 messages = messages,
                 threadName = thread.threadName,
-                maxTranscriptChars = aiEngine.maxPromptChars()
+                maxTranscriptChars = aiEngine.maxPromptChars(),
+                languageName = language
             ) ?: throw NothingToSummarizeException(
                 if (incremental && !allowRepeat) "No new messages since the last summary" else "No messages to summarize"
             )
 
-            Timber.d("Summarizing ${messages.size} messages (mode: ${settings.summarizationMode}, prompt: ${prompt.length} chars)")
+            Timber.d("Summarizing ${messages.size} messages (mode: ${settings.summarizationMode}, language: $language, prompt: ${prompt.length} chars)")
 
             // Step 4: Ensure the active engine is ready
             aiEngine.ensureModelLoaded(modelRepository).getOrElse { error ->
