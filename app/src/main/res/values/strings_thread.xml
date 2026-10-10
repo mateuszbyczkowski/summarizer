@@ -78,7 +78,8 @@
     <string name="thread_step_current">in progress</string>
     <string name="thread_step_pending">pending</string>
     <string name="thread_waiting">Waiting to start…</string>
-    <string name="thread_elapsed">Elapsed %1$s</string>
+    <!-- "Started at 17:02" -->
+    <string name="thread_started_at">Started at %1$s</string>
     <string name="thread_usual_time">usually 30–60 s</string>
     <string name="thread_leave_app">You can leave the app — we\'ll notify you when it\'s ready.</string>
     <string name="thread_previous_summary">Previous summary · %1$s</string>

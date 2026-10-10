@@ -18,6 +18,7 @@
 
     <!-- Generation stages -->
     <string name="summary_stage_preparing">Preparing messages…</string>
+    <string name="summary_stage_waiting">Waiting for another summary to finish…</string>
     <string name="summary_stage_loading_model">Loading the model…</string>
     <string name="summary_stage_reading">Reading the conversation…</string>
     <string name="summary_stage_writing">Writing the summary…</string>

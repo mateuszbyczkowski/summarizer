@@ -10,6 +10,7 @@ import com.summarizer.app.data.download.ModelSetupManager
 import com.summarizer.app.data.download.ModelDownloadManager
 import com.summarizer.app.di.ApplicationScope
 import com.summarizer.app.domain.ai.AIEngine
+import com.summarizer.app.domain.ai.ModelGate
 import com.summarizer.app.domain.model.AIModel
 import com.summarizer.app.domain.model.AIProvider
 import com.summarizer.app.domain.model.ModelDownloadState
@@ -50,6 +51,7 @@ class ModelDownloadViewModel @Inject constructor(
     private val preferencesRepository: PreferencesRepository,
     private val workScheduler: WorkScheduler,
     private val aiEngine: AIEngine,
+    private val modelGate: ModelGate,
     threadRepository: ThreadRepository,
     private val generationCoordinator: SummaryGenerationCoordinator,
     @ApplicationContext private val context: Context,
@@ -172,12 +174,14 @@ class ModelDownloadViewModel @Inject constructor(
 
     fun deleteModel(modelId: String) {
         applicationScope.launch {
-            // The file may be memory-mapped by the local engine
-            aiEngine.unloadModel()
-            if (modelRepository.deleteModelFile(modelId)) {
-                Timber.i("Model $modelId deleted successfully")
-            } else {
-                Timber.e("Failed to delete model $modelId")
+            // The file may be memory-mapped by the local engine; a running summary finishes first
+            modelGate.withModel {
+                aiEngine.unloadModel()
+                if (modelRepository.deleteModelFile(modelId)) {
+                    Timber.i("Model $modelId deleted successfully")
+                } else {
+                    Timber.e("Failed to delete model $modelId")
+                }
             }
         }
     }
@@ -214,20 +218,23 @@ class ModelDownloadViewModel @Inject constructor(
             activeModelChanges.update { it + 1 }
             withContext(Dispatchers.Main) { onActivated() }
 
-            // Unload any previously loaded model so the new one takes effect immediately.
-            if (aiEngine.isModelLoaded() &&
-                aiEngine.getModelInfo()?.path != model.localFilePath
-            ) {
-                Timber.i("Unloading previous model before loading ${model.name}")
-                aiEngine.unloadModel()
-            }
+            // Swap models once a running summary is done, so it is never unloaded mid-summary
+            modelGate.withModel {
+                // Unload any previously loaded model so the new one takes effect immediately.
+                if (aiEngine.isModelLoaded() &&
+                    aiEngine.getModelInfo()?.path != model.localFilePath
+                ) {
+                    Timber.i("Unloading previous model before loading ${model.name}")
+                    aiEngine.unloadModel()
+                }
 
-            try {
-                Timber.i("Pre-loading model in background: ${model.name}")
-                aiEngine.loadModel(model.localFilePath).getOrThrow()
-                Timber.i("Model pre-loaded successfully: ${model.name}")
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to pre-load model: ${model.name}")
+                try {
+                    Timber.i("Pre-loading model in background: ${model.name}")
+                    aiEngine.loadModel(model.localFilePath).getOrThrow()
+                    Timber.i("Model pre-loaded successfully: ${model.name}")
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to pre-load model: ${model.name}")
+                }
             }
         }
     }

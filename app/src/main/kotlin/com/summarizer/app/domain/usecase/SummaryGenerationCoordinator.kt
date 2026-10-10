@@ -24,6 +24,9 @@ import javax.inject.Singleton
  * when the user leaves the app and posts a notification when done; at most one runs per thread.
  * Screens observe [stateFor] (including progress and the overview as it is written); results
  * land in the database.
+ *
+ * The overview being written stays in memory here ([publishPartialText]), never in WorkManager
+ * progress: WorkManager stores progress in its own unencrypted database and logs it.
  */
 @Singleton
 class SummaryGenerationCoordinator @Inject constructor(
@@ -54,14 +57,23 @@ class SummaryGenerationCoordinator @Inject constructor(
     /** Failed jobs the user already dismissed; WorkManager keeps finished jobs around for a while. */
     private val dismissed = MutableStateFlow<Set<UUID>>(emptySet())
 
+    /** The overview written so far, by thread, while its summary is being written. */
+    private val partialTexts = MutableStateFlow<Map<String, String>>(emptyMap())
+
     fun stateFor(threadId: String): Flow<State?> =
         combine(
             workManager.getWorkInfosForUniqueWorkFlow(SummaryGenerationWorker.uniqueWorkName(threadId)),
-            dismissed
-        ) { infos, dismissedIds ->
+            dismissed,
+            partialTexts
+        ) { infos, dismissedIds, partials ->
             val info = infos.lastOrNull() ?: return@combine null
-            stateOf(info, dismissedIds)
+            stateOf(info, dismissedIds, partials[threadId])
         }.distinctUntilChanged()
+
+    /** Called by the summary job as the overview is written; null when the job ends. */
+    fun publishPartialText(threadId: String, text: String?) {
+        partialTexts.update { if (text.isNullOrBlank()) it - threadId else it + (threadId to text) }
+    }
 
     /**
      * States of all threads with a summary job, from one WorkManager query (for lists such as
@@ -72,12 +84,13 @@ class SummaryGenerationCoordinator @Inject constructor(
             infos.mapNotNull { info ->
                 val threadId = info.tags.firstOrNull { it.startsWith(THREAD_TAG_PREFIX) }
                     ?.removePrefix(THREAD_TAG_PREFIX) ?: return@mapNotNull null
-                stateOf(info, dismissedIds)?.let { threadId to it }
+                stateOf(info, dismissedIds, partialText = null)?.let { threadId to it }
             }.toMap()
         }.distinctUntilChanged()
 
-    private fun stateOf(info: WorkInfo, dismissedIds: Set<UUID>): State? = when (info.state) {
-        WorkInfo.State.ENQUEUED, WorkInfo.State.RUNNING, WorkInfo.State.BLOCKED -> runningState(info)
+    private fun stateOf(info: WorkInfo, dismissedIds: Set<UUID>, partialText: String?): State? = when (info.state) {
+        WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED -> runningState(info, partialText = null)
+        WorkInfo.State.RUNNING -> runningState(info, partialText)
         WorkInfo.State.FAILED -> if (info.id in dismissedIds) null else State.Failed(
             message = info.outputData.getString(SummaryGenerationWorker.KEY_ERROR).orEmpty(),
             nothingNew = info.outputData.getBoolean(SummaryGenerationWorker.KEY_NOTHING_NEW, false)
@@ -85,14 +98,14 @@ class SummaryGenerationCoordinator @Inject constructor(
         WorkInfo.State.SUCCEEDED, WorkInfo.State.CANCELLED -> null
     }
 
-    private fun runningState(info: WorkInfo): State.Running {
+    private fun runningState(info: WorkInfo, partialText: String?): State.Running {
         val progress = info.progress
         return State.Running(
             stage = progress.getString(SummaryGenerationWorker.KEY_STAGE)
                 ?.let { name -> GenerationStage.entries.firstOrNull { it.name == name } }
                 ?: GenerationStage.PREPARING,
             startedAt = progress.getLong(SummaryGenerationWorker.KEY_STARTED_AT, 0L).takeIf { it > 0 },
-            partialText = progress.getString(SummaryGenerationWorker.KEY_PARTIAL_TEXT)?.takeIf { it.isNotBlank() }
+            partialText = partialText
         )
     }
 

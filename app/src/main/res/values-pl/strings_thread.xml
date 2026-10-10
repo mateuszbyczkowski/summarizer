@@ -85,7 +85,7 @@
     <string name="thread_step_current">w toku</string>
     <string name="thread_step_pending">oczekuje</string>
     <string name="thread_waiting">Czekam na start…</string>
-    <string name="thread_elapsed">Minęło %1$s</string>
+    <string name="thread_started_at">Rozpoczęto o %1$s</string>
     <string name="thread_usual_time">zwykle 30–60 s</string>
     <string name="thread_leave_app">Możesz wyjść z aplikacji. Damy znać powiadomieniem, gdy będzie gotowe.</string>
     <string name="thread_previous_summary">Poprzednie podsumowanie · %1$s</string>

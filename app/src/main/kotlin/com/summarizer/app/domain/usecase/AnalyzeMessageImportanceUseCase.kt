@@ -3,7 +3,7 @@ package com.summarizer.app.domain.usecase
 import com.summarizer.app.domain.ai.AIEngine
 import com.summarizer.app.domain.model.AIProvider
 import com.summarizer.app.domain.repository.PreferencesRepository
-import kotlinx.coroutines.sync.Mutex
+import com.summarizer.app.domain.ai.ModelGate
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -17,11 +17,9 @@ import javax.inject.Singleton
 @Singleton
 class AnalyzeMessageImportanceUseCase @Inject constructor(
     private val aiEngine: AIEngine,
-    private val preferencesRepository: PreferencesRepository
+    private val preferencesRepository: PreferencesRepository,
+    private val modelGate: ModelGate
 ) {
-
-    /** Only one AI analysis at a time; bursts of messages fall back instead of queueing up. */
-    private val aiAnalysisLock = Mutex()
 
     /**
      * Analyze a message and return an importance score (0.0 - 1.0).
@@ -41,14 +39,10 @@ class AnalyzeMessageImportanceUseCase @Inject constructor(
     suspend fun execute(messageContent: String, senderName: String): Float {
         analyzeWithHeuristics(messageContent)?.let { return it }
 
-        if (preferencesRepository.getAIProvider() != AIProvider.LOCAL || !aiAnalysisLock.tryLock()) {
-            return FALLBACK_SCORE
-        }
-        return try {
-            analyzeWithAI(messageContent, senderName)
-        } finally {
-            aiAnalysisLock.unlock()
-        }
+        if (preferencesRepository.getAIProvider() != AIProvider.LOCAL) return FALLBACK_SCORE
+        // Only when the model is free: bursts of messages and running summaries never queue up
+        // behind each other
+        return modelGate.tryWithModel { analyzeWithAI(messageContent, senderName) } ?: FALLBACK_SCORE
     }
 
     /**

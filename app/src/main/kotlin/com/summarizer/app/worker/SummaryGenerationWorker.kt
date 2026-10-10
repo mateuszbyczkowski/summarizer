@@ -24,6 +24,7 @@ import com.summarizer.app.domain.repository.PreferencesRepository
 import com.summarizer.app.domain.repository.ThreadRepository
 import com.summarizer.app.domain.usecase.GenerateSummaryUseCase
 import com.summarizer.app.domain.usecase.NothingToSummarizeException
+import com.summarizer.app.domain.usecase.SummaryGenerationCoordinator
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +39,8 @@ import timber.log.Timber
  * Generates one summary the user asked for, as a foreground job so it survives the user
  * switching to another app, then posts a "summary ready" notification that opens it.
  *
- * Publishes progress ([KEY_STAGE], [KEY_STARTED_AT], [KEY_PARTIAL_TEXT]) for the screens; the
+ * Publishes progress ([KEY_STAGE], [KEY_STARTED_AT]) for the screens, and the overview being
+ * written through [SummaryGenerationCoordinator.publishPartialText] (kept out of WorkManager); the
  * ongoing notification can cancel the job. The ready notification shows the first task, but
  * only when the phone is unlocked: on the lock screen a public version without content is shown.
  */
@@ -47,6 +49,7 @@ class SummaryGenerationWorker @AssistedInject constructor(
     @Assisted private val context: Context,
     @Assisted workerParams: WorkerParameters,
     private val generateSummaryUseCase: GenerateSummaryUseCase,
+    private val coordinator: SummaryGenerationCoordinator,
     private val threadRepository: ThreadRepository,
     private val preferencesRepository: PreferencesRepository
 ) : CoroutineWorker(context, workerParams) {
@@ -65,11 +68,6 @@ class SummaryGenerationWorker @AssistedInject constructor(
         /** Progress: when generation started (epoch millis) */
         const val KEY_STARTED_AT = "started_at"
 
-        /** Progress: the overview written so far */
-        const val KEY_PARTIAL_TEXT = "partial_text"
-
-        // WorkManager data is limited to 10 KB
-        private const val MAX_PARTIAL_CHARS = 2_000
         // Streaming produces a token every few milliseconds; the screen needs a few updates per second
         private const val PROGRESS_INTERVAL_MS = 250L
 
@@ -131,14 +129,13 @@ class SummaryGenerationWorker @AssistedInject constructor(
         val progress = MutableStateFlow(Progress(GenerationStage.PREPARING, null))
         val publisher = launch {
             // StateFlow keeps only the latest value, so pausing here skips intermediate updates
+            var publishedStage: GenerationStage? = null
             progress.collect { (stage, partialText) ->
-                setProgress(
-                    workDataOf(
-                        KEY_STAGE to stage.name,
-                        KEY_STARTED_AT to startedAt,
-                        KEY_PARTIAL_TEXT to partialText?.take(MAX_PARTIAL_CHARS)
-                    )
-                )
+                if (stage != publishedStage) {
+                    setProgress(workDataOf(KEY_STAGE to stage.name, KEY_STARTED_AT to startedAt))
+                    publishedStage = stage
+                }
+                coordinator.publishPartialText(threadId, partialText)
                 delay(PROGRESS_INTERVAL_MS)
             }
         }
@@ -152,6 +149,7 @@ class SummaryGenerationWorker @AssistedInject constructor(
             }
         } finally {
             publisher.cancel()
+            coordinator.publishPartialText(threadId, null)
         }
     }
 

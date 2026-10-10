@@ -20,6 +20,7 @@
 
     <!-- Generation stages -->
     <string name="summary_stage_preparing">Przygotowuję wiadomości…</string>
+    <string name="summary_stage_waiting">Czekam, aż skończy się inne podsumowanie…</string>
     <string name="summary_stage_loading_model">Wczytuję model…</string>
     <string name="summary_stage_reading">Czytam rozmowę…</string>
     <string name="summary_stage_writing">Piszę podsumowanie…</string>

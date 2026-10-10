@@ -3,6 +3,7 @@ package com.summarizer.app.data.download
 import android.content.Context
 import com.summarizer.app.di.ApplicationScope
 import com.summarizer.app.domain.ai.AIEngine
+import com.summarizer.app.domain.ai.ModelGate
 import com.summarizer.app.domain.model.AIModel
 import com.summarizer.app.domain.model.DownloadStatus
 import com.summarizer.app.domain.model.ModelDownloadState
@@ -47,6 +48,7 @@ class ModelSetupManager @Inject constructor(
     private val downloadManager: ModelDownloadManager,
     private val catalogSync: ModelCatalogSync,
     private val aiEngine: AIEngine,
+    private val modelGate: ModelGate,
     @ApplicationScope private val scope: CoroutineScope
 ) {
     private data class Tracked(val modelId: String, val model: AIModel?, val download: ModelDownloadState?)
@@ -179,8 +181,11 @@ class ModelSetupManager @Inject constructor(
      * still loaded in memory (e.g. the debug Demo) has to go so the next summary loads it.
      */
     private suspend fun activate(model: AIModel) {
-        if (aiEngine.isModelLoaded() && aiEngine.getModelInfo()?.path != model.localFilePath) {
-            aiEngine.unloadModel()
+        // After a running summary, which keeps the model it started with
+        modelGate.withModel {
+            if (aiEngine.isModelLoaded() && aiEngine.getModelInfo()?.path != model.localFilePath) {
+                aiEngine.unloadModel()
+            }
         }
         Timber.i("Model ${model.id} is set up")
     }

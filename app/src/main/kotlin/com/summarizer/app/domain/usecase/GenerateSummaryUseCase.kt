@@ -3,6 +3,7 @@ package com.summarizer.app.domain.usecase
 import com.summarizer.app.domain.ai.AIEngine
 import com.summarizer.app.domain.ai.AIEngineError
 import com.summarizer.app.domain.ai.LanguageDetector
+import com.summarizer.app.domain.ai.ModelGate
 import com.summarizer.app.domain.ai.PromptTemplate
 import com.summarizer.app.domain.ai.SummaryResponseParser
 import com.summarizer.app.domain.ai.ensureModelLoaded
@@ -42,7 +43,8 @@ class GenerateSummaryUseCase @Inject constructor(
     private val threadRepository: ThreadRepository,
     private val threadSettingsRepository: ThreadSettingsRepository,
     private val modelRepository: ModelRepository,
-    private val languageDetector: LanguageDetector
+    private val languageDetector: LanguageDetector,
+    private val modelGate: ModelGate
 ) {
 
     /**
@@ -99,12 +101,6 @@ class GenerateSummaryUseCase @Inject constructor(
                 )
             }
 
-            // Step 4: Ensure the engine is ready; the prompt budget depends on which engine
-            // actually loaded (a GPU model may fall back to a CPU model)
-            onProgress?.invoke(GenerationStage.LOADING_MODEL, null)
-            aiEngine.ensureModelLoaded(modelRepository).getOrElse { error ->
-                throw IllegalStateException("Failed to load AI model: ${error.message}", error)
-            }
             val language = languageDetector.detectLanguageName(
                 summarizable.filter { it.messageType == MessageType.TEXT }.joinToString("\n") { it.content }
             )
@@ -118,31 +114,39 @@ class GenerateSummaryUseCase @Inject constructor(
                 ) ?: throw NothingToSummarizeException("No messages to summarize")
             }
 
-            // Step 5: Generate summary. Transient failures are retried by the engine itself.
-            onProgress?.invoke(GenerationStage.READING, null)
-            val generate = suspend {
-                val prompt = buildPrompt()
-                Timber.d("Summarizing ${messages.size} messages (mode: ${if (incremental) "incremental" else "full"}, language: $language, prompt: ${prompt.length} chars)")
-                aiEngine.generate(
-                    prompt = prompt,
-                    systemPrompt = PromptTemplate.systemPrompt(language),
-                    maxTokens = SUMMARY_MAX_TOKENS,
-                    temperature = 0.2f, // Low temperature: factual, consistent wording
-                    onPartial = onProgress?.let { report ->
-                        { partial -> report(GenerationStage.WRITING, SummaryResponseParser.streamingOverview(partial)) }
-                    }
-                )
-            }
-            var generated = generate()
-            // The model was swapped while this summary waited for another one (a model chosen in
-            // the model manager, or one that just finished downloading): load it and try again
-            if (generated.exceptionOrNull() is AIEngineError.ModelNotLoaded &&
-                aiEngine.ensureModelLoaded(modelRepository).isSuccess
-            ) {
-                generated = generate()
-            }
-            val rawResponse = generated.getOrElse { error ->
-                throw IllegalStateException("Failed to generate summary: ${error.message ?: "AI generation error"}", error)
+            // Step 4: Wait until no other summary uses the model, then make sure the engine is
+            // ready; the prompt budget depends on which engine actually loaded (a GPU model may
+            // fall back to a CPU model)
+            val rawResponse = modelGate.withModel(onWait = { onProgress?.invoke(GenerationStage.WAITING, null) }) {
+                onProgress?.invoke(GenerationStage.LOADING_MODEL, null)
+                aiEngine.ensureModelLoaded(modelRepository).getOrElse { error ->
+                    throw IllegalStateException("Failed to load AI model: ${error.message}", error)
+                }
+                // Step 5: Generate summary. Transient failures are retried by the engine itself.
+                onProgress?.invoke(GenerationStage.READING, null)
+                val generate = suspend {
+                    val prompt = buildPrompt()
+                    Timber.d("Summarizing ${messages.size} messages (mode: ${if (incremental) "incremental" else "full"}, language: $language, prompt: ${prompt.length} chars)")
+                    aiEngine.generate(
+                        prompt = prompt,
+                        systemPrompt = PromptTemplate.systemPrompt(language),
+                        maxTokens = SUMMARY_MAX_TOKENS,
+                        temperature = 0.2f, // Low temperature: factual, consistent wording
+                        onPartial = onProgress?.let { report ->
+                            { partial -> report(GenerationStage.WRITING, SummaryResponseParser.streamingOverview(partial)) }
+                        }
+                    )
+                }
+                var generated = generate()
+                // The model was unloaded outside the queue (data reset): load it and try again
+                if (generated.exceptionOrNull() is AIEngineError.ModelNotLoaded &&
+                    aiEngine.ensureModelLoaded(modelRepository).isSuccess
+                ) {
+                    generated = generate()
+                }
+                generated.getOrElse { error ->
+                    throw IllegalStateException("Failed to generate summary: ${error.message ?: "AI generation error"}", error)
+                }
             }
 
             // Step 6: Parse response into a Summary domain model. Dates without a year are

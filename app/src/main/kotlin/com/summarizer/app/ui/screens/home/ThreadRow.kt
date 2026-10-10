@@ -24,7 +24,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -103,7 +102,6 @@ fun ThreadRow(
             else -> null
         },
         when {
-            row.isGenerating -> null
             overviewText != null -> stringResource(R.string.thread_row_cd_summary, overviewText)
             lastMessage != null -> stringResource(R.string.thread_row_cd_last_message, lastMessage)
             else -> null
@@ -136,13 +134,9 @@ fun ThreadRow(
                 ThreadAvatar(name = thread.threadName, modifier = Modifier.clearAndSetSemantics { })
                 Column(modifier = Modifier.weight(1f)) {
                     NameAndTime(name = thread.threadName, time = time, hasNew = newCount > 0)
+                    // No animated bar while summarizing: the meta line says so, and on-device
+                    // generation keeps the GPU so busy that every animation frame stalls the UI
                     when {
-                        row.isGenerating -> LinearProgressIndicator(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 10.dp, bottom = 6.dp)
-                                .clearAndSetSemantics { }
-                        )
                         overviewText != null -> Teaser(text = overviewText, isSummary = true)
                         lastMessage != null -> Teaser(text = lastMessage, isSummary = false)
                     }
