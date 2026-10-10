@@ -20,6 +20,7 @@
     <string name="engine_plain_backup_cpu">Backup (CPU)</string>
     <string name="engine_plain_demo">Demo (debug)</string>
     <string name="engine_language_gemma">Good with Polish and many other languages</string>
+    <string name="engine_language_gemma_e4b">Most thorough, but about 3× slower than Recommended; while it reads a chat the phone may not respond for minutes</string>
     <string name="engine_language_lfm">Simpler summaries, weaker Polish; for phones whose GPU cannot run Gemma</string>
     <string name="engine_language_demo">Canned Polish summary of the test chat</string>
 

@@ -80,8 +80,9 @@
     <string name="thread_waiting">Waiting to start…</string>
     <!-- "Started at 17:02" -->
     <string name="thread_started_at">Started at %1$s</string>
-    <string name="thread_usual_time">usually 30–60 s</string>
+    <string name="thread_usual_time">usually 1–2 min</string>
     <string name="thread_leave_app">You can leave the app — we\'ll notify you when it\'s ready.</string>
+    <string name="thread_reading_slow">While the model reads the chat, the phone may not respond to taps. Leave the app — we\'ll notify you when it\'s ready.</string>
     <string name="thread_previous_summary">Previous summary · %1$s</string>
     <string name="thread_failed_title">Couldn\'t summarize</string>
     <string name="thread_failed_body">Something went wrong while writing the summary. Try again.</string>

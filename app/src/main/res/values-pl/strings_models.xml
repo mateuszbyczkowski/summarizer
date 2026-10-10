@@ -18,6 +18,7 @@
     <string name="engine_plain_backup_cpu">Zapasowy (CPU)</string>
     <string name="engine_plain_demo">Demo (debug)</string>
     <string name="engine_language_gemma">Dobrze rozumie polski i wiele innych języków</string>
+    <string name="engine_language_gemma_e4b">Najdokładniejszy, ale ok. 3× wolniejszy niż Polecany; gdy czyta czat, telefon może nie reagować przez kilka minut</string>
     <string name="engine_language_lfm">Prostsze podsumowania, słabszy polski; dla telefonów, na których GPU nie uruchomi Gemmy</string>
     <string name="engine_language_demo">Gotowe polskie podsumowanie testowego czatu</string>
 

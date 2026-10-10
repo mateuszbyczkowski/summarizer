@@ -22,7 +22,7 @@ class ModelProfilesTest {
         val e2b = ModelProfiles.profileOf(model(ModelProfiles.GEMMA_E2B_ID))
         assertEquals(R.string.engine_plain_recommended, e2b.plainName)
         assertEquals(ModelBackend.GPU, e2b.backend)
-        assertEquals(40, e2b.typicalSeconds)
+        assertEquals(50, e2b.typicalSeconds)
 
         assertEquals(R.string.engine_plain_best_quality, ModelProfiles.profileOf(model(ModelProfiles.GEMMA_E4B_ID)).plainName)
 

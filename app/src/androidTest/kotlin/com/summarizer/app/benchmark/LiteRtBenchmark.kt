@@ -38,7 +38,8 @@ import java.util.concurrent.TimeUnit
  *       -e repo litert-community/gemma-4-E2B-it-litert-lm -e file gemma-4-E2B-it-gpu.litertlm \
  *       -e rev <commit> com.summarizer.app.debug.test/androidx.test.runner.AndroidJUnitRunner
  *   adb shell am instrument -w -e class com.summarizer.app.benchmark.LiteRtBenchmark#compareBackends ...
- * Logs with tag "LiteRtBenchmark". Models are stored in files/litertlm/.
+ * Logs with tag "LiteRtBenchmark". Downloads go to files/litertlm/; the app's own models
+ * (files/models/) are compared too, e.g. `-e model gemma-4-e2b -e backends gpu,cpu`.
  */
 @RunWith(AndroidJUnit4::class)
 class LiteRtBenchmark {
@@ -100,7 +101,9 @@ class LiteRtBenchmark {
     @Test
     fun compareBackends() {
         val filter = args.getString("model").orEmpty()
-        val models = modelDir.listFiles { f -> f.extension == "litertlm" && filter in f.name }.orEmpty()
+        // Benchmark downloads and the app's own models (files/models)
+        val models = listOf(modelDir, File(context.filesDir, "models"))
+            .flatMap { dir -> dir.listFiles { f -> f.extension == "litertlm" && filter in f.name }.orEmpty().toList() }
         assumeTrue("No LiteRT-LM model", models.isNotEmpty())
         val backends = (args.getString("backends") ?: "gpu,cpu").split(",")
 

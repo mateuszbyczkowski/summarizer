@@ -14,8 +14,9 @@ enum class ModelBackend { GPU, CPU, DEMO }
  *
  * @property plainName Plain-language name shown first; null for models the app does not know
  *   (the technical name is shown instead)
- * @property typicalSeconds Typical time for one summary of a busy chat, from LocalModelBenchmark /
- *   LiteRtBenchmark runs on the debug sample chat (Dimensity 900); null when unknown
+ * @property typicalSeconds Typical time for one summary, from LocalModelBenchmark / LiteRtBenchmark
+ *   runs on the debug sample chat (Dimensity 900, 2026-10-10: E2B 50 s, E4B 143 s, LFM2.5 165 s);
+ *   null when unknown
  * @property languageNote How well the model handles Polish and other languages
  */
 data class ModelProfile(
@@ -35,9 +36,9 @@ object ModelProfiles {
     private val ORDER = listOf(GEMMA_E2B_ID, GEMMA_E4B_ID, LFM_ID, DemoEngine.MODEL_ID)
 
     fun profileOf(model: AIModel): ModelProfile = when (model.id) {
-        GEMMA_E2B_ID -> ModelProfile(R.string.engine_plain_recommended, 40, ModelBackend.GPU, R.string.engine_language_gemma)
-        GEMMA_E4B_ID -> ModelProfile(R.string.engine_plain_best_quality, 60, ModelBackend.GPU, R.string.engine_language_gemma)
-        LFM_ID -> ModelProfile(R.string.engine_plain_backup_cpu, 120, ModelBackend.CPU, R.string.engine_language_lfm)
+        GEMMA_E2B_ID -> ModelProfile(R.string.engine_plain_recommended, 50, ModelBackend.GPU, R.string.engine_language_gemma)
+        GEMMA_E4B_ID -> ModelProfile(R.string.engine_plain_best_quality, 145, ModelBackend.GPU, R.string.engine_language_gemma_e4b)
+        LFM_ID -> ModelProfile(R.string.engine_plain_backup_cpu, 165, ModelBackend.CPU, R.string.engine_language_lfm)
         DemoEngine.MODEL_ID -> ModelProfile(R.string.engine_plain_demo, 10, ModelBackend.DEMO, R.string.engine_language_demo)
         else -> ModelProfile(null, null, backendFromUrl(model.downloadUrl), null)
     }

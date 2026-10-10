@@ -137,7 +137,11 @@ internal fun GenerationCard(
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
-                            text = stringResource(R.string.thread_leave_app),
+                            // On-device models keep the GPU busy while reading, and the screen
+                            // cannot redraw until they are done
+                            text = stringResource(
+                                if (stage == GenerationStage.READING) R.string.thread_reading_slow else R.string.thread_leave_app
+                            ),
                             style = MaterialTheme.typography.bodyMedium,
                             color = colors.onSurfaceVariant
                         )
