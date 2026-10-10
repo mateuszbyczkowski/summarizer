@@ -18,6 +18,8 @@ android {
         versionName = "0.1.0-i1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Model benchmarks need a downloaded model; run them explicitly on a phone (see CLAUDE.md)
+        testInstrumentationRunnerArguments["notPackage"] = "com.summarizer.app.benchmark"
         vectorDrawables {
             useSupportLibrary = true
         }

@@ -1,8 +1,10 @@
-package com.summarizer.app.data.ai
+package com.summarizer.app.benchmark
 
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.summarizer.app.data.ai.AndroidLanguageDetector
+import com.summarizer.app.data.ai.LiteRtEngine
 import com.summarizer.app.data.debug.DebugSampleData
 import com.summarizer.app.domain.ai.PromptTemplate
 import com.summarizer.app.domain.ai.SummaryResponseParser
