@@ -79,6 +79,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -129,7 +130,7 @@ fun ModelDownloadScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val tryStartedMessage = stringResource(R.string.engine_try_started)
-    val context = LocalContext.current
+    val resources = LocalResources.current
 
     LifecycleResumeEffect(viewModel) {
         // The storage location may have changed on the picker screen
@@ -153,7 +154,7 @@ fun ModelDownloadScreen(
                 onModelSelected(model)
             } else {
                 val name = ModelProfiles.technicalName(model)
-                scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.engine_now_using, name)) }
+                scope.launch { snackbarHostState.showSnackbar(resources.getString(R.string.engine_now_using, name)) }
             }
         },
         onStorageClick = onStorageClick
