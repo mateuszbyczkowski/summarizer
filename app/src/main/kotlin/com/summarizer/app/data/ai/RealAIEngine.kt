@@ -62,8 +62,11 @@ class RealAIEngine @Inject constructor() : AIEngine {
         // and keeps prompt processing to well under a minute on mid-range phones
         private const val MAX_PROMPT_CHARS = 8_500
 
-        // Runtime settings required since Llamatik 1.x; values follow llama.cpp defaults
-        private const val MAX_THREADS = 4
+        // Measured on a Dimensity 900 (LocalModelBenchmark): generation is fastest with 6 of 8
+        // cores; leaving 2 cores free keeps the UI responsive. Batch size and flash attention
+        // made no measurable difference.
+        private const val MIN_THREADS = 2
+        private const val MAX_THREADS = 6
         private const val BATCH_SIZE = 512
     }
 
@@ -81,7 +84,7 @@ class RealAIEngine @Inject constructor() : AIEngine {
             topK = topK,
             repeatPenalty = repeatPenalty,
             contextLength = MODEL_CONTEXT_TOKENS,
-            numThreads = Runtime.getRuntime().availableProcessors().coerceIn(1, MAX_THREADS),
+            numThreads = (Runtime.getRuntime().availableProcessors() - 2).coerceIn(MIN_THREADS, MAX_THREADS),
             useMmap = true,
             flashAttention = false,
             batchSize = BATCH_SIZE
