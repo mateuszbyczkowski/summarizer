@@ -99,3 +99,7 @@ api-keys.txt
 *.swp
 *~
 .*.swp
+
+# Local tool state
+.claude/
+.playwright-mcp/
