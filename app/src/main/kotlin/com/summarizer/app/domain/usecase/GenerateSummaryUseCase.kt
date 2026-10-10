@@ -1,11 +1,11 @@
 package com.summarizer.app.domain.usecase
 
 import com.summarizer.app.domain.ai.AIEngine
-import com.summarizer.app.domain.model.ActionItem
 import com.summarizer.app.domain.ai.LanguageDetector
 import com.summarizer.app.domain.ai.PromptTemplate
 import com.summarizer.app.domain.ai.SummaryResponseParser
 import com.summarizer.app.domain.ai.ensureModelLoaded
+import com.summarizer.app.domain.model.GenerationStage
 import com.summarizer.app.domain.model.MessageType
 import com.summarizer.app.domain.model.Summary
 import com.summarizer.app.domain.repository.MessageRepository
@@ -19,6 +19,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.time.Instant
+import java.time.ZoneId
 import javax.inject.Inject
 
 /**
@@ -49,13 +51,20 @@ class GenerateSummaryUseCase @Inject constructor(
      * @param allowRepeat When the thread has no new messages (incremental mode), summarize the
      *        recent conversation again instead of failing. Used for summaries the user asks for;
      *        scheduled runs skip idle threads.
+     * @param onProgress Receives each stage and, while the model writes, the overview written so
+     *        far; may be called from a background thread
      * @return Result containing the generated Summary, or [NothingToSummarizeException] when the
      *         thread has no (new) messages to summarize
      */
-    suspend fun execute(threadId: String, allowRepeat: Boolean = false): Result<Summary> = withContext(Dispatchers.Default) {
+    suspend fun execute(
+        threadId: String,
+        allowRepeat: Boolean = false,
+        onProgress: ((stage: GenerationStage, partialOverview: String?) -> Unit)? = null
+    ): Result<Summary> = withContext(Dispatchers.Default) {
         suspendRunCatching {
             val startTime = System.currentTimeMillis()
             Timber.d("Starting summary generation for thread: $threadId")
+            onProgress?.invoke(GenerationStage.PREPARING, null)
 
             // Step 1: Fetch thread and its settings
             val thread = threadRepository.getThread(threadId)
@@ -88,6 +97,7 @@ class GenerateSummaryUseCase @Inject constructor(
 
             // Step 4: Ensure the engine is ready; the prompt budget depends on which engine
             // actually loaded (a GPU model may fall back to a CPU model)
+            onProgress?.invoke(GenerationStage.LOADING_MODEL, null)
             aiEngine.ensureModelLoaded(modelRepository).getOrElse { error ->
                 throw IllegalStateException("Failed to load AI model: ${error.message}", error)
             }
@@ -104,30 +114,39 @@ class GenerateSummaryUseCase @Inject constructor(
             Timber.d("Summarizing ${messages.size} messages (mode: ${settings.summarizationMode}, language: $language, prompt: ${prompt.length} chars)")
 
             // Step 5: Generate summary. Transient failures are retried by the engine itself.
+            onProgress?.invoke(GenerationStage.READING, null)
             val rawResponse = aiEngine.generate(
                 prompt = prompt,
                 systemPrompt = PromptTemplate.systemPrompt(language),
                 maxTokens = SUMMARY_MAX_TOKENS,
-                temperature = 0.2f // Low temperature: factual, consistent wording
+                temperature = 0.2f, // Low temperature: factual, consistent wording
+                onPartial = onProgress?.let { report ->
+                    { partial -> report(GenerationStage.WRITING, SummaryResponseParser.streamingOverview(partial)) }
+                }
             ).getOrElse { error ->
                 throw IllegalStateException("Failed to generate summary: ${error.message ?: "AI generation error"}", error)
             }
 
-            // Step 6: Parse response into a Summary domain model
-            val parsed = SummaryResponseParser.parse(rawResponse)
+            // Step 6: Parse response into a Summary domain model. Dates without a year are
+            // resolved relative to the day of the last summarized message.
+            val endTimestamp = messages.maxOf { it.timestamp }
+            val lastMessageDay = Instant.ofEpochMilli(endTimestamp).atZone(ZoneId.systemDefault()).toLocalDate()
+            val parsed = SummaryResponseParser.parse(rawResponse, lastMessageDay)
             val summary = Summary(
                 threadId = threadId,
                 threadName = thread.threadName,
                 overview = parsed.overview,
                 keyTopics = parsed.topics,
-                actionItems = parsed.actions.map { ActionItem(task = it, assignedTo = null, priority = "medium") },
+                actionItems = parsed.actions,
                 announcements = parsed.announcements,
                 participantHighlights = emptyList(),
                 messageCount = messages.size,
                 startTimestamp = messages.minOf { it.timestamp },
-                endTimestamp = messages.maxOf { it.timestamp },
+                endTimestamp = endTimestamp,
                 generatedAt = System.currentTimeMillis(),
-                rawAIResponse = rawResponse  // Save raw AI output for debugging
+                rawAIResponse = rawResponse,  // Save raw AI output for debugging
+                keyDates = parsed.keyDates,
+                engine = aiEngine.engineName()
             )
 
             // Step 7: Save and record what was summarized
@@ -144,8 +163,8 @@ class GenerateSummaryUseCase @Inject constructor(
     }
 
     private companion object {
-        // A concise four-section summary fits comfortably; also bounds on-device generation time
-        const val SUMMARY_MAX_TOKENS = 400
+        // A concise five-section summary fits comfortably; also bounds on-device generation time
+        const val SUMMARY_MAX_TOKENS = 512
     }
 }
 

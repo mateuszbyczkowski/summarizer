@@ -1,6 +1,7 @@
 package com.summarizer.app.data.local.database.dao
 
 import androidx.room.Dao
+import androidx.room.Embedded
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -19,6 +20,23 @@ interface ThreadDao {
 
     @Query("SELECT * FROM threads WHERE threadId = :threadId")
     suspend fun getThread(threadId: String): ThreadEntity?
+
+    /**
+     * Every thread with the number of messages newer than its latest summary (all messages when
+     * it has none). Uses the (threadId, timestamp) index on messages.
+     */
+    @Query("""
+        SELECT t.*, (
+            SELECT COUNT(*) FROM messages m
+            WHERE m.threadId = t.threadId AND m.timestamp > COALESCE((
+                SELECT s.endTimestamp FROM summaries s WHERE s.threadId = t.threadId
+                ORDER BY s.generatedAt DESC, s.id DESC LIMIT 1
+            ), -1)
+        ) AS newSinceSummary
+        FROM threads t
+        ORDER BY t.lastMessageTimestamp DESC, t.threadName ASC
+    """)
+    fun getThreadsWithNewMessageCounts(): Flow<List<ThreadWithNewCount>>
 
     @Query("SELECT * FROM threads WHERE threadId = :threadId")
     fun observeThread(threadId: String): Flow<ThreadEntity?>
@@ -64,3 +82,9 @@ interface ThreadDao {
     @Query("UPDATE threads SET isFollowed = :isFollowed WHERE threadId = :threadId")
     suspend fun updateFollowStatus(threadId: String, isFollowed: Boolean)
 }
+
+/** A thread with the number of messages that arrived after its latest summary. */
+data class ThreadWithNewCount(
+    @Embedded val thread: ThreadEntity,
+    val newSinceSummary: Int
+)

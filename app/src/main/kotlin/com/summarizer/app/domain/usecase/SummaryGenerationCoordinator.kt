@@ -7,6 +7,7 @@ import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import com.summarizer.app.domain.model.GenerationStage
 import com.summarizer.app.worker.SummaryGenerationWorker
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -21,7 +22,8 @@ import javax.inject.Singleton
 /**
  * Starts on-demand summary generation as a [SummaryGenerationWorker] job. It keeps running
  * when the user leaves the app and posts a notification when done; at most one runs per thread.
- * Screens observe [stateFor]; results land in the database.
+ * Screens observe [stateFor] (including progress and the overview as it is written); results
+ * land in the database.
  */
 @Singleton
 class SummaryGenerationCoordinator @Inject constructor(
@@ -29,7 +31,16 @@ class SummaryGenerationCoordinator @Inject constructor(
 ) {
 
     sealed interface State {
-        data object Running : State
+        /**
+         * @property startedAt When the job started (epoch millis); null while it waits to start
+         * @property partialText The overview written so far, during [GenerationStage.WRITING]
+         */
+        data class Running(
+            val stage: GenerationStage,
+            val startedAt: Long?,
+            val partialText: String?
+        ) : State
+
         data class Failed(val message: String, val nothingNew: Boolean) : State
     }
 
@@ -45,7 +56,7 @@ class SummaryGenerationCoordinator @Inject constructor(
         ) { infos, dismissedIds ->
             val info = infos.lastOrNull() ?: return@combine null
             when (info.state) {
-                WorkInfo.State.ENQUEUED, WorkInfo.State.RUNNING, WorkInfo.State.BLOCKED -> State.Running
+                WorkInfo.State.ENQUEUED, WorkInfo.State.RUNNING, WorkInfo.State.BLOCKED -> runningState(info)
                 WorkInfo.State.FAILED -> if (info.id in dismissedIds) null else State.Failed(
                     message = info.outputData.getString(SummaryGenerationWorker.KEY_ERROR).orEmpty(),
                     nothingNew = info.outputData.getBoolean(SummaryGenerationWorker.KEY_NOTHING_NEW, false)
@@ -53,6 +64,17 @@ class SummaryGenerationCoordinator @Inject constructor(
                 WorkInfo.State.SUCCEEDED, WorkInfo.State.CANCELLED -> null
             }
         }.distinctUntilChanged()
+
+    private fun runningState(info: WorkInfo): State.Running {
+        val progress = info.progress
+        return State.Running(
+            stage = progress.getString(SummaryGenerationWorker.KEY_STAGE)
+                ?.let { name -> GenerationStage.entries.firstOrNull { it.name == name } }
+                ?: GenerationStage.PREPARING,
+            startedAt = progress.getLong(SummaryGenerationWorker.KEY_STARTED_AT, 0L).takeIf { it > 0 },
+            partialText = progress.getString(SummaryGenerationWorker.KEY_PARTIAL_TEXT)?.takeIf { it.isNotBlank() }
+        )
+    }
 
     fun generate(threadId: String) {
         val request = OneTimeWorkRequestBuilder<SummaryGenerationWorker>()
@@ -66,6 +88,11 @@ class SummaryGenerationCoordinator @Inject constructor(
             ExistingWorkPolicy.KEEP,
             request
         )
+    }
+
+    /** Stops the thread's summary if one is generating; the job ends as cancelled, without a result. */
+    fun cancel(threadId: String) {
+        workManager.cancelUniqueWork(SummaryGenerationWorker.uniqueWorkName(threadId))
     }
 
     fun dismissError(threadId: String) {

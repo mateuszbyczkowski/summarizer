@@ -49,6 +49,11 @@
             </intent-filter>
         </service>
 
+        <!-- "Copy" action of the summary-ready notification -->
+        <receiver
+            android:name=".worker.CopySummaryReceiver"
+            android:exported="false" />
+
         <!-- Summary generation runs as a foreground job so it survives switching apps -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"

@@ -21,13 +21,17 @@ interface AIEngine {
      * @param systemPrompt Optional system-level instructions (default: null)
      * @param maxTokens Maximum number of tokens to generate (default: 512)
      * @param temperature Sampling temperature 0.0-1.0 (default: 0.7)
+     * @param onPartial Receives the text generated so far (cumulative, not a delta) while the
+     *        model writes, possibly from a background thread; engines that cannot stream may
+     *        never call it
      * @return Result containing generated text or error
      */
     suspend fun generate(
         prompt: String,
         systemPrompt: String? = null,
         maxTokens: Int = 512,
-        temperature: Float = 0.7f
+        temperature: Float = 0.7f,
+        onPartial: ((String) -> Unit)? = null
     ): Result<String>
 
     /**
@@ -59,6 +63,12 @@ interface AIEngine {
      * @return ModelInfo or null if no model is loaded
      */
     suspend fun getModelInfo(): ModelInfo?
+
+    /**
+     * Human-readable name of the engine and model that would generate now, e.g.
+     * "Gemma 4 E2B · GPU" or "OpenAI gpt-4o-mini"; recorded with each summary.
+     */
+    suspend fun engineName(): String? = getModelInfo()?.name
 }
 
 /**

@@ -1,22 +1,28 @@
 package com.summarizer.app.domain.ai
 
+import com.summarizer.app.domain.model.ActionItem
+import com.summarizer.app.domain.model.KeyDate
+import java.time.LocalDate
+
 /**
- * Reads the OVERVIEW / TOPICS / ACTIONS / ANNOUNCEMENTS format requested by [PromptTemplate].
+ * Reads the OVERVIEW / TOPICS / ACTIONS / ANNOUNCEMENTS / DATES format requested by [PromptTemplate].
  *
  * Tolerates what small models commonly do: markdown around labels, content on the label line,
  * numbered or starred bullets, copied format hints, and "None" (in a few languages) for empty
- * sections. Without any labels, the whole reply is used as the overview.
+ * sections. Without any labels, the whole reply is used as the overview. Deadlines in actions
+ * and DATES lines are resolved with [SummaryDates].
  */
 object SummaryResponseParser {
 
     data class ParsedSummary(
         val overview: String,
         val topics: List<String>,
-        val actions: List<String>,
-        val announcements: List<String>
+        val actions: List<ActionItem>,
+        val announcements: List<String>,
+        val keyDates: List<KeyDate> = emptyList()
     )
 
-    private enum class Section { OVERVIEW, TOPICS, ACTIONS, ANNOUNCEMENTS }
+    private enum class Section { OVERVIEW, TOPICS, ACTIONS, ANNOUNCEMENTS, DATES }
 
     private const val MAX_ITEMS = 5
     private const val MAX_FALLBACK_OVERVIEW_CHARS = 400
@@ -27,12 +33,14 @@ object SummaryResponseParser {
     // words so content such as "Dziadek: odbierze Zosię" is not taken for a label.
     private val SECTION_LABEL = Regex(
         "^(?:\\d+[.)]\\s*)?" +
-            "((?:KEY\\s+)?(?:OVERVIEW|SUMMARY|TOPIC\\p{L}*|ACTION\\p{L}*(?:\\s+ITEMS?)?|ANNOUNC\\p{L}*)" +
-            "|PRZEGLĄD|PODSUMOWANIE|TEMATY|DZIAŁANIA|ZADANIA|OGŁOSZENIA)" +
+            "((?:(?:KEY|IMPORTANT)\\s+)?(?:OVERVIEW|SUMMARY|TOPIC\\p{L}*|ACTION\\p{L}*(?:\\s+ITEMS?)?|ANNOUNC\\p{L}*|DATES)" +
+            "|PRZEGLĄD|PODSUMOWANIE|TEMATY|DZIAŁANIA|ZADANIA|OGŁOSZENIA|(?:WAŻNE\\s+)?DATY|TERMINY)" +
             "\\s*(?::\\s*(.*)|-\\s+(.*))?$",
         RegexOption.IGNORE_CASE
     )
-    private val PLACEHOLDER = Regex("^<.*>$")
+    private val PLACEHOLDER = Regex("^[|\\s-]*<.*>[|\\s-]*$")
+    // Date placeholders from the format a model may copy into a real item ("Przelew (by DD.MM)")
+    private val TEMPLATE_FRAGMENT = Regex("\\s*\\(?(?:by\\s+)?DD\\.MM\\)?|\\s*HH:MM", RegexOption.IGNORE_CASE)
     private val MARKDOWN = Regex("\\*\\*|__|^#+\\s*", RegexOption.MULTILINE)
     private val BULLET = Regex("^(?:[-*•–]|\\d+[.)])\\s*")
     private val EMPTY_MARKERS = setOf(
@@ -41,7 +49,13 @@ object SummaryResponseParser {
     )
     private val FORMAT_HINTS = PromptTemplate.FORMAT_HINTS.map { it.lowercase() }.toSet()
 
-    fun parse(rawResponse: String): ParsedSummary {
+    /**
+     * Parses a reply.
+     *
+     * @param reference Day the summarized conversation ended; dates without a year are resolved
+     *        relative to it
+     */
+    fun parse(rawResponse: String, reference: LocalDate = LocalDate.now()): ParsedSummary {
         val lines = rawResponse.replace(MARKDOWN, "").lines()
         val sections = mutableMapOf<Section, MutableList<String>>()
         var current: Section? = null
@@ -52,8 +66,8 @@ object SummaryResponseParser {
                 current = sectionFor(label.groupValues[1])
                 val inline = label.groupValues[2].ifEmpty { label.groupValues[3] }
                 val section = sections.getOrPut(current) { mutableListOf() }
-                // "TOPICS: a, b, c" on one line is a list too
-                if (current != Section.OVERVIEW && inline.count { it == ',' } >= 2) {
+                // "TOPICS: a, b, c" on one line is a list too (date lines use commas for details)
+                if (current != Section.OVERVIEW && current != Section.DATES && inline.count { it == ',' } >= 2) {
                     section.addAll(inline.split(','))
                 } else {
                     section.add(inline)
@@ -75,9 +89,21 @@ object SummaryResponseParser {
         return ParsedSummary(
             overview = items(sections[Section.OVERVIEW]).joinToString(" "),
             topics = listItems(sections[Section.TOPICS]),
-            actions = listItems(sections[Section.ACTIONS]),
-            announcements = listItems(sections[Section.ANNOUNCEMENTS])
+            actions = listItems(sections[Section.ACTIONS]).map { SummaryDates.parseAction(it, reference) },
+            announcements = listItems(sections[Section.ANNOUNCEMENTS]),
+            keyDates = listItems(sections[Section.DATES]).mapNotNull { SummaryDates.parseKeyDate(it, reference) }
         )
+    }
+
+    /**
+     * The overview of a reply that is still being written, for showing progress. Empty while
+     * the model is still writing the OVERVIEW label; the whole text if it ignores the format.
+     */
+    fun streamingOverview(partial: String): String {
+        val text = partial.replace(MARKDOWN, "").trim()
+        if (text.lines().any { SECTION_LABEL.matches(it.trim()) }) return parse(text).overview
+        // The reply may start with an unfinished label ("OVER")
+        return if ("OVERVIEW".startsWith(text.trim { !it.isLetter() }, ignoreCase = true)) "" else text
     }
 
     private fun truncateAtWord(text: String, maxChars: Int): String {
@@ -88,12 +114,13 @@ object SummaryResponseParser {
     }
 
     private fun sectionFor(label: String): Section {
-        val upper = label.uppercase().removePrefix("KEY").trim()
+        val upper = label.uppercase().removePrefix("KEY").removePrefix("IMPORTANT").trim()
         return when {
             upper.startsWith("OVERVIEW") || upper.startsWith("SUMMARY") ||
                 upper == "PRZEGLĄD" || upper == "PODSUMOWANIE" -> Section.OVERVIEW
             upper.startsWith("TOPIC") || upper == "TEMATY" -> Section.TOPICS
             upper.startsWith("ACTION") || upper == "DZIAŁANIA" || upper == "ZADANIA" -> Section.ACTIONS
+            upper.endsWith("DATES") || upper.endsWith("DATY") || upper == "TERMINY" -> Section.DATES
             else -> Section.ANNOUNCEMENTS
         }
     }
@@ -105,9 +132,10 @@ object SummaryResponseParser {
     private fun items(lines: List<String>?): List<String> =
         lines.orEmpty()
             .map { it.trim().replace(BULLET, "").trim() }
+            .filter { it.lowercase() !in FORMAT_HINTS }
+            .map { it.replace(TEMPLATE_FRAGMENT, "").trim() }
             .filter { item ->
-                val lower = item.lowercase()
-                item.isNotEmpty() && lower !in EMPTY_MARKERS && lower !in FORMAT_HINTS && !PLACEHOLDER.matches(item)
+                item.isNotEmpty() && item.lowercase() !in EMPTY_MARKERS && !PLACEHOLDER.matches(item)
             }
             // Small models sometimes loop on the same bullet
             .distinctBy { it.lowercase() }

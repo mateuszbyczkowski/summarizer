@@ -1,5 +1,6 @@
 package com.summarizer.app.data.repository
 
+import com.summarizer.app.data.ai.DemoEngine
 import com.summarizer.app.data.local.dao.AIModelDao
 import com.summarizer.app.data.local.entity.AIModelEntity
 import com.summarizer.app.domain.model.AIModel
@@ -40,6 +41,8 @@ class ModelRepositoryImpl @Inject constructor(
     /** Models whose file disappeared (deleted, SD card removed) are no longer "downloaded". */
     private suspend fun forgetMissingFiles() = withContext(Dispatchers.IO) {
         aiModelDao.getDownloadedModels()
+            // The debug Demo model has no file
+            .filter { it.id != DemoEngine.MODEL_ID }
             .filter { it.localFilePath == null || !File(it.localFilePath).exists() }
             .forEach { aiModelDao.updateDownloadStatus(it.id, false, null, null) }
     }

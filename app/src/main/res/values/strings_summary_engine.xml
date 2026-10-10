@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Summary generation: progress, notifications, copying a summary as text -->
+
+    <!-- Ongoing notification -->
+    <string name="summary_notification_cancel">Cancel</string>
+    <string name="summary_notification_progress_public">Summarizing a chat…</string>
+
+    <!-- Ready notification. Title: "Summary ready · 2 tasks"; text: the first open task -->
+    <plurals name="summary_notification_ready_tasks">
+        <item quantity="one">Summary ready · %d task</item>
+        <item quantity="other">Summary ready · %d tasks</item>
+    </plurals>
+    <string name="summary_notification_show">Show</string>
+    <string name="summary_notification_copy">Copy</string>
+    <string name="summary_copied">Summary copied</string>
+    <string name="summary_copy_label">Chat summary</string>
+
+    <!-- Generation stages -->
+    <string name="summary_stage_preparing">Preparing messages…</string>
+    <string name="summary_stage_loading_model">Loading the model…</string>
+    <string name="summary_stage_reading">Reading the conversation…</string>
+    <string name="summary_stage_writing">Writing the summary…</string>
+    <string name="summary_cancel_generation">Cancel</string>
+
+    <!-- Summary as plain text (copy / share) -->
+    <string name="summary_text_dates">Important dates</string>
+    <string name="summary_text_tasks">To do</string>
+    <string name="summary_text_announcements">Announcements</string>
+    <string name="summary_text_topics">Topics</string>
+    <string name="summary_text_due">by %1$s</string>
+    <!-- java.time pattern for a day in copied summaries, e.g. "Fri 17.10" -->
+    <string name="summary_text_date_pattern">EEE d.MM</string>
+</resources>

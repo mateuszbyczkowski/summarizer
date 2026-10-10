@@ -3,6 +3,7 @@ package com.summarizer.app.ui.screens.summary
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.summarizer.app.domain.model.GenerationStage
 import com.summarizer.app.domain.model.Summary
 import com.summarizer.app.domain.repository.SummaryRepository
 import com.summarizer.app.domain.repository.ThreadRepository
@@ -21,7 +22,7 @@ import javax.inject.Inject
 sealed interface SummaryUiState {
     data object Loading : SummaryUiState
     data object Initial : SummaryUiState
-    data object Generating : SummaryUiState
+    data class Generating(val stage: GenerationStage, val partialText: String?) : SummaryUiState
     data class Success(val summary: Summary) : SummaryUiState
     data class Error(val message: String) : SummaryUiState
 }
@@ -45,7 +46,7 @@ class SummaryDisplayViewModel @Inject constructor(
         coordinator.stateFor(threadId)
     ) { latest, generation ->
         when (generation) {
-            SummaryGenerationCoordinator.State.Running -> SummaryUiState.Generating
+            is SummaryGenerationCoordinator.State.Running -> SummaryUiState.Generating(generation.stage, generation.partialText)
             is SummaryGenerationCoordinator.State.Failed -> SummaryUiState.Error(generation.message)
             null -> latest?.let { SummaryUiState.Success(it) } ?: SummaryUiState.Initial
         }
@@ -57,6 +58,10 @@ class SummaryDisplayViewModel @Inject constructor(
 
     fun retry() {
         coordinator.generate(threadId)
+    }
+
+    fun cancelGeneration() {
+        coordinator.cancel(threadId)
     }
 
     fun dismissError() {

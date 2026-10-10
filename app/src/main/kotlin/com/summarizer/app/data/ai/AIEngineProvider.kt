@@ -1,5 +1,6 @@
 package com.summarizer.app.data.ai
 
+import com.summarizer.app.BuildConfig
 import com.summarizer.app.domain.ai.AIEngine
 import com.summarizer.app.domain.ai.ModelInfo
 import com.summarizer.app.domain.model.AIProvider
@@ -16,7 +17,8 @@ import javax.inject.Singleton
  *
  * Local models run on one of two on-device engines, chosen by file format:
  * `.litertlm` on [LiteRtEngine] (GPU), `.gguf` on [RealAIEngine] (llama.cpp, CPU). If the GPU
- * cannot load a model, a downloaded CPU model is used instead.
+ * cannot load a model, a downloaded CPU model is used instead. Debug builds also offer
+ * [DemoEngine], which streams a fixed summary without a model file.
  *
  * This wrapper allows users to switch between AI providers without restarting the app.
  */
@@ -25,6 +27,7 @@ class AIEngineProvider @Inject constructor(
     private val realEngine: RealAIEngine,
     private val liteRtEngine: LiteRtEngine,
     private val openAIEngine: OpenAIEngine,
+    private val demoEngine: DemoEngine,
     private val preferencesRepository: PreferencesRepository,
     private val modelRepository: ModelRepository
 ) : AIEngine {
@@ -42,8 +45,13 @@ class AIEngineProvider @Inject constructor(
         }
     }
 
-    private fun engineFor(modelPath: String?): AIEngine =
-        if (modelPath?.endsWith(".litertlm") == true) liteRtEngine else realEngine
+    private fun engineFor(modelPath: String?): AIEngine = when {
+        BuildConfig.DEBUG && modelPath == DemoEngine.MODEL_PATH -> demoEngine
+        modelPath?.endsWith(".litertlm") == true -> liteRtEngine
+        else -> realEngine
+    }
+
+    private val localEngines get() = listOf(realEngine, liteRtEngine, demoEngine)
 
     override suspend fun loadModel(modelPath: String): Result<Unit> {
         if (preferencesRepository.getAIProvider() == AIProvider.OPENAI) {
@@ -52,7 +60,7 @@ class AIEngineProvider @Inject constructor(
 
         val engine = engineFor(modelPath)
         // Only one local model in memory at a time
-        listOf(realEngine, liteRtEngine).filter { it !== engine }.forEach { it.unloadModel() }
+        localEngines.filter { it !== engine }.forEach { it.unloadModel() }
 
         val result = engine.loadModel(modelPath)
         if (result.isSuccess) {
@@ -83,23 +91,22 @@ class AIEngineProvider @Inject constructor(
         prompt: String,
         systemPrompt: String?,
         maxTokens: Int,
-        temperature: Float
+        temperature: Float,
+        onPartial: ((String) -> Unit)?
     ): Result<String> {
         val engine = getActiveEngine()
         Timber.d("AIEngineProvider: Generating using ${engine::class.simpleName}")
-        return engine.generate(prompt, systemPrompt, maxTokens, temperature)
+        return engine.generate(prompt, systemPrompt, maxTokens, temperature, onPartial)
     }
 
     override fun cancelGeneration() {
-        realEngine.cancelGeneration()
-        liteRtEngine.cancelGeneration()
+        localEngines.forEach { it.cancelGeneration() }
         openAIEngine.cancelGeneration()
     }
 
     override suspend fun unloadModel() {
         // Only local engines hold resources; OpenAI has nothing to unload
-        realEngine.unloadModel()
-        liteRtEngine.unloadModel()
+        localEngines.forEach { it.unloadModel() }
         loadedLocalEngine = null
     }
 
@@ -108,4 +115,18 @@ class AIEngineProvider @Inject constructor(
     override suspend fun isModelLoaded(): Boolean = getActiveEngine().isModelLoaded()
 
     override suspend fun getModelInfo(): ModelInfo? = getActiveEngine().getModelInfo()
+
+    /**
+     * The catalog name of the loaded local model with where it runs ("Gemma 4 E2B · GPU"), or
+     * the OpenAI model.
+     */
+    override suspend fun engineName(): String? {
+        val engine = getActiveEngine()
+        if (engine === openAIEngine || engine === demoEngine) return engine.engineName()
+        val info = engine.getModelInfo() ?: return null
+        val catalogName = modelRepository.getDownloadedModels().firstOrNull { it.localFilePath == info.path }?.name
+        // Catalog names carry the backend in parentheses: "Gemma 4 E2B (GPU)"
+        val name = catalogName?.substringBefore(" (")?.trim() ?: info.name
+        return "$name · ${if (engine === liteRtEngine) "GPU" else "CPU"}"
+    }
 }

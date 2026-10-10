@@ -22,14 +22,15 @@ object PromptTemplate {
      */
     fun systemPrompt(languageName: String?): String =
         if (languageName == null) SYSTEM_PROMPT
-        else "$SYSTEM_PROMPT Always write in $languageName; only the four section labels stay in English."
+        else "$SYSTEM_PROMPT Always write in $languageName; only the five section labels stay in English."
 
     /** Template lines a model may copy verbatim; the parser drops them. */
     internal val FORMAT_HINTS = listOf(
         "<1-2 sentences: what happened and what was decided>",
         "<topic in a few words>",
-        "<task someone must do, who and by when>",
-        "<important news, change or date>"
+        "<task someone must do and who> (by DD.MM)",
+        "<important news or change>",
+        "DD.MM HH:MM | <event, place>"
     )
 
     /**
@@ -60,7 +61,7 @@ object PromptTemplate {
             |
             |Summarize this chat in $language. Use only facts from the messages; do not guess. If something changed later in the chat, give only the latest information. Be specific (names, dates, times, places, amounts) and keep each bullet under 15 words. "You" is the phone owner.
             |
-            |Reply in exactly this format, keeping the four labels in English, with at most 3 bullets per section and "None" if a section is empty:
+            |Reply in exactly this format, keeping the five labels in English, with at most 3 bullets per section and "None" if a section is empty. Write dates as DD.MM and times as HH:MM:
             |OVERVIEW: ${FORMAT_HINTS[0]}
             |TOPICS:
             |- ${FORMAT_HINTS[1]}
@@ -68,6 +69,8 @@ object PromptTemplate {
             |- ${FORMAT_HINTS[2]}
             |ANNOUNCEMENTS:
             |- ${FORMAT_HINTS[3]}
+            |DATES:
+            |- ${FORMAT_HINTS[4]}
         """.trimMargin()
     }
 

@@ -3,6 +3,7 @@ package com.summarizer.app.data.local.database
 import androidx.room.TypeConverter
 import com.summarizer.app.domain.model.MessageType
 import com.summarizer.app.domain.model.ActionItem
+import com.summarizer.app.domain.model.KeyDate
 import com.summarizer.app.domain.model.ParticipantHighlight
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -45,6 +46,17 @@ class Converters {
     fun toActionItemList(value: String): List<ActionItem> {
         // A malformed row must not break every query that reads it
         return runCatching { json.decodeFromString<List<ActionItem>>(value) }.getOrDefault(emptyList())
+    }
+
+    @TypeConverter
+    fun fromKeyDateList(value: List<KeyDate>): String {
+        return json.encodeToString<List<KeyDate>>(value)
+    }
+
+    @TypeConverter
+    fun toKeyDateList(value: String): List<KeyDate> {
+        // A malformed row must not break every query that reads it
+        return runCatching { json.decodeFromString<List<KeyDate>>(value) }.getOrDefault(emptyList())
     }
 
     @TypeConverter

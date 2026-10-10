@@ -53,7 +53,8 @@ class OpenAIEngine @Inject constructor(
         prompt: String,
         systemPrompt: String?,
         maxTokens: Int,
-        temperature: Float
+        temperature: Float,
+        onPartial: ((String) -> Unit)?
     ): Result<String> = suspendRunCatching {
         // Always fetch the latest API key from repository
         val apiKey = requireApiKey()
@@ -99,7 +100,7 @@ class OpenAIEngine @Inject constructor(
         }.getOrElse { error ->
             Timber.e(error, "OpenAI: Generation failed")
             throw toEngineError(error)
-        }
+        }.also { onPartial?.invoke(it) } // Not streamed: the whole reply arrives at once
     }
 
     private class RequestTimeoutException : Exception("OpenAI request timed out")
@@ -136,6 +137,8 @@ class OpenAIEngine @Inject constructor(
 
     override suspend fun isModelLoaded(): Boolean =
         !preferencesRepository.getOpenAIApiKey().isNullOrBlank()
+
+    override suspend fun engineName(): String = "OpenAI ${preferencesRepository.getSelectedOpenAIModel()}"
 
     override suspend fun getModelInfo(): ModelInfo? {
         if (!isModelLoaded()) return null

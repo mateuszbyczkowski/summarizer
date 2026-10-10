@@ -1,7 +1,6 @@
 package com.summarizer.app.data.repository
 
 import com.summarizer.app.data.local.database.dao.SummaryDao
-import com.summarizer.app.data.local.entity.SummaryEntity
 import com.summarizer.app.domain.model.Summary
 import com.summarizer.app.domain.repository.SummaryRepository
 import kotlinx.coroutines.flow.Flow
@@ -22,6 +21,10 @@ class SummaryRepositoryImpl @Inject constructor(
         return summaryDao.getLatestSummaryForThread(threadId)?.toDomainModel()
     }
 
+    override suspend fun getSummary(summaryId: Long): Summary? {
+        return summaryDao.getSummary(summaryId)?.toDomainModel()
+    }
+
     override fun getRecentSummaries(limit: Int): Flow<List<Summary>> {
         return summaryDao.getRecentSummaries(limit).map { entities ->
             entities.map { it.toDomainModel() }
@@ -32,6 +35,15 @@ class SummaryRepositoryImpl @Inject constructor(
         return summaryDao.insert(summary.toEntity())
     }
 
+    override suspend fun setActionItemDone(summaryId: Long, index: Int, done: Boolean) {
+        summaryDao.setActionItemDone(summaryId, index, done)
+    }
+
+    override suspend fun setRating(summaryId: Long, rating: Int?) {
+        require(rating == null || rating == 1 || rating == -1) { "Rating must be +1, -1 or null" }
+        summaryDao.setRating(summaryId, rating)
+    }
+
     override suspend fun deleteSummariesForThread(threadId: String) {
         summaryDao.deleteSummariesForThread(threadId)
     }
@@ -39,36 +51,4 @@ class SummaryRepositoryImpl @Inject constructor(
     override suspend fun searchSummaries(query: String): List<Summary> {
         return summaryDao.searchSummaries(query).map { it.toDomainModel() }
     }
-
-    private fun SummaryEntity.toDomainModel() = Summary(
-        id = id,
-        threadId = threadId,
-        threadName = threadName,
-        overview = overview,
-        keyTopics = keyTopics,
-        actionItems = actionItems,
-        announcements = announcements,
-        participantHighlights = participantHighlights,
-        messageCount = messageCount,
-        startTimestamp = startTimestamp,
-        endTimestamp = endTimestamp,
-        generatedAt = generatedAt,
-        rawAIResponse = rawAIResponse
-    )
-
-    private fun Summary.toEntity() = SummaryEntity(
-        id = id,
-        threadId = threadId,
-        threadName = threadName,
-        overview = overview,
-        keyTopics = keyTopics,
-        actionItems = actionItems,
-        announcements = announcements,
-        participantHighlights = participantHighlights,
-        messageCount = messageCount,
-        startTimestamp = startTimestamp,
-        endTimestamp = endTimestamp,
-        generatedAt = generatedAt,
-        rawAIResponse = rawAIResponse
-    )
 }

@@ -1,8 +1,11 @@
 package com.summarizer.app.domain.ai
 
+import com.summarizer.app.domain.model.ActionItem
+import com.summarizer.app.domain.model.KeyDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.LocalDate
 
 class SummaryResponseParserTest {
 
@@ -23,7 +26,7 @@ class SummaryResponseParserTest {
 
         assertEquals("The class trip moves to Friday. Parents agreed to share costs.", parsed.overview)
         assertEquals(listOf("Trip date", "Costs"), parsed.topics)
-        assertEquals(listOf("Anna books the bus by Wednesday"), parsed.actions)
+        assertEquals(listOf("Anna books the bus by Wednesday"), parsed.actions.map { it.task })
         assertEquals(listOf("Trip moved to Friday 8:00"), parsed.announcements)
     }
 
@@ -67,7 +70,7 @@ class SummaryResponseParserTest {
 
         assertEquals("Wycieczka w piątek, zbiórka 7:15.", parsed.overview)
         assertEquals(listOf("Wycieczka"), parsed.topics)
-        assertEquals(listOf("Przelew 85 zł do środy"), parsed.actions)
+        assertEquals(listOf("Przelew 85 zł do środy"), parsed.actions.map { it.task })
         assertEquals(listOf("Zebranie we wtorek 18:00"), parsed.announcements)
     }
 
@@ -99,7 +102,7 @@ class SummaryResponseParserTest {
         )
 
         assertEquals(listOf("Wycieczka"), parsed.topics)
-        assertEquals(listOf("Dziadek: odbierze Zosię o 15:00", "Zadanie: przelew 85 zł"), parsed.actions)
+        assertEquals(listOf("Dziadek: odbierze Zosię o 15:00", "Zadanie: przelew 85 zł"), parsed.actions.map { it.task })
     }
 
     @Test
@@ -108,5 +111,70 @@ class SummaryResponseParserTest {
 
         assertEquals("Everyone agreed to meet at 7 at the park.", parsed.overview)
         assertTrue(parsed.topics.isEmpty())
+    }
+
+    @Test
+    fun `dates section and task deadlines are structured`() {
+        val parsed = SummaryResponseParser.parse(
+            """
+            OVERVIEW: Wycieczka w piątek 17.10.
+            ACTIONS:
+            - Przelew 85 zł na konto klasowe (do 15.10)
+            - Oddać zgody (do poniedziałku)
+            ANNOUNCEMENTS:
+            - None
+            DATES:
+            - 17.10 7:30 | Wycieczka, autobus spod szkoły
+            - 21.10 18:00 | Zebranie rodziców, sala 12
+            - w środę | Basen
+            """.trimIndent(),
+            reference = LocalDate.of(2026, 10, 13)
+        )
+
+        assertEquals(
+            listOf(
+                ActionItem(task = "Przelew 85 zł na konto klasowe", due = "2026-10-15"),
+                ActionItem(task = "Oddać zgody (do poniedziałku)")
+            ),
+            parsed.actions
+        )
+        assertEquals(
+            listOf(
+                KeyDate(label = "Wycieczka", date = "2026-10-17", time = "07:30", detail = "autobus spod szkoły"),
+                KeyDate(label = "Zebranie rodziców", date = "2026-10-21", time = "18:00", detail = "sala 12"),
+                KeyDate(label = "Basen", date = null, time = null, detail = "w środę")
+            ),
+            parsed.keyDates
+        )
+        assertTrue(parsed.announcements.isEmpty())
+    }
+
+    @Test
+    fun `copied date placeholders are removed and Polish date labels recognized`() {
+        val parsed = SummaryResponseParser.parse(
+            """
+            OVERVIEW: Spotkanie.
+            ACTIONS:
+            - <task someone must do and who> (by DD.MM)
+            - Kupić bilety (by DD.MM)
+            WAŻNE DATY:
+            - DD.MM HH:MM | <event, place>
+            - 2026-11-03 | Koncert
+            """.trimIndent(),
+            reference = LocalDate.of(2026, 10, 13)
+        )
+
+        assertEquals(listOf(ActionItem(task = "Kupić bilety")), parsed.actions)
+        assertEquals(listOf(KeyDate(label = "Koncert", date = "2026-11-03")), parsed.keyDates)
+    }
+
+    @Test
+    fun `streaming overview hides an unfinished label and follows the overview`() {
+        assertEquals("", SummaryResponseParser.streamingOverview(""))
+        assertEquals("", SummaryResponseParser.streamingOverview("**OVER"))
+        assertEquals("", SummaryResponseParser.streamingOverview("OVERVIEW:"))
+        assertEquals("Wycieczka w", SummaryResponseParser.streamingOverview("OVERVIEW: Wycieczka w"))
+        assertEquals("Wycieczka.", SummaryResponseParser.streamingOverview("OVERVIEW: Wycieczka.\nTOPICS:\n- Wyc"))
+        assertEquals("Everyone agreed", SummaryResponseParser.streamingOverview("Everyone agreed"))
     }
 }

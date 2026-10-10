@@ -2,6 +2,8 @@ package com.summarizer.app.ui.screens.models
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.summarizer.app.BuildConfig
+import com.summarizer.app.data.ai.DemoEngine
 import com.summarizer.app.data.download.ModelDownloadManager
 import com.summarizer.app.di.ApplicationScope
 import com.summarizer.app.domain.ai.AIEngine
@@ -51,7 +53,7 @@ class ModelDownloadViewModel @Inject constructor(
     }
 
     /**
-     * Bring the seeded catalog up to date with [DEFAULT_MODELS]:
+     * Bring the seeded catalog up to date with [CATALOG]:
      *  - Insert/overwrite the current catalog rows (OnConflictStrategy.REPLACE preserves nothing
      *    other than what we re-supply; downloaded flags on these IDs stay correct because we never
      *    re-seed an existing ID — see check below).
@@ -62,7 +64,7 @@ class ModelDownloadViewModel @Inject constructor(
     private suspend fun reconcileCatalog() {
         modelRepository.refreshDownloadState()
         val existing = modelRepository.getAllModels().first()
-        val catalogIds = DEFAULT_MODELS.map { it.id }.toSet()
+        val catalogIds = CATALOG.map { it.id }.toSet()
 
         val staleIds = existing.map { it.id }.filterNot { it in catalogIds }
         for (id in staleIds) {
@@ -73,7 +75,7 @@ class ModelDownloadViewModel @Inject constructor(
 
         // Refresh catalog metadata (URL, checksum, size, text) while keeping download state
         val existingById = existing.associateBy { it.id }
-        DEFAULT_MODELS.forEach { catalogModel ->
+        CATALOG.forEach { catalogModel ->
             val current = existingById[catalogModel.id] ?: return@forEach
             val refreshed = catalogModel.copy(
                 isDownloaded = current.isDownloaded,
@@ -83,7 +85,7 @@ class ModelDownloadViewModel @Inject constructor(
         }
 
         val existingIds = existingById.keys
-        val toInsert = DEFAULT_MODELS.filterNot { it.id in existingIds }
+        val toInsert = CATALOG.filterNot { it.id in existingIds }
         if (toInsert.isNotEmpty()) {
             Timber.i("Seeding catalog with ${toInsert.size} new model(s): ${toInsert.map { it.id }}")
             modelRepository.insertModels(toInsert)
@@ -177,6 +179,9 @@ class ModelDownloadViewModel @Inject constructor(
                 checksum = "b1b3de114215d9507409a662a501a631095a479a419584e8a2ded6304b19b4f5"
             )
         )
+
+        /** What Manage Models lists: debug builds add the Demo model (no download), see [DemoEngine]. */
+        private val CATALOG = listOfNotNull(DemoEngine.MODEL.takeIf { BuildConfig.DEBUG }) + DEFAULT_MODELS
     }
 
     /**

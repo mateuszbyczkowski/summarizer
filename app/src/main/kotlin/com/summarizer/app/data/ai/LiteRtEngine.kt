@@ -9,6 +9,8 @@ import com.google.ai.edge.litertlm.Conversation
 import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
+import com.google.ai.edge.litertlm.Message
+import com.google.ai.edge.litertlm.MessageCallback
 import com.google.ai.edge.litertlm.SamplerConfig
 import com.summarizer.app.domain.ai.AIEngine
 import com.summarizer.app.domain.ai.AIEngineError
@@ -27,7 +29,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
 import java.io.File
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -49,6 +53,7 @@ class LiteRtEngine @Inject constructor(
         // ~6K tokens of transcript at ~2.4 chars/token; reads in well under a minute on the GPU
         private const val MAX_PROMPT_CHARS = 14_000
         private const val GENERATION_TIMEOUT_MS = 5 * 60_000L
+        private const val STOPPED_WAIT_MS = 10_000L
         private const val TOP_K = 40
         private const val TOP_P = 0.9
     }
@@ -110,7 +115,8 @@ class LiteRtEngine @Inject constructor(
         prompt: String,
         systemPrompt: String?,
         maxTokens: Int,
-        temperature: Float
+        temperature: Float,
+        onPartial: ((String) -> Unit)?
     ): Result<String> = suspendRunCatching {
         // One generation at a time: waiting for another summary must not count against this
         // one's timeout, and a timeout must only cancel this summary's conversation
@@ -125,11 +131,7 @@ class LiteRtEngine @Inject constructor(
                 loaded.createConversation(config).use { conversation ->
                     synchronized(conversationLock) { activeConversation = conversation }
                     try {
-                        val started = SystemClock.elapsedRealtime()
-                        val reply = conversation.sendMessage(prompt)
-                        val text = reply.contents.contents.filterIsInstance<Content.Text>().joinToString("") { it.text }
-                        Timber.i("LiteRT-LM generation: prompt ${prompt.length} chars, ${text.length} chars in ${SystemClock.elapsedRealtime() - started}ms")
-                        text
+                        streamReply(conversation, prompt, onPartial)
                     } finally {
                         // Cleared before use{} closes the conversation, so cancel never sees a closed one
                         synchronized(conversationLock) { activeConversation = null }
@@ -149,6 +151,53 @@ class LiteRtEngine @Inject constructor(
         val result = stripReasoning(raw)
         if (result.isEmpty()) throw AIEngineError.InvalidResponse("Empty response from model")
         result
+    }
+
+    /**
+     * Sends the prompt and blocks this (native) thread until the reply is complete, reporting
+     * the text so far to [onPartial]. Logs contain sizes and timings only, never content.
+     */
+    private fun streamReply(conversation: Conversation, prompt: String, onPartial: ((String) -> Unit)?): String {
+        val output = StringBuilder()
+        val done = CountDownLatch(1)
+        var error: Throwable? = null
+        // LiteRT-LM 0.18 sends each new piece of text; the API does not document this, so a
+        // message that repeats everything so far (cumulative) is detected on the second one
+        var cumulative: Boolean? = null
+        val started = SystemClock.elapsedRealtime()
+        var firstTextAt = 0L
+
+        conversation.sendMessageAsync(prompt, object : MessageCallback {
+            override fun onMessage(message: Message) {
+                val chunk = message.contents.contents.filterIsInstance<Content.Text>().joinToString("") { it.text }
+                if (chunk.isEmpty()) return
+                if (firstTextAt == 0L) firstTextAt = SystemClock.elapsedRealtime()
+                if (cumulative == null && output.isNotEmpty()) {
+                    cumulative = chunk.length > output.length && chunk.startsWith(output)
+                }
+                if (cumulative == true) output.setLength(0)
+                output.append(chunk)
+                onPartial?.invoke(stripReasoning(output.toString()))
+            }
+
+            override fun onDone() = done.countDown()
+
+            override fun onError(throwable: Throwable) {
+                error = throwable
+                done.countDown()
+            }
+        })
+
+        if (!done.await(GENERATION_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+            conversation.cancelProcess()
+            if (!done.await(STOPPED_WAIT_MS, TimeUnit.MILLISECONDS)) Timber.w("LiteRT-LM did not report completion after cancel")
+        }
+
+        val now = SystemClock.elapsedRealtime()
+        val promptMs = if (firstTextAt > 0) firstTextAt - started else now - started
+        Timber.i("LiteRT-LM generation: prompt ${prompt.length} chars read in ${promptMs}ms, ${output.length} chars in ${now - started}ms")
+        error?.let { if (output.isEmpty()) throw AIEngineError.GenerationFailed(it.message ?: "LiteRT-LM generation failed", it) }
+        return output.toString()
     }
 
     override suspend fun maxPromptChars(): Int = MAX_PROMPT_CHARS

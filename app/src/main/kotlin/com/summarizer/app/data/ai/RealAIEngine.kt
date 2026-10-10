@@ -138,14 +138,15 @@ class RealAIEngine @Inject constructor() : AIEngine {
         prompt: String,
         systemPrompt: String?,
         maxTokens: Int,
-        temperature: Float
+        temperature: Float,
+        onPartial: ((String) -> Unit)?
     ): Result<String> = suspendRunCatching {
         // One generation at a time: waiting must not count against the timeout, and a timeout
         // must only stop this generation (nativeCancelGenerate is global)
         val raw = generationMutex.withLock { runCancellable {
             if (currentModelInfo == null) throw AIEngineError.ModelNotLoaded
             updateGenerateParams(temperature, maxTokens)
-            streamGeneration(prompt, systemPrompt.orEmpty(), maxTokens)
+            streamGeneration(prompt, systemPrompt.orEmpty(), maxTokens, onPartial)
         } }
 
         val result = stripReasoning(raw)
@@ -163,7 +164,12 @@ class RealAIEngine @Inject constructor() : AIEngine {
      * token limit (instead of running until the timeout) and measure prompt processing vs.
      * generation speed. Logs contain sizes and timings only, never content.
      */
-    private fun streamGeneration(prompt: String, systemPrompt: String, maxTokens: Int): String {
+    private fun streamGeneration(
+        prompt: String,
+        systemPrompt: String,
+        maxTokens: Int,
+        onPartial: ((String) -> Unit)?
+    ): String {
         val output = StringBuilder()
         val done = CountDownLatch(1)
         var error: String? = null
@@ -203,6 +209,7 @@ class RealAIEngine @Inject constructor() : AIEngine {
                         }
                     checkedUpTo = lastNewline
                 }
+                if (!stopped) onPartial?.invoke(stripReasoning(output.toString()))
             }
 
             override fun onComplete() = done.countDown()

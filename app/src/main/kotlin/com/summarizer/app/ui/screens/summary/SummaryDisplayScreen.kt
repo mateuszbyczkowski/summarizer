@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.summarizer.app.R
+import com.summarizer.app.domain.model.GenerationStage
 import com.summarizer.app.domain.model.Summary
 import com.summarizer.app.ui.components.AppTopBar
 import com.summarizer.app.ui.components.EmptyState
@@ -72,7 +73,9 @@ fun SummaryDisplayScreen(
                 .padding(paddingValues)
         ) {
             AnimatedContent(
+                // Streaming updates must not restart the transition
                 targetState = uiState,
+                contentKey = { it::class },
                 transitionSpec = {
                     fadeIn(animationSpec = tween(300)) togetherWith
                     fadeOut(animationSpec = tween(200))
@@ -87,7 +90,13 @@ fun SummaryDisplayScreen(
                         )
                     }
                     is SummaryUiState.Generating -> {
-                        GeneratingIndicator()
+                        // Read the latest state: the content is keyed by state type only
+                        val generating = uiState as? SummaryUiState.Generating ?: state
+                        GeneratingIndicator(
+                            stage = generating.stage,
+                            partialText = generating.partialText,
+                            onCancelClick = { viewModel.cancelGeneration() }
+                        )
                     }
                     is SummaryUiState.Success -> {
                         SummaryContent(summary = state.summary)
@@ -126,7 +135,7 @@ private fun InitialPrompt(onGenerateClick: () -> Unit) {
 }
 
 @Composable
-private fun GeneratingIndicator() {
+private fun GeneratingIndicator(stage: GenerationStage, partialText: String?, onCancelClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -142,15 +151,33 @@ private fun GeneratingIndicator() {
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = stringResource(R.string.summary_generating),
+                text = stringResource(
+                    when (stage) {
+                        GenerationStage.PREPARING -> R.string.summary_stage_preparing
+                        GenerationStage.LOADING_MODEL -> R.string.summary_stage_loading_model
+                        GenerationStage.READING -> R.string.summary_stage_reading
+                        GenerationStage.WRITING -> R.string.summary_stage_writing
+                    }
+                ),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            Text(
-                text = stringResource(R.string.summary_generating_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (partialText.isNullOrBlank()) {
+                Text(
+                    text = stringResource(R.string.summary_generating_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Text(
+                    text = partialText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            TextButton(onClick = onCancelClick) {
+                Text(stringResource(R.string.summary_cancel_generation))
+            }
         }
     }
 }

@@ -50,8 +50,18 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
     }
 }
 
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Structured summaries: key dates, which engine wrote it, and the user's rating.
+        // Task due dates and done state live in the action_items JSON (old rows stay readable).
+        db.execSQL("ALTER TABLE summaries ADD COLUMN key_dates TEXT NOT NULL DEFAULT '[]'")
+        db.execSQL("ALTER TABLE summaries ADD COLUMN engine TEXT")
+        db.execSQL("ALTER TABLE summaries ADD COLUMN rating INTEGER")
+    }
+}
+
 /** Every migration from a version that still has user data. Versions 1-3 predate releases. */
-val ALL_MIGRATIONS = arrayOf(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+val ALL_MIGRATIONS = arrayOf(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
 
 /**
  * One-time cleanup of threads created under older naming rules: every conversation is moved,

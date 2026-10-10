@@ -13,16 +13,23 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
+import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.summarizer.app.MainActivity
 import com.summarizer.app.R
+import com.summarizer.app.domain.model.GenerationStage
+import com.summarizer.app.domain.model.Summary
 import com.summarizer.app.domain.repository.ThreadRepository
 import com.summarizer.app.domain.usecase.GenerateSummaryUseCase
 import com.summarizer.app.domain.usecase.NothingToSummarizeException
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 
@@ -30,7 +37,9 @@ import timber.log.Timber
  * Generates one summary the user asked for, as a foreground job so it survives the user
  * switching to another app, then posts a "summary ready" notification that opens it.
  *
- * Notifications only name the thread; summary content never appears on the lock screen.
+ * Publishes progress ([KEY_STAGE], [KEY_STARTED_AT], [KEY_PARTIAL_TEXT]) for the screens; the
+ * ongoing notification can cancel the job. The ready notification shows the first task, but
+ * only when the phone is unlocked: on the lock screen a public version without content is shown.
  */
 @HiltWorker
 class SummaryGenerationWorker @AssistedInject constructor(
@@ -44,6 +53,20 @@ class SummaryGenerationWorker @AssistedInject constructor(
         const val KEY_THREAD_ID = "thread_id"
         const val KEY_ERROR = "error"
         const val KEY_NOTHING_NEW = "nothing_new"
+
+        /** Progress: [GenerationStage] name */
+        const val KEY_STAGE = "stage"
+
+        /** Progress: when generation started (epoch millis) */
+        const val KEY_STARTED_AT = "started_at"
+
+        /** Progress: the overview written so far */
+        const val KEY_PARTIAL_TEXT = "partial_text"
+
+        // WorkManager data is limited to 10 KB
+        private const val MAX_PARTIAL_CHARS = 2_000
+        // Streaming produces a token every few milliseconds; the screen needs a few updates per second
+        private const val PROGRESS_INTERVAL_MS = 250L
 
         private const val PROGRESS_CHANNEL_ID = "summary_progress"
         private const val RESULT_CHANNEL_ID = "summary_result"
@@ -70,14 +93,12 @@ class SummaryGenerationWorker @AssistedInject constructor(
             Timber.w(e, "Could not promote summary generation to foreground")
         }
 
-        // The user asked for this summary, so re-summarize even without new messages
-        return generateSummaryUseCase.execute(threadId, allowRepeat = true).fold(
-            onSuccess = {
-                notifyResult(
-                    threadName,
-                    title = context.getString(R.string.summary_notification_ready_title),
-                    text = threadName?.let { context.getString(R.string.summary_notification_ready_text, it) }
-                )
+        // The user asked for this summary, so re-summarize even without new messages.
+        // Cancelling the job (notification action, coordinator) cancels this coroutine, which
+        // stops the engine.
+        return generateWithProgress().fold(
+            onSuccess = { summary ->
+                notifyReady(threadName, summary)
                 Result.success()
             },
             onFailure = { error ->
@@ -96,20 +117,78 @@ class SummaryGenerationWorker @AssistedInject constructor(
         )
     }
 
+    private data class Progress(val stage: GenerationStage, val partialText: String?)
+
+    /** Runs the use case while publishing its progress, throttled, as WorkManager progress. */
+    private suspend fun generateWithProgress(): kotlin.Result<Summary> = coroutineScope {
+        val startedAt = System.currentTimeMillis()
+        val progress = MutableStateFlow(Progress(GenerationStage.PREPARING, null))
+        val publisher = launch {
+            // StateFlow keeps only the latest value, so pausing here skips intermediate updates
+            progress.collect { (stage, partialText) ->
+                setProgress(
+                    workDataOf(
+                        KEY_STAGE to stage.name,
+                        KEY_STARTED_AT to startedAt,
+                        KEY_PARTIAL_TEXT to partialText?.take(MAX_PARTIAL_CHARS)
+                    )
+                )
+                delay(PROGRESS_INTERVAL_MS)
+            }
+        }
+        try {
+            generateSummaryUseCase.execute(threadId, allowRepeat = true) { stage, partialOverview ->
+                progress.value = Progress(stage, partialOverview)
+            }
+        } finally {
+            publisher.cancel()
+        }
+    }
+
     private fun foregroundInfo(threadName: String?): ForegroundInfo {
+        val title = context.getString(R.string.summary_notification_progress_title)
         val notification = NotificationCompat.Builder(context, PROGRESS_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle(context.getString(R.string.summary_notification_progress_title))
+            .setContentTitle(title)
             .setContentText(threadName)
             .setProgress(0, 0, true)
             .setOngoing(true)
             .setSilent(true)
             .setContentIntent(openSummaryIntent())
+            .addAction(
+                0,
+                context.getString(R.string.summary_notification_cancel),
+                WorkManager.getInstance(context).createCancelPendingIntent(id)
+            )
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(publicNotification(PROGRESS_CHANNEL_ID, context.getString(R.string.summary_notification_progress_public)))
             .build()
         return ForegroundInfo(progressNotificationId(), notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
     }
 
-    private suspend fun notifyResult(threadName: String?, title: String, text: String?) {
+    /** "Summary ready · 2 tasks" with the first open task, and actions to show or copy it. */
+    private suspend fun notifyReady(threadName: String?, summary: Summary) {
+        val openTasks = summary.actionItems.filterNot { it.done }
+        val title = if (openTasks.isEmpty()) {
+            context.getString(R.string.summary_notification_ready_title)
+        } else {
+            context.resources.getQuantityString(R.plurals.summary_notification_ready_tasks, openTasks.size, openTasks.size)
+        }
+        val text = openTasks.firstOrNull()?.task
+            ?: threadName?.let { context.getString(R.string.summary_notification_ready_text, it) }
+        notifyResult(threadName, title, text) {
+            setSubText(threadName)
+                .addAction(0, context.getString(R.string.summary_notification_show), openSummaryIntent())
+                .addAction(0, context.getString(R.string.summary_notification_copy), copySummaryIntent(summary.id))
+        }
+    }
+
+    private suspend fun notifyResult(
+        threadName: String?,
+        title: String,
+        text: String?,
+        extras: NotificationCompat.Builder.() -> NotificationCompat.Builder = { this }
+    ) {
         // The summary screen already shows the result when the user is in the app
         val appVisible = withContext(Dispatchers.Main) {
             ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
@@ -123,8 +202,31 @@ class SummaryGenerationWorker @AssistedInject constructor(
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setAutoCancel(true)
             .setContentIntent(openSummaryIntent())
+            // Lock screen: only the generic title, no chat name or summary content
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(publicNotification(RESULT_CHANNEL_ID, context.getString(R.string.summary_notification_ready_title)))
+            .extras()
             .build()
         notificationManager.notify(resultNotificationId(), notification)
+    }
+
+    private fun publicNotification(channelId: String, title: String): Notification =
+        NotificationCompat.Builder(context, channelId)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(title)
+            .build()
+
+    private fun copySummaryIntent(summaryId: Long): PendingIntent {
+        val intent = Intent(context, CopySummaryReceiver::class.java).apply {
+            putExtra(CopySummaryReceiver.EXTRA_SUMMARY_ID, summaryId)
+            putExtra(CopySummaryReceiver.EXTRA_NOTIFICATION_ID, resultNotificationId())
+        }
+        return PendingIntent.getBroadcast(
+            context,
+            resultNotificationId(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
     }
 
     private fun openSummaryIntent(): PendingIntent {

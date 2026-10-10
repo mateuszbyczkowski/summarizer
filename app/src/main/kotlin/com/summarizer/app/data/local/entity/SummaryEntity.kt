@@ -4,6 +4,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.summarizer.app.domain.model.ActionItem
+import com.summarizer.app.domain.model.KeyDate
 import com.summarizer.app.domain.model.ParticipantHighlight
 
 @Entity(tableName = "summaries")
@@ -34,5 +35,13 @@ data class SummaryEntity(
     val generatedAt: Long = System.currentTimeMillis(),
 
     @ColumnInfo(name = "raw_ai_response")
-    val rawAIResponse: String? = null
+    val rawAIResponse: String? = null,
+
+    @ColumnInfo(name = "key_dates", defaultValue = "[]")
+    val keyDates: List<KeyDate> = emptyList(),
+
+    val engine: String? = null,
+
+    /** +1 / -1 feedback, null when not rated */
+    val rating: Int? = null
 )
